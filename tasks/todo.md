@@ -1,7 +1,7 @@
 # paybands — implementation plan
 
 Repo: `github.com/iamakbarsha1/paybands` (public, remote via `github.com-personal`)
-Design decisions live in `INCUBYTE-ASSESSMENT-PLAN.md`. This file is the build order.
+Design decisions live in [`docs/design-notes.md`](../docs/design-notes.md). This file is the build order.
 
 Rules for every phase:
 
@@ -15,21 +15,20 @@ Rules for every phase:
 
 Docs land **before** the first line of product code. The commit order is itself part of the submission.
 
-- [ ] `git init`, remote `git@github.com-personal:iamakbarsha1/paybands.git`, branch `main`
-- [ ] `docs/requirements.md` — one page: goal, scope, features, deliberate non-goals with reasoning
-- [ ] `docs/design-notes.md` — the planning doc, cleaned up
-- [ ] `docs/data-model.md` — ER diagram + the four modelling calls (minor units, effective dating, band scoping, nullable gender)
-- [ ] `docs/glossary.md` — comp ratio, range penetration, midpoint, mean vs median gap
-- [ ] `README.md` — clone → install → seed → run → test, in that order
-- [ ] `.gitignore`, LICENSE, `.editorconfig`
-- [ ] Commit: `docs: requirements and scope` then `docs: data model and glossary`
+- [x] `git init`, remote `git@github.com-personal:iamakbarsha1/paybands.git`, branch `main`
+- [x] `docs/requirements.md` — goal, scope, non-goals with reasoning
+- [x] `docs/design-notes.md` — the planning doc, tightened, duplication removed
+- [x] `docs/data-model.md` — ER diagram + the four modelling calls
+- [x] `docs/glossary.md` — comp ratio, range penetration, midpoint, mean vs median gap
+- [ ] `README.md` — clone → install → seed → run → test _(install/run/test done; seed in phase 3)_
+- [x] `.gitignore`, LICENSE, `.editorconfig`
 
 ## Phase 1 — Workspace skeleton
 
 ```
 paybands/
-├─ apps/api          Fastify 5 + TypeScript, Node 22
-├─ apps/web          Next.js 15 App Router + React 19
+├─ apps/api          Fastify 5 + TypeScript, Node 24
+├─ apps/web          Next.js 16 App Router + React 19
 ├─ packages/core     pure comp maths + shared domain types, zero framework imports
 ├─ docs/
 └─ .github/workflows/ci.yml
@@ -37,11 +36,10 @@ paybands/
 
 `packages/core` exists for one reason: the comp maths must be testable with no database, no HTTP, and no React, and the web app needs the same types the API returns. That is a shared-code reason, not scaffolding.
 
-- [ ] pnpm workspace, TypeScript project references, strict mode on
-- [ ] ESLint + Prettier, one config at the root
-- [ ] Vitest at the root, projects per package
-- [ ] CI: install → typecheck → lint → test → build, on every push
-- [ ] Commit: `chore: pnpm workspace and toolchain`, `ci: lint, typecheck, test on push`
+- [x] pnpm workspace, strict mode on. Project references dropped — core is consumed as source, which removes the ordering problem they solve ([decision 12](../docs/decisions/decision-log.md))
+- [x] ESLint + Prettier, one root config. A `no-restricted-imports` rule makes the framework-free boundary enforced, not conventional
+- [x] Vitest at the root, a project per package
+- [x] CI: install → typecheck → lint → test → build, on every push
 
 ## Phase 2 — Schema
 
@@ -114,7 +112,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 8 — Web: employees
 
-- [ ] Next.js 15 App Router, shadcn/ui + Tailwind
+- [ ] Next.js 16 App Router, shadcn/ui + Tailwind
 - [ ] Login page
 - [ ] Employee list — server-side pagination, filters, sort. Never ship 10,000 rows to the browser.
 - [ ] Employee detail — salary timeline, band position, comp ratio
@@ -133,7 +131,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 10 — Ask bar (LLM) — optional, feature-flagged
 
-Strictly bounded. See `INCUBYTE-ASSESSMENT-PLAN.md` §10.
+Strictly bounded. See [`docs/design-notes.md`](../docs/design-notes.md) §8.
 
 - [ ] Natural language → **validated query object**, zod-parsed, rejected if it does not fit the schema
 - [ ] The query object runs the same deterministic analytics code paths as the UI
