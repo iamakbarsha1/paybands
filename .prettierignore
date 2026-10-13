@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+coverage
+pnpm-lock.yaml
+*.docx
+next-env.d.ts
+
+# Prose, not code. Prettier pads markdown tables to a fixed width, which turns
+# every later edit to a doc table into a large diff that hides the real change.
+*.md

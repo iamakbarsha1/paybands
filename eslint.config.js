@@ -1,0 +1,80 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import prettier from 'eslint-config-prettier';
+
+export default tseslint.config(
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.next/**',
+      '**/coverage/**',
+      '**/next-env.d.ts',
+    ],
+  },
+
+  js.configs.recommended,
+  tseslint.configs.recommendedTypeChecked,
+
+  {
+    languageOptions: {
+      parserOptions: {
+        projectService: { allowDefaultProject: ['*.ts', '*.js'] },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      // An unawaited promise in a money or database path is a silent data bug.
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
+
+  // packages/core exists so the comp arithmetic is testable with no framework,
+  // database or I/O. Without this rule that boundary is a convention one import
+  // can break. See docs/decisions/decision-log.md, decision 4.
+  {
+    files: ['packages/core/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'fastify',
+                'fastify/*',
+                'next',
+                'next/*',
+                'react',
+                'react-dom',
+                '@prisma/client',
+                'node:fs',
+                'node:net',
+                'node:http',
+                'node:https',
+                'node:child_process',
+              ],
+              message:
+                '@paybands/core stays free of frameworks and I/O. See docs/decisions/decision-log.md, decision 4.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    files: ['**/*.js'],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
+
+  prettier,
+);
