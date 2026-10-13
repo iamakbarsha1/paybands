@@ -4,27 +4,27 @@ The assessment email asked candidates to clarify rather than assume. These went 
 
 ---
 
-**Subject:** Re: Incubyte Engineering Assessment — a few clarifications before I build
+**Subject:** Re: Incubyte Engineering Assessment — 7 clarifications
 
 Hi Titiksha,
 
-Thanks for sending this across. I've read the brief and written a one-page requirements document before starting, as asked. A few things I'd rather confirm than assume — I've noted the default I'm proceeding on for each, so none of these hold me up.
+Requirements doc is written and the build is underway. Seven questions. Each carries the default I'm proceeding on, so none of them block me.
 
-1. **Deadline.** The email mentions submitting in the least possible time but no date. Is there an actual cut-off I should work to?
+1. **Deadline.** Is there a cut-off date?
 
-2. **"Answer questions about how the org pays people."** I'm reading this as analytics and reporting views — pay bands, comp ratio, distribution by country/department/level, outliers, and gender pay gap — rather than a natural-language query interface. The persona is an HR manager replacing spreadsheets, and what she can't do in Excel at 10,000 rows is slice and compare quickly. *Default: reporting views.*
+2. **"Answer questions about how the org pays people."** Reporting views, or a natural-language query interface? _Default: reporting views — pay bands, comp ratio, distribution, outliers, gender pay gap._
 
-3. **Multiple countries and currency.** I'm taking "multiple countries" to mean salaries held in local currencies that need normalising before they can be compared, rather than one reporting currency throughout. Comparing an INR salary against a GBP one without normalising makes pay bands and any gap figure meaningless. *Default: local currency stored, USD derived through an effective-dated rate table, seeded rather than fetched live so tests stay deterministic.*
+3. **Currency.** Salaries in local currencies needing normalisation, or one reporting currency throughout? _Default: local currency stored, USD derived from a seeded rate table._
 
-4. **Salary history.** Is effective-dated salary history expected, or is a current salary per employee enough? None of the reports strictly need history, but adding it later means rewriting the schema, the seed, and every query, whereas adding it now is one table and a date predicate. *Default: effective-dated, with the UI surface kept to a timeline on the employee page.*
+4. **Salary history.** Effective-dated history, or current salary per employee? _Default: effective-dated._
 
-5. **Authentication.** For a single-persona tool, is any auth expected, or is an open demo URL acceptable? The deployment is public and the dataset is 10,000 people's salaries, so shipping it unauthenticated felt like the wrong call regardless. *Default: single login, hashed passwords, protected routes — but no role system, since the brief describes one persona.*
+5. **Auth.** Expected for a single-persona tool, or is an open demo URL fine? _Default: single login, no role system._
 
-6. **Gender pay gap reporting.** This needs a gender field in the seeded data. I'd also suppress the figure for groups below a minimum headcount, since a gap computed over three people is noise presented as a finding. *Default: included, with suppression.*
+6. **Gender pay gap.** Is seeding a gender field acceptable? I'd suppress the figure for groups below a minimum headcount. _Default: included, with suppression._
 
-7. **LLM usage.** The role description lists LLMs, and the brief's wording could be read as natural-language querying. My plan is a small, optional "ask bar" that translates a typed question into a validated query object which then runs the same deterministic analytics code the report pages use — the model never computes a figure and never sees salary rows. Happy to drop it if you'd rather see the tool without it. *Default: built last, behind a flag, so the deployed app works without it.*
+7. **LLM.** The role description lists LLMs. Worth adding a natural-language ask bar, or do you want the tool without it? _Default: included, built last, behind a flag — it translates a question into a validated query and never computes a figure itself._
 
-Thanks — I'll have the repository link across shortly.
+Repository link follows shortly.
 
 Best,
 Akbar Sha
@@ -35,12 +35,12 @@ Akbar Sha
 
 _Recorded here as they come in, along with anything that changed as a result._
 
-| # | Question | Answer | What changed |
-|---|---|---|---|
-| 1 | Deadline | — | — |
-| 2 | Reporting vs NL query | — | — |
-| 3 | Multi-currency | — | — |
-| 4 | Salary history | — | — |
-| 5 | Auth | — | — |
-| 6 | Gender gap | — | — |
-| 7 | LLM | — | — |
+| #   | Question              | Answer | What changed |
+| --- | --------------------- | ------ | ------------ |
+| 1   | Deadline              | —      | —            |
+| 2   | Reporting vs NL query | —      | —            |
+| 3   | Multi-currency        | —      | —            |
+| 4   | Salary history        | —      | —            |
+| 5   | Auth                  | —      | —            |
+| 6   | Gender gap            | —      | —            |
+| 7   | LLM                   | —      | —            |
