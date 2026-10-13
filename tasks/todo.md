@@ -20,7 +20,7 @@ Docs land **before** the first line of product code. The commit order is itself 
 - [x] `docs/design-notes.md` — the planning doc, tightened, duplication removed
 - [x] `docs/data-model.md` — ER diagram + the four modelling calls
 - [x] `docs/glossary.md` — comp ratio, range penetration, midpoint, mean vs median gap
-- [ ] `README.md` — clone → install → seed → run → test _(install/run/test done; seed in phase 3)_
+- [x] `README.md` — clone → install → seed → run → test
 - [x] `.gitignore`, LICENSE, `.editorconfig`
 
 ## Phase 1 — Workspace skeleton
@@ -53,16 +53,19 @@ paybands/
 
 ## Phase 3 — Seed
 
-- [ ] Deterministic RNG with a fixed seed. Reseeding twice gives the same database.
-- [ ] 6 countries, 8 job levels, 10 departments, pay bands per level × country
-- [ ] 10,000 employees with a realistic pyramid — most at L2–L4, few at L7–L8
-- [ ] 3–5 salary records each, effective-dated: hire → merit → promotion
-- [ ] **Planted outliers**: ~40 below band min, ~25 above band max, one department with a real gender gap, one department with a gap over too few people to report
-- [ ] Seeded HR-manager login
-- [ ] Batched inserts — 10k rows one at a time is a slow seed and a bad look
-- [ ] Commit: `feat(db): seed script for 10k employees`, `test(db): seed is deterministic`
+- [x] Deterministic RNG with a fixed seed. Reseeding twice gives the same database — proved on the generator in CI, and by hand at the database level ([decision 24](../docs/decisions/decision-log.md))
+- [x] 6 countries, 8 job levels, 10 departments, 48 pay bands (level × country)
+- [x] 10,000 employees on an L2–L4-heavy pyramid: 900 / 2200 / 2600 / 2100 / 1200 / 600 / 300 / 100
+- [x] 3–5 salary records each, effective-dated: hire → merit → promotion. 34,898 records, 84% of employees with three or more; the rest joined too recently, or left too soon, to have had that many reviews
+- [x] **Planted outliers**: 40 below band min, 25 above band max, Sales carrying an 11.7% gender gap, Legal at 11 people too few to report. Counts are of *active* employees, which is not the same number as a count of rows ([decision 29](../docs/decisions/decision-log.md))
+- [x] Seeded HR-manager login, argon2id with a fixed salt so the row survives a reseed ([decision 25](../docs/decisions/decision-log.md))
+- [x] Batched inserts — 10k rows one at a time is a slow seed and a bad look
+- [x] The seed refuses a database it did not write ([decision 32](../docs/decisions/decision-log.md)) — not in the original plan, added after review
+- [x] Commit: `feat(db): seed script for 10k employees`, `test(db): seed is deterministic`
 
 > The planted outliers matter. An outlier report that finds nothing because the data is uniformly random demos nothing.
+
+Four adversarial reviewers found five cross-field defects that twenty-one passing assertions did not: outliers planted on leavers the reports filter out, 657 active employees reporting to someone who had left, and three reference tables whose validity windows did not cover the dates they had to serve. Each one was two correct halves in two different functions with nothing relating them. Decisions 29 to 32 record the fixes.
 
 ## Phase 4 — Comp maths (`packages/core`) — TDD
 
@@ -174,4 +177,10 @@ Run the skills, fix what they find, commit the reports as artifacts.
 
 ## Review
 
-_Filled in as phases complete._
+An index, not a second copy. Each phase's outcome is recorded in its own section above, and the reasoning in [`docs/decisions/decision-log.md`](../docs/decisions/decision-log.md).
+
+| Phase | Decisions | Worth knowing |
+|---|---|---|
+| 0–1 | 1–14 | Project references dropped; the framework-free boundary is an ESLint rule, not a convention |
+| 2 | 15–21 | The partial unique index is hand-written into the migration, and verified by making the database reject a second open salary record |
+| 3 | 22–32 | Adversarial review found five cross-field defects that twenty-one passing assertions missed |
