@@ -273,3 +273,136 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 
 **Cheaper:** Leave it unpinned. Cheapest to write, and the standard way a take-home is found broken on someone else's machine.
 **Falsifier:** If the chosen deploy host does not offer Node 24, the host wins.
+
+---
+
+### 15. Integer surrogate keys, with natural keys for country and currency
+
+**SOUND** · reversal: expensive, a type change on every key and every foreign key · 2026-10-13 · phase 2 schema
+
+**Decision:** `SERIAL` primary keys everywhere except `country` and `currency`, which are keyed on their ISO codes.
+
+**Evidence:** `docs/data-model.md` ER block — `int id PK` on every table, `string code PK` on the two reference tables.
+
+- **D** — Yes. Every table needs a key; the only question is which.
+- **O** — The most expensive door in the schema, which is why it is settled before the first migration.
+- **U** — No claim that integers are faster. The claim is narrower: ISO 3166 and ISO 4217 codes are stable, globally agreed identifiers, so a surrogate key beside them would be a second name for the same thing.
+- **B** — Every foreign key and every API path parameter.
+- **T** — Gives up UUIDs, so IDs are guessable and sequential. The dataset is behind a login with one role, and `GET /employees/4` leaking the headcount is not a threat this product has.
+
+**Cheaper:** None — a key is mandatory. UUIDs are the alternative, not the cheaper one: wider rows, worse index locality, and unreadable in a seed script.
+**Falsifier:** If employee IDs ever appear in a public URL, sequential keys become an enumeration hole and UUIDs win.
+
+---
+
+### 16. `app_user` has no foreign key to `employee`
+
+**SOUND** · reversal: cheap in the direction that matters — a nullable FK is one migration; removing one after reports read it is not · 2026-10-13 · phase 2 schema
+
+**Decision:** The login identity stays unlinked from the dataset it administers. Stated in a schema comment so it reads as a decision, not an omission.
+
+**Evidence:** `docs/data-model.md:89`. `docs/requirements.md` names one persona and no roles; `apps/api/prisma/schema.prisma` carries the reasoning above `model AppUser`.
+
+- **D** — The link is what would need to justify itself. Nothing in the brief asks who the logged-in user is in the data.
+- **O** — No. Adding a nullable `employee_id` later costs one migration.
+- **U** — No claim made.
+- **B** — None today. The link would reach phase 7 auth and every report that then has to answer "is this row mine".
+- **T** — Gives up "show me my own band position", a feature nobody asked for, and gives up an audit trail tying edits to a person — which the brief also does not ask for.
+
+**Cheaper:** None. This is the cheaper option; the FK is the expensive one.
+**Falsifier:** If a second role appears, or any report must behave differently for the viewer's own row, the link is required and this reverses.
+
+---
+
+### 17. Prisma 7.10.0, not the 8.0.0-rc the registry tags `latest`
+
+**SOUND** · reversal: cheap, a version bump once 8 ships stable · 2026-10-13 · phase 2 schema
+
+**Decision:** `prisma@^7.10.0`. The CLI only — no client generated until phase 3 needs one.
+
+**Evidence:** `npm view prisma dist-tags` has `latest: 8.0.0-rc.22` and `prev: 7.10.0`, while `@prisma/client` latest is `7.10.0`. Taking `latest` would pair a release candidate CLI with a stable client.
+
+- **D** — Yes. The alternative is not "no decision", it is silently running a release candidate.
+- **O** — No. Schema syntax and migration SQL carry across the major version.
+- **U** — Not a claim about 7 being better. The claim is checkable: 8.0.0-rc.22 is a candidate, and the client is not published at 8.
+- **B** — One package in one workspace.
+- **T** — Gives up whatever 8 improves. Nothing in this schema needs it.
+
+**Cheaper:** None — the version has to be pinned either way.
+**Falsifier:** When 8.0.0 ships stable with a matching client, this reverses.
+
+---
+
+### 18. The one-open-salary invariant is a hand-written partial unique index
+
+**SOUND** · reversal: cheap to drop, expensive to recover from — the data it prevents is already wrong by the time anyone notices · 2026-10-13 · phase 2 schema
+
+**Decision:** `CREATE UNIQUE INDEX one_open_salary_per_employee ON salary_record(employee_id) WHERE effective_to IS NULL`, written into the migration by hand because the Prisma schema has no syntax for a `WHERE` clause.
+
+**Evidence:** `apps/api/prisma/migrations/20261013175431_init/migration.sql`. Verified twice against the database: `pg_indexes` reports the predicate, and a probe transaction that inserted a second open record was rejected with a unique violation. A second probe confirmed Prisma does not try to drop the index it cannot see — `migrate dev --create-only` against the unchanged schema produced an empty migration.
+
+- **D** — Yes. Phase 5 closes one record and opens another in one transaction; a half-applied raise is exactly the bug this catches.
+- **O** — No, dropping it is one line.
+- **U** — Not assumed. Both the index and its enforcement were executed against the real database before this entry was written.
+- **B** — Every salary write, which is the point. The hidden cost is that `schema.prisma` is no longer the whole truth, so the index is commented in both the schema and the migration.
+- **T** — Gives up application-level checking, which cannot hold under concurrency, for a constraint that fails loudly at the point of the write.
+
+**Cheaper:** Check for an open record in application code before inserting. Cheaper to write, and it loses the race against a second concurrent raise.
+**Falsifier:** If an employee may ever hold two concurrent open salary records — a secondment, a dual contract — the invariant is wrong, not the implementation.
+
+---
+
+### 19. `salary_record.reason` is a Postgres enum, not free text
+
+**SOUND** · reversal: cheap, `ALTER TABLE ... USING reason::text` · 2026-10-13 · phase 2 schema
+
+**Decision:** `salary_reason` enum with `hire`, `merit`, `promotion`, `market`, matching the treatment `gender` already gets.
+
+**Evidence:** `docs/data-model.md` names the four values in the ER block; `docs/data-model.md` §4 argues the same case for `gender`.
+
+- **D** — Yes. The seed plants a hire → merit → promotion history, and the employee timeline reads the value back.
+- **O** — No. Adding a fifth value is `ALTER TYPE ... ADD VALUE`, and leaving the enum is a cast.
+- **U** — No claim.
+- **B** — The seed and the timeline view.
+- **T** — Gives up free text, so a new reason needs a migration. A free-text column makes the timeline ungroupable and admits `Merit` and `merit` as two reasons.
+
+**Cheaper:** `TEXT` with a `CHECK` constraint. Equivalent safety, and the type is then invisible to the generated client.
+**Falsifier:** If reasons become user-defined, the enum is wrong.
+
+---
+
+### 20. Migrations connect through the direct endpoint, the app through the pooled one
+
+**SOUND** · reversal: cheap, one environment variable · 2026-10-13 · phase 2 schema
+
+**Decision:** `prisma.config.ts` points the CLI at `DIRECT_URL`; `DATABASE_URL` stays pooled for the app. `.env` is gitignored, `.env.example` carries placeholders.
+
+**Evidence:** Prisma 7.10's config type accepts `url` and `shadowDatabaseUrl` only — `directUrl` is a type error, which `tsc` caught once `prisma.config.ts` was added to the API's `include`. Migrations take advisory locks and build a shadow database, neither of which belongs on a pgbouncer connection.
+
+- **D** — Yes. One URL for both works until a migration deadlocks behind the pooler.
+- **O** — No.
+- **U** — Honest limit: the pooled URL did apply the first migration before this was fixed. The separation is Neon's documented guidance, not a failure observed here.
+- **B** — Two environment variables instead of one, in `.env.example` and on the deploy host.
+- **T** — Gives up a single connection string, and with it the chance of a reader assuming one URL is enough.
+
+**Cheaper:** One pooled URL for everything. It worked once; it is the setup that fails under a concurrent migration.
+**Falsifier:** On a Postgres host with no pooler in front of it, the two URLs are the same string and this collapses.
+
+---
+
+### 21. Prisma lives in `apps/api`, not a `packages/db` workspace
+
+**SOUND** · reversal: cheap, a directory move while there is one consumer · 2026-10-13 · phase 2 schema
+
+**Decision:** `apps/api/prisma/` holds the schema and migrations; the generated client is gitignored.
+
+**Evidence:** `packages/core` is barred from importing `@prisma/client` by `eslint.config.js`, and `apps/web` talks to the API over HTTP. That leaves one consumer.
+
+- **D** — A `packages/db` boundary would exist to decouple two consumers. There is one.
+- **O** — No.
+- **U** — No claim.
+- **B** — None. Phase 3's seed and phase 5's repository layer both live in the same package.
+- **T** — Gives up a seam that would let a second service share the schema, which this build does not have.
+
+**Cheaper:** None — this is the cheaper option.
+**Falsifier:** If a second deployable needs the same tables, the package earns its keep.
