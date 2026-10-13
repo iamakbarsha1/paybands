@@ -1,0 +1,16 @@
+{
+  "name": "@paybands/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Comp arithmetic and domain types. No framework imports, no I/O. Consumed as TypeScript source, so there is no build step here.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
