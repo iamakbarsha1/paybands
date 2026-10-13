@@ -157,3 +157,60 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 
 **Cheaper:** Private with an invite. Marginally safer, slower for the reviewer.
 **Falsifier:** If Incubyte prefers submissions kept private, flip it and send an invite.
+
+---
+
+### 9. FX rates stored as integer micros, not a decimal column
+
+**SOUND** · reversal: moderate, one column type and one conversion function, before any migration · 2026-10-13 · data model
+
+**Decision:** `fx_rate.rate_to_usd_micros` as an integer of millionths, replacing the `decimal rate_to_usd` in the first-cut diagram. Conversion is `amount_minor × rate_micros / 1_000_000`, divided once at a documented rounding point.
+
+**Evidence:** Decision 1 above — money is integer minor units precisely because chained division over floats drifts. A float rate multiplied into an integer amount re-introduces the float on the first multiply.
+
+- **D** — Yes. One float left in the chain defeats the reason the rest of the chain is integers.
+- **O** — Not yet; it becomes one the moment a migration is written. That is the argument for settling it now.
+- **U** — No performance claim. Six digits of precision covers every pair in scope by orders of magnitude.
+- **B** — The rate table, the seed, one conversion function. Nothing else reads a rate directly.
+- **T** — Gives up a rate column that reads naturally in a SQL client, and forces the rounding point to be chosen explicitly rather than inherited. The second is really a benefit.
+
+**Cheaper:** `NUMERIC(18,8)` for the rate. Exact in the database, but it arrives in JavaScript as a string and needs parsing into an integer anyway.
+**Falsifier:** A currency pair needing more than six decimal places to round correctly at realistic magnitudes — which would grow the scale, not change the type.
+
+---
+
+### 10. `gender` is a NOT NULL enum with an explicit `undisclosed`
+
+**SOUND** · reversal: cheap now, expensive after the seed exists — making it nullable later means auditing every consumer for a new `NULL` branch · 2026-10-13 · data model
+
+**Decision:** Four values, no `NULL`. `undisclosed` and `other` count toward headcount and are excluded from the two-group gap comparison, with the excluded count in the response.
+
+**Evidence:** `docs/requirements.md` — the gap report is one of five named deliverables, with suppression listed as a feature of it.
+
+- **D** — Yes. `NULL` versus `undisclosed` is the difference between a person the query forgot and a person the query counted and set aside. In a report about counting people fairly, a silently dropped row is the worst available failure.
+- **O** — Not in this direction. The opposite direction lets a `NULL` branch go unwritten in each consumer, and finding them later is an audit rather than a migration.
+- **U** — No measured claim. "Real HR data has gaps" is handled by construction rather than by hope.
+- **B** — Every gap-report path has to say what it does with `other` and `undisclosed`. That is the point.
+- **T** — Adding a fifth value is a migration. Free text avoids that and makes the report ungroupable, which is worse.
+
+**Cheaper:** Nullable `gender` with `COALESCE(gender, 'undisclosed')` at each read site. Identical results when every read site remembers.
+**Falsifier:** Cut the gap report and the column carries no analytical weight; nullable free text would do.
+
+---
+
+### 11. Comp ratio is computed in local currency, never in normalised USD
+
+**SOUND** · reversal: cheap in code, expensive in trust — the kind of error noticed only when a published number moves for no reason · 2026-10-13 · glossary, defining the band-position measures
+
+**Decision:** Comp ratio and range penetration divide a local-currency salary by a local-currency band figure. USD normalisation is used only for cross-country *salary* comparison in the distribution report.
+
+**Evidence:** `docs/data-model.md` §3 — bands are scoped to `(job_level, country)` and denominated in the country's currency.
+
+- **D** — Yes. Converting both sides to USD gives an identical ratio today and a different one tomorrow, because the rate moved. A comp ratio that changes without the pay or the band changing is a bug that reads as a finding.
+- **O** — Cheap to reverse as code. The expensive part is that the wrong version is self-consistent and plausible, so it survives review and is caught by a confused user instead.
+- **U** — Not a measurement question. It follows from the rate cancelling only if both sides are converted on the same date, which no caching schedule guarantees.
+- **B** — Constrains the analytics layer: band lookup returns the employee's own band, and the conversion helper must not be reachable from the comp-ratio path. Worth one test asserting the ratio is stable across rate changes.
+- **T** — Gives up a single uniform "everything in USD" pipeline, which would be simpler to write and wrong.
+
+**Cheaper:** Convert everything to USD once and compute all measures there. One code path instead of two, and it breaks the moment a rate is updated.
+**Falsifier:** Global rather than per-country bands would leave no local band to divide by, making USD the only option.
