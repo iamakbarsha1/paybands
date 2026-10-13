@@ -1,0 +1,25 @@
+{
+  "name": "@paybands/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Next.js App Router UI for the HR manager.",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "start": "next start --port 3000",
+    "typecheck": "next typegen && tsc --noEmit",
+    "build": "next build"
+  },
+  "dependencies": {
+    "@paybands/core": "workspace:*",
+    "next": "^16.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^6.0.3"
+  }
+}
