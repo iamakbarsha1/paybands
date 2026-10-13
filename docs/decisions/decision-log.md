@@ -406,3 +406,138 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 
 **Cheaper:** None — this is the cheaper option.
 **Falsifier:** If a second deployable needs the same tables, the package earns its keep.
+
+---
+
+### 22. The seed generates its own data, with no data-generation dependency
+
+**SOUND** · reversal: cheap, the generator is one file behind one function · 2026-10-14 · phase 3 seed
+
+**Decision:** A twelve-line `mulberry32` PRNG and per-country name tables written into the repo, instead of `@faker-js/faker` or `seedrandom`.
+
+**Evidence:** The seed calls four generators — a float, an integer, a weighted pick and a name — against `@faker-js/faker`'s multi-megabyte locale payload.
+
+- **D** — Yes. Reproducible data is the whole of phase 3.
+- **O** — No. The RNG sits behind `rng.ts` and nothing outside it knows which algorithm runs.
+- **U** — The determinism claim is tested rather than assumed: `apps/api/src/seed/generate.test.ts`.
+- **B** — None. Avoiding a dependency is the point.
+- **T** — Gives up faker's variety. Six country name tables repeat across 10,000 employees, so duplicate full names occur — as they do in a real company.
+
+**Cheaper:** `faker` with `faker.seed(n)`, which is fewer lines here. Rejected because the guarantee would then live in a dependency's changelog instead of in this repo.
+**Falsifier:** If the seed needed addresses, phone numbers and company names as well, hand-written tables stop being the cheaper option.
+
+---
+
+### 23. The seed assigns primary keys itself, then resets every sequence
+
+**SOUND** · reversal: moderate, the ids are woven through every foreign key the generator emits · 2026-10-14 · phase 3 seed
+
+**Decision:** `generate()` assigns `id` on every row. The writer truncates with `RESTART IDENTITY`, inserts the explicit ids, then `setval`s each sequence to `max(id)`.
+
+**Evidence:** `employee.manager_id` and `salary_record.employee_id` point at rows the same run creates (`apps/api/prisma/schema.prisma:116`, `:132`), so the generator cannot emit them without knowing the ids. Postgres does not advance a sequence for an explicitly supplied id, so without `setval` the first `POST /employees` in phase 5 collides on id 1.
+
+- **D** — Yes. Without explicit ids the generator has to round-trip every insert to learn the key it just created.
+- **O** — Moderate. The ids are internal, but every foreign key in the generated output assumes them.
+- **U** — Not assumed. The seed run reads `last_value` back off each sequence.
+- **B** — Every seeded table, plus one `setval` each. It also fixes the insert order: employees are generated highest level first, so a manager's id is always lower than their report's and a chunked insert never references a row a later chunk creates.
+- **T** — Gives up letting the database own key assignment, which is what the schema says it does.
+
+**Cheaper:** Insert without ids and read them back. That is 10,000 round trips, or `RETURNING` over chunks plus a second pass to fill `manager_id`.
+**Falsifier:** If ids were client-generated UUIDs, the sequence problem disappears and so does this entry.
+
+---
+
+### 24. Determinism is proved on the generator, not on the database
+
+**WEAK** · reversal: cheap, a database-level check is additive · 2026-10-14 · phase 3 seed
+
+**Decision:** The committed test calls `generate(SEED)` twice, deep-equals the two results, and asserts a SHA-256 of the canonical output against a constant. No database.
+
+**Evidence:** `.github/workflows/ci.yml` has no database service and no secret, and the test-database harness is phase 5 work (`tasks/todo.md:89`).
+
+- **D** — Yes. "Reseeding twice gives the same database" is a claim, and an untested claim is the thing this log exists to catch.
+- **O** — Cheap. The database-level check is added, not swapped in.
+- **U** — This is the weak part, and it is why the verdict is not SOUND. The test proves the generated rows are identical. It does not run the writer, so "the same database" rests on an argument rather than an assertion: the writer truncates, inserts explicit ids in a fixed order and sets each sequence, so its output is a function of the generator's.
+- **B** — One test file. It runs in CI today, which the alternative does not.
+- **T** — Gives up catching nondeterminism introduced by the writer rather than the generator.
+
+Two assertions rather than one, because they fail on different things. The deep-equal catches nondeterminism inside a single process. The hash catches a generator whose output changed between versions, including the case the deep-equal cannot see: a `Date.now()` read once at module load, equal within a run and different tomorrow.
+
+**Cheaper:** The deep-equal alone. Rejected for exactly that case.
+**Falsifier:** A reseed that produces a different database while this test passes.
+
+---
+
+### 25. The seeded password hash uses a fixed argon2id salt
+
+**SOUND** · reversal: cheap, one line, and only the demo account is affected · 2026-10-14 · phase 3 seed
+
+**Decision:** The HR-manager account is hashed with argon2id against a constant salt, so `app_user` is byte-identical on every reseed.
+
+**Evidence:** argon2id with a random salt writes a different `password_hash` on every run, which breaks the one guarantee phase 3 exists to provide (`tasks/todo.md:56`). The account is a demo login whose password ships in the README (`tasks/todo.md:168`).
+
+- **D** — Yes. Without it the determinism test either fails or has to exclude a table, and an excluded table is a hole in the claim.
+- **O** — Cheap. The constant is one line in the seed.
+- **U** — No claim. The salt is fixed only for rows this script writes; phase 7 hashes real passwords with a random salt.
+- **B** — One row, in one script, never in the application.
+- **T** — Gives up per-row salt uniqueness on the seeded account. A fixed salt matters because one precomputed table then cracks many accounts. There is one account, and its password is printed in the README.
+
+**Cheaper:** Hard-code a pre-computed hash string and skip the dependency here. Rejected because a hash constant cannot be read, cannot be rotated without an external tool, and phase 7 needs argon2 for verification regardless.
+**Falsifier:** If seeded accounts ever become real user accounts, the fixed salt is wrong and the seed should stop creating logins at all.
+
+---
+
+### 26. The planted outliers are hard-coded, not drawn from the distribution
+
+**SOUND** · reversal: cheap, the counts are constants · 2026-10-14 · phase 3 seed
+
+**Decision:** Exact counts — 40 employees below their band minimum, 25 above the maximum — a named department carrying a fixed gender pay multiplier, and a named department with a headcount hard-coded small enough to be suppressed.
+
+**Evidence:** `tasks/todo.md:65` — "An outlier report that finds nothing because the data is uniformly random demos nothing." A department's gender split drawn from a 44/52/2/2 distribution over 400 people lands within a point of the mean, so the gap report would have nothing to show.
+
+- **D** — Yes. Phases 6 and 9 build an outlier report and a gap report, and both need something to find.
+- **O** — Cheap.
+- **U** — Not a claim about the data. It is the data.
+- **B** — Phases 4 and 6 can assert exact numbers instead of ranges, which is the second reason to plant rather than hope.
+- **T** — Gives up any pretence that the dataset is a sample of something. It is a fixture, and the suppressed department is a fixture twice over.
+
+**Cheaper:** Widen the salary spread and let outliers fall out. Rejected because the count is then unknown, so no test can assert it.
+**Falsifier:** If the seed were used to measure detection sensitivity rather than to demonstrate the reports, planted values would bias the result.
+
+---
+
+### 27. A terminated employee keeps an open salary record
+
+**SOUND** · reversal: moderate, a backfill plus every join written against the invariant · 2026-10-14 · phase 3 seed
+
+**Decision:** `termination_date` marks a leaver and the final `salary_record` keeps `effective_to = NULL` regardless. Every employee has exactly one open record.
+
+**Evidence:** The partial unique index permits zero or one open record per employee, so closing the last record on termination is legal (`apps/api/prisma/migrations/20261013175431_init/migration.sql`). Rejected anyway: a report joining the current salary row would then drop every leaver silently, which is the failure `gender` being non-null exists to prevent (`docs/data-model.md` §4).
+
+- **D** — Yes. It is the invariant every current-salary join relies on, and it is cheaper to state once than to defend at each join.
+- **O** — Moderate. Changing it later means a backfill and a revisit of every query written against it.
+- **U** — No claim.
+- **B** — Every analytics query. They exclude leavers on `termination_date`, never on the absence of a salary row.
+- **T** — Gives up reading an open record as "currently being paid". It means the last record in force, and the employee row says whether they are still here.
+
+**Cheaper:** Close the last record on the termination date. One line, reads more naturally, and makes a left join the only safe way to read a salary.
+**Falsifier:** If a report ever needs payroll liability rather than headcount compensation, "open" has to mean "still paying" and this is wrong.
+
+---
+
+### 28. The seed truncates and re-inserts with no wrapping transaction
+
+**SOUND** · reversal: cheap, one `$transaction` call · 2026-10-14 · phase 3 seed
+
+**Decision:** `TRUNCATE ... RESTART IDENTITY CASCADE`, then batched `createMany`, with no enclosing transaction.
+
+**Evidence:** The run writes roughly 48,000 rows across eight tables. A failed run leaves a partial database, and the next run's `TRUNCATE` erases it, so re-running is the recovery.
+
+- **D** — The transaction would exist to protect against a partial seed. A partial seed is fixed by running the seed again.
+- **O** — Cheap.
+- **U** — Honest limit: the pooler-timeout argument below is Neon's documented behaviour, not something measured here.
+- **B** — None. The seed is a development command, and phase 13 runs it once against a fresh branch.
+- **T** — Gives up atomicity. A seed interrupted halfway leaves the database inconsistent until it is re-run.
+
+**Cheaper:** None — this is the cheaper option. Wrapping twenty-five statements in a transaction through a connection pooler adds an idle-in-transaction window and a timeout to tune.
+**Falsifier:** If the seed were ever run against a database serving traffic, the gap between the truncate and the last insert is a visibly empty database and the transaction earns its place.
