@@ -2,6 +2,7 @@ node_modules
 dist
 .next
 coverage
+generated
 pnpm-lock.yaml
 *.docx
 next-env.d.ts

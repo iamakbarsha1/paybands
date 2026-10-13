@@ -9,6 +9,9 @@ export default tseslint.config(
       '**/dist/**',
       '**/.next/**',
       '**/coverage/**',
+      // Prisma's client, regenerated from the schema on every install. Linting
+      // it reports on code nobody here writes or can fix.
+      '**/generated/**',
       '**/next-env.d.ts',
     ],
   },

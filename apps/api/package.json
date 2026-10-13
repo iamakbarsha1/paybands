@@ -10,10 +10,15 @@
     "typecheck": "tsc --noEmit",
     "build": "tsup",
     "db:migrate": "prisma migrate dev",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "db:seed": "prisma db seed",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
     "@paybands/core": "workspace:*",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "fastify": "^5.12.7"
   },
   "devDependencies": {
