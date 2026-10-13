@@ -5,6 +5,9 @@ build/
 coverage/
 *.tsbuildinfo
 
+# Prisma client output. Generated from the schema, so it is not source.
+generated/
+
 .env
 .env.*
 !.env.example

@@ -1,0 +1,184 @@
+// Shapes argued in docs/data-model.md. Four calls are load-bearing here:
+// money is BIGINT minor units, effective dating uses NULL for "current",
+// pay bands are scoped to level AND country, and gender is a non-null enum.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Four values, no NULL. NULL lets an employee vanish from a headcount, which is
+// the worst failure available in a report whose purpose is counting people
+// fairly. See docs/data-model.md §4.
+enum Gender {
+  female
+  male
+  other
+  undisclosed
+
+  @@map("gender")
+}
+
+enum SalaryReason {
+  hire
+  merit
+  promotion
+  market
+
+  @@map("salary_reason")
+}
+
+model Currency {
+  code      String @id @db.VarChar(3)
+  name      String
+  symbol    String
+  /// Decimal places: 2 for USD, 0 for JPY. Divides amount_minor for display.
+  minorUnit Int    @map("minor_unit")
+
+  countries     Country[]
+  fxRates       FxRate[]
+  salaryRecords SalaryRecord[]
+  payBands      PayBand[]
+
+  @@map("currency")
+}
+
+model Country {
+  code         String @id @db.VarChar(2)
+  name         String
+  currencyCode String @map("currency_code") @db.VarChar(3)
+
+  currency  Currency   @relation(fields: [currencyCode], references: [code])
+  employees Employee[]
+  payBands  PayBand[]
+
+  @@map("country")
+}
+
+model FxRate {
+  id Int @id @default(autoincrement())
+
+  currencyCode String @map("currency_code") @db.VarChar(3)
+  /// One unit of this currency in USD millionths. Integer, like every other
+  /// money column: conversion is amount_minor * rate_micros / 1_000_000,
+  /// divided once at a documented rounding point.
+  rateToUsdMicros Int @map("rate_to_usd_micros")
+
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@index([currencyCode, effectiveFrom])
+  @@map("fx_rate")
+}
+
+model Department {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  employees Employee[]
+
+  @@map("department")
+}
+
+model JobLevel {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  /// Sort order. L1 is 1.
+  rank Int
+
+  employees Employee[]
+  payBands  PayBand[]
+
+  @@map("job_level")
+}
+
+model Employee {
+  id           Int    @id @default(autoincrement())
+  employeeCode String @unique @map("employee_code")
+  firstName    String @map("first_name")
+  lastName     String @map("last_name")
+  email        String @unique
+  gender       Gender
+
+  hireDate DateTime @map("hire_date") @db.Date
+  /// NULL = active.
+  terminationDate DateTime? @map("termination_date") @db.Date
+
+  countryCode  String @map("country_code") @db.VarChar(2)
+  departmentId Int    @map("department_id")
+  jobLevelId   Int    @map("job_level_id")
+  managerId    Int?   @map("manager_id")
+
+  country       Country        @relation(fields: [countryCode], references: [code])
+  department    Department     @relation(fields: [departmentId], references: [id])
+  jobLevel      JobLevel       @relation(fields: [jobLevelId], references: [id])
+  manager       Employee?      @relation("ReportsTo", fields: [managerId], references: [id])
+  reports       Employee[]     @relation("ReportsTo")
+  salaryRecords SalaryRecord[]
+
+  @@index([countryCode, departmentId, jobLevelId])
+  @@index([terminationDate])
+  @@map("employee")
+}
+
+model SalaryRecord {
+  id         Int @id @default(autoincrement())
+  employeeId Int @map("employee_id")
+
+  /// Integer minor units. 1,250,000.00 INR is 125000000.
+  amountMinor  BigInt @map("amount_minor")
+  currencyCode String @map("currency_code") @db.VarChar(3)
+
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  /// NULL = in force. One open record per employee, enforced by a partial
+  /// unique index in the migration — Prisma schema cannot express the WHERE.
+  effectiveTo DateTime? @map("effective_to") @db.Date
+
+  reason SalaryReason
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@index([employeeId, effectiveFrom])
+  @@map("salary_record")
+}
+
+model PayBand {
+  id          Int    @id @default(autoincrement())
+  jobLevelId  Int    @map("job_level_id")
+  countryCode String @map("country_code") @db.VarChar(2)
+
+  minMinor     BigInt @map("min_minor")
+  midMinor     BigInt @map("mid_minor")
+  maxMinor     BigInt @map("max_minor")
+  currencyCode String @map("currency_code") @db.VarChar(3)
+
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+
+  jobLevel JobLevel @relation(fields: [jobLevelId], references: [id])
+  country  Country  @relation(fields: [countryCode], references: [code])
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@index([jobLevelId, countryCode])
+  @@map("pay_band")
+}
+
+/// The login identity, deliberately unlinked from Employee. Joining the two
+/// raises "can she see her own row differently", and there is no role system to
+/// answer it. See docs/data-model.md.
+model AppUser {
+  id           Int    @id @default(autoincrement())
+  email        String @unique
+  /// argon2id.
+  passwordHash String @map("password_hash")
+  displayName  String @map("display_name")
+
+  @@map("app_user")
+}

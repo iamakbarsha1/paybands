@@ -8,7 +8,9 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "build": "tsup"
+    "build": "tsup",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@paybands/core": "workspace:*",
@@ -16,6 +18,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
+    "prisma": "^7.10.0",
     "tsup": "^8.5.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
