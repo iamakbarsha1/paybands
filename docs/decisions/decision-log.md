@@ -82,6 +82,8 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 **Cheaper:** `apps/api/src/domain/`, with the web app importing types through one generated API-contract file.
 **Falsifier:** If by phase 9 the web app imports real functions from core — formatting, band-position maths for a chart — this upgrades to SOUND. If it only ever imports types, the package should collapse and this log should say so.
 
+**Update, phase 1:** Still WEAK; one objection answered. The enforcement point no longer holds — `eslint.config.js` fails the build if anything in `packages/core` imports Fastify, Next, React, Prisma or an I/O builtin. The untested claim stands: both apps import *values* (`apps/web/app/page.tsx:1`, `apps/api/src/app.ts:2`), but they are enum tables, not the arithmetic the package exists for. The phase 9 test remains.
+
 ---
 
 ### 5. Effective-dated salary history, when no report needs it
@@ -214,3 +216,60 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 
 **Cheaper:** Convert everything to USD once and compute all measures there. One code path instead of two, and it breaks the moment a rate is updated.
 **Falsifier:** Global rather than per-country bands would leave no local band to divide by, making USD the only option.
+
+---
+
+### 12. TypeScript project references dropped; `packages/core` is consumed as source
+
+**SOUND** · reversal: cheap, one `exports` field and two build configs · 2026-10-13 · phase 1 scaffolding, reversing the project-references line in `tasks/todo.md`
+
+**Decision:** `packages/core` has no build step. `exports` points at `./src/index.ts`, and the consumers compile it — the API through tsup's `noExternal`, the web app through Next's `transpilePackages`.
+
+**Evidence:** `packages/core/package.json:9`, `apps/api/tsup.config.ts:10`, `apps/web/next.config.ts:5`. Verified end to end: `node apps/api/dist/index.js` serves `/reference` with values defined in `packages/core/src/domain.ts`.
+
+- **D** — No. Project references solve build *ordering* — making core's `.d.ts` files exist before a consumer typechecks. With no emitted artifact there is nothing to order.
+- **O** — Cheap either way while core exports one module, and it is `private: true`, so no external consumer can be surprised.
+- **U** — Verified, not assumed. `pnpm typecheck` runs three projects with no ordering constraint and no prior build, from a clean `node_modules`.
+- **B** — One line of config in each consumer, and core cannot be published as-is. Saves `composite`, `declaration`, a `references` array per package, a `tsc -b` solution file, and the `noEmit`-versus-`composite` conflict a Next.js app in the solution would create.
+- **T** — Gives up incremental cross-package builds, independent publishing, and declaration-emit validation of core's public type surface. The first two are unwanted; the third is a real gap, accepted because phase 4 is test-first on core and a build step between edit and test is friction TDD punishes daily.
+
+**Cheaper:** None. The next-simplest option is the one dropped — strictly more configuration for an ordering guarantee no longer needed.
+**Falsifier:** If core ever needs publishing, or a consumer appears that cannot compile TypeScript source, it needs a real build and the references come back.
+
+---
+
+### 13. TypeScript 6, not the TypeScript 7 the registry marks latest
+
+**SOUND** · reversal: cheap, a version bump once the linter's peer range moves · 2026-10-13 · phase 1 toolchain
+
+**Decision:** `typescript@^6.0.3` across the workspace, with `typescript-eslint@^8.71.2` providing type-aware linting.
+
+**Evidence:** `typescript-eslint@8.71.2` declares `typescript: ">=4.8.4 <6.1.0"`. TypeScript 7.0.2 is outside it. `package.json:24`.
+
+- **D** — Yes. The alternative is not "no decision", it is silently running an unsupported compiler under the linter.
+- **O** — No. Nothing uses TypeScript 7 syntax, so the bump is one line when the peer range moves.
+- **U** — Not a claim that 6 is better than 7. The claim is narrower and checkable: 7 is outside a declared peer range this repo depends on.
+- **B** — None. Everything typechecks on 6.0.3 from a clean install.
+- **T** — Gives up TypeScript 7's compiler speed, the headline reason to want it. At three small packages that typecheck in seconds, speed buys nothing and type-aware linting buys a lot — `no-floating-promises` in particular, in a codebase about to grow database transactions.
+
+**Cheaper:** Take TypeScript 7 and drop to the non-type-checked lint config. Simpler, and it removes the rules that find defects rather than style.
+**Falsifier:** When `typescript-eslint` widens its peer range to include 7, this reverses. Nothing else holds it.
+
+---
+
+### 14. Node 24, not the Node 22 the planning notes named
+
+**SOUND** · reversal: cheap, one line in `.nvmrc` and one in `engines` · 2026-10-13 · phase 1 toolchain
+
+**Decision:** `.nvmrc` pins `24`, `engines.node` is `>=24`, and CI reads the version from `.nvmrc` rather than hardcoding it.
+
+**Evidence:** `.nvmrc`, `package.json:11`, `.github/workflows/ci.yml:22`. Next 16 requires `>=20.9.0`, so the floor is not what forces this.
+
+- **D** — Yes, in that *some* version has to be pinned. The real alternative is leaving it unpinned, and then CI, the deploy host and a reviewer's machine each pick their own.
+- **O** — No.
+- **U** — No claim that 24 is faster. The claim is about support window: 24 is the LTS line with the longer remaining life, which matters for a repo cloned months from now.
+- **B** — CI, the deploy target, and anyone cloning. Contained by one source of truth — CI reads `.nvmrc`, so the two cannot drift.
+- **T** — Gives up Node 22 compatibility, which nothing needs, and gives up matching the newer version this was developed on. So the full CI sequence was replayed against Node 24 before the workflow was committed.
+
+**Cheaper:** Leave it unpinned. Cheapest to write, and the standard way a take-home is found broken on someone else's machine.
+**Falsifier:** If the chosen deploy host does not offer Node 24, the host wins.
