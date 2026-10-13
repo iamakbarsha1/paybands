@@ -43,13 +43,13 @@ paybands/
 
 ## Phase 2 — Schema
 
-- [ ] Neon Postgres project, connection string in `.env.example` (never a real one in git)
-- [ ] Prisma schema: country, currency, fx_rate, department, job_level, employee, salary_record, pay_band, app_user
-- [ ] Money columns as `BigInt` minor units. No floats, no `Decimal` for storage.
-- [ ] Indexes: `salary_record(employee_id, effective_from)`, `employee(country_code, department_id, job_level_id)`, `pay_band(job_level_id, country_code)`
-- [ ] Partial unique index: one open salary record per employee (`effective_to IS NULL`)
-- [ ] Migration committed, not just `db push`
-- [ ] Commit: `feat(db): schema and migrations`
+- [x] Neon Postgres project, connection string in `.env.example` (never a real one in git) — two URLs, pooled for the app and direct for migrations ([decision 20](../docs/decisions/decision-log.md))
+- [x] Prisma schema: country, currency, fx_rate, department, job_level, employee, salary_record, pay_band, app_user
+- [x] Money columns as `BigInt` minor units. No floats, no `Decimal` for storage.
+- [x] Indexes: `salary_record(employee_id, effective_from)`, `employee(country_code, department_id, job_level_id)`, `pay_band(job_level_id, country_code)`
+- [x] Partial unique index: one open salary record per employee (`effective_to IS NULL`) — hand-written into the migration, verified against the database ([decision 18](../docs/decisions/decision-log.md))
+- [x] Migration committed, not just `db push`
+- [x] Commit: `feat(db): schema and migrations`
 
 ## Phase 3 — Seed
 
