@@ -466,6 +466,8 @@ Two assertions rather than one, because they fail on different things. The deep-
 **Cheaper:** The deep-equal alone. Rejected for exactly that case.
 **Falsifier:** A reseed that produces a different database while this test passes.
 
+**Run by hand, 2026-10-14:** three consecutive seeds, with an `md5(string_agg(row::text ORDER BY id))` taken over `employee`, `salary_record`, `pay_band` and `app_user` between runs. All four digests identical, and `employee_id_seq` and `salary_record_id_seq` both back at their row counts. That is the argument executed rather than asserted, including the fixed argon2 salt holding `app_user` steady. The verdict stays WEAK because this ran on a laptop against one database and CI still cannot.
+
 ---
 
 ### 25. The seeded password hash uses a fixed argon2id salt
@@ -504,6 +506,8 @@ Two assertions rather than one, because they fail on different things. The deep-
 **Cheaper:** Widen the salary spread and let outliers fall out. Rejected because the count is then unknown, so no test can assert it.
 **Falsifier:** If the seed were used to measure detection sensitivity rather than to demonstrate the reports, planted values would bias the result.
 
+**Amended by decision 29:** 40 and 25 are counts of *active* employees. As first written the outliers were drawn without regard to `termination_date`, so the reports saw 37 and 23 while this entry said 40 and 25.
+
 ---
 
 ### 27. A terminated employee keeps an open salary record
@@ -541,3 +545,83 @@ Two assertions rather than one, because they fail on different things. The deep-
 
 **Cheaper:** None — this is the cheaper option. Wrapping twenty-five statements in a transaction through a connection pooler adds an idle-in-transaction window and a timeout to tune.
 **Falsifier:** If the seed were ever run against a database serving traffic, the gap between the truncate and the last insert is a visibly empty database and the transaction earns its place.
+
+---
+
+### 29. The seed's planted properties are defined over active employees, not over row counts
+
+**SOUND** · reversal: cheap now, expensive once a report asserts a number · 2026-10-14 · phase 3 seed, after adversarial review
+
+**Decision:** Outliers are planted only on employees with no `termination_date`, and an employee's manager must also be active. The counts decisions 26 and 27 promise are counts the reports will actually return.
+
+**Evidence:** Decisions 26 and 27 were each implemented correctly and were jointly broken. Measured against the seeded database before the fix: 40 employees below their band minimum and 25 above, but **37 and 23 among active employees**. Separately, 711 employees reported to a leaver, 657 of them still active, and 152 to someone who left before they were hired. Two independent reviewers found the first; both found the second.
+
+- **D** — Yes. Decision 26's entire stated benefit is that phases 4 and 6 can assert exact numbers, and the number the report returns was not the number in the log.
+- **O** — Cheap today, because no report exists yet. The moment phase 6 asserts whatever the report happens to return, the wrong number is frozen into a test and the fixture is the thing that has to change.
+- **U** — Not a claim. Both figures were read out of the database.
+- **B** — Two filters in the generator, and every count in phases 4, 6 and 9.
+- **T** — Gives up the simpler reading that a planted count is a count of rows. It is a count of rows a report can see, which is a different number whenever a filter stands between the two.
+
+**Cheaper:** Record both numbers, 40 total and 37 active, and let each consumer pick. Rejected because a fixture with two counts for one property invites the reader to assert the wrong one, which is the failure this entry exists to close.
+**Falsifier:** If a report is ever written that deliberately includes leavers, its counts will not match these and the fixture needs a second planted set rather than a redefinition.
+
+---
+
+### 30. A reference table is dated from before the earliest row it has to serve
+
+**SOUND** · reversal: cheap, two constants · 2026-10-14 · phase 3 seed, after adversarial review
+
+**Decision:** `fx_rate` and `pay_band` both take their earliest `effective_from` from `HIRE_FROM`, the same constant that bounds the generated salary history.
+
+**Evidence:** Measured before the fix: 975 salary records had no FX rate in force on their own `effective_from`, and 18,062 had no pay band — **845 of those being current records**. `docs/data-model.md` §2 instructs every reader to resolve a row with `effective_from <= $date AND (effective_to IS NULL OR effective_to > $date)`. Applying that documented predicate to `pay_band` in phase 6 would have dropped 845 current employees out of the comp-ratio report and returned no error. All four reviewers found an instance of this; none found all three.
+
+- **D** — Yes. The document tells the next person to use a predicate that silently returns nothing.
+- **O** — Cheap. Two constants.
+- **U** — Not a claim. Both gaps were counted in SQL.
+- **B** — Every point-in-time lookup in phases 4, 6 and 11, and it removes a whole class of empty result that would have been debugged as a query bug.
+- **T** — Gives up the tidiness of a band dated from the FX period it was priced in. There is one band generation, so the alternative was a band that exists for a quarter of the history it is compared against.
+
+**Cheaper:** Leave it and let each report use `effective_to IS NULL` instead of the as-of predicate. That works today and contradicts the document, which is worse than a wrong constant.
+**Falsifier:** If pay bands ever get a second generation with real historical values, the earliest one is dated by its own data and this collapses into that.
+
+---
+
+### 31. The hire-date skew is computed with `sqrt`, not `Math.pow`
+
+**SOUND** · reversal: cheap, one expression · 2026-10-14 · phase 3 seed, after adversarial review
+
+**Decision:** `x ** 0.75` is written `Math.sqrt(Math.sqrt(x * x * x))`.
+
+**Evidence:** Every other number driving the generator is exact: `mulberry32` is integer-only, money is `BigInt`, and the draw helpers floor an exact product. `Math.pow` with a fractional exponent was the sole exception, and ECMA-262 does not require it to be bit-identical between engine versions. `Math.sqrt` is the one case every engine takes from the hardware IEEE 754 instruction.
+
+- **D** — Yes, because decision 24 sells byte-identical output on every machine and this was the only operation that could break it.
+- **O** — Cheap.
+- **U** — Honest limit: no drift was observed. `.nvmrc` pins one Node version, so the hazard is latent rather than demonstrated. The reviewer who raised it said so.
+- **B** — One expression.
+- **T** — Gives up the clearer `** 0.75`, which is why the line carries a comment.
+
+**Cheaper:** A comment recording the assumption and nothing else. Rejected because decision 24 claims a guarantee, and a comment saying the guarantee might not hold is not a guarantee.
+**Falsifier:** If the committed hash ever holds across two engine versions that disagree on `Math.pow`, the substitution bought nothing.
+
+---
+
+### 32. The seed refuses a database it did not write, and gates on content rather than on the connection string
+
+**SOUND** · reversal: cheap, one query and one environment variable · 2026-10-14 · phase 3 seed, after adversarial review
+
+**Decision:** Before the truncate, the writer reads `max(id)` from `employee`. No table or no rows means a fresh branch and it proceeds. `EMPLOYEE_COUNT` means the database is this seed's own output and it proceeds. Any other value is refused, printed, and overridable with `PAYBANDS_SEED_FORCE=1`.
+
+**Evidence:** `index.ts` reads one environment variable and nine lines later issues `TRUNCATE ... RESTART IDENTITY CASCADE` across all nine tables. Nothing distinguishes `apps/api/.env` from a file holding a real connection string, and phase 13 puts a production Neon branch into exactly that position. Decision 28's own falsifier names this case.
+
+- **D** — Yes. The operation is irreversible, has no transaction by decision 28, and phase 13 creates the second database that makes the mistake possible.
+- **O** — Cheap. One query and one variable.
+- **U** — The cost claim is reasoned, not measured: one scalar `SELECT` against a run that already spends about twenty seconds writing 48,000 rows.
+- **B** — One function in the writer. It must tolerate a missing table, because `max(id)` on an absent relation raises `42P01` rather than returning `NULL`, and a branch with no migrations applied is the case the guard exists to wave through.
+- **T** — Gives up the certainty that the seed always runs. It can now refuse, and the refusal has to carry the reason and the override or it becomes a mystery.
+
+The test for proportionality is that the guard never speaks during ordinary work. Both normal paths, a first seed on a fresh branch and a reseed, pass silently. The accident it is built for is not someone pointing the seed at a company's HR database. It is phase 5 shipping `POST /employees`, production taking one write, and someone reseeding: `max(id)` becomes 10001 and the guard fires. Decision 23 already names that row as the reason `setval` exists.
+
+Blind spot, stated rather than discovered later: a production branch holding only this seed's output is truncated and refilled. That is deliberate, because refilling it reproduces a byte-identical database.
+
+**Cheaper:** A separate `SEED_DATABASE_URL` that the writer reads instead of `DATABASE_URL`. Rejected because its failure mode is "the seed does not run", which people fix by copying `DATABASE_URL` into it, and a guard that trains you to defeat it is worse than none. A database-name check cannot work either: both Neon URLs end in `/paybands`, and a branch is identified by its endpoint host.
+**Falsifier:** If `EMPLOYEE_COUNT` is ever changed, a legitimate reseed of the previous dataset is refused once. If that friction recurs, gate on a marker row rather than a count.
