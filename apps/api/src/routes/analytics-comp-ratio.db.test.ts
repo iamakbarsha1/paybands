@@ -1,8 +1,8 @@
 import { compRatio, money } from '@paybands/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { buildApp, type App } from '../app';
-import { hasTestDatabase, resetAndSeed, testPrisma } from '../testing/db';
+import type { App } from '../app';
+import { hasTestDatabase, resetAndSeed, testApp, testPrisma } from '../testing/db';
 import { FIXTURE, LANDMARKS } from '../testing/fixture';
 
 interface Summary {
@@ -75,7 +75,7 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/comp-ratio', () => {
   beforeAll(async () => {
     prisma = testPrisma();
     await resetAndSeed(prisma);
-    app = buildApp({ prisma });
+    app = testApp(prisma);
     byCountry = (await read('country')).body;
   });
 

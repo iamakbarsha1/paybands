@@ -1,8 +1,8 @@
 import { DEFAULT_COMP_RATIO_THRESHOLD } from '@paybands/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { buildApp, type App } from '../app';
-import { hasTestDatabase, resetAndSeed, testPrisma } from '../testing/db';
+import type { App } from '../app';
+import { hasTestDatabase, resetAndSeed, testApp, testPrisma } from '../testing/db';
 import { FIXTURE, LANDMARKS } from '../testing/fixture';
 
 interface Row {
@@ -57,7 +57,7 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/outliers', () => {
   beforeAll(async () => {
     prisma = testPrisma();
     await resetAndSeed(prisma);
-    app = buildApp({ prisma });
+    app = testApp(prisma);
     const response = await app.inject({ method: 'GET', url: '/analytics/outliers' });
     body = response.json<Body>();
   });

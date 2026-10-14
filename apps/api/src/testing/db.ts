@@ -1,6 +1,7 @@
 import { hash } from '@node-rs/argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
+import { buildApp, type App } from '../app';
 import { ARGON2ID } from '../auth/password';
 import { FIXTURE, FIXTURE_PASSWORD } from './fixture';
 
@@ -55,6 +56,14 @@ function assertDisposable(url: string): void {
     `Refusing to truncate "${database}": the test database name has to end in _test. ` +
       'Set PAYBANDS_TEST_FORCE=1 to override.',
   );
+}
+
+/** Fixed, so a test can forge a cookie the app will accept and then prove it rejects it. */
+export const TEST_SESSION_SECRET = 'paybands-test-session-secret-0123456789';
+
+/** One place that knows what a test app is built with, rather than twelve call sites. */
+export function testApp(prisma: PrismaClient): App {
+  return buildApp({ prisma, sessionSecret: TEST_SESSION_SECRET });
 }
 
 export function testPrisma(): PrismaClient {

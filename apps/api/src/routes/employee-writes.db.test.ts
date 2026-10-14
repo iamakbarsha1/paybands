@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { buildApp, type App } from '../app';
-import { hasTestDatabase, resetAndSeed, testPrisma } from '../testing/db';
+import type { App } from '../app';
+import { hasTestDatabase, resetAndSeed, testApp, testPrisma } from '../testing/db';
 import { FIXTURE } from '../testing/fixture';
 
 const JOINER = {
@@ -23,7 +23,7 @@ describe.skipIf(!hasTestDatabase())('writing an employee', () => {
 
   beforeAll(() => {
     prisma = testPrisma();
-    app = buildApp({ prisma });
+    app = testApp(prisma);
   });
 
   // Every test here changes rows, so each starts from the fixture rather than from its predecessor.

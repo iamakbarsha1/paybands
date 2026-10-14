@@ -21,7 +21,8 @@ function signed(value: string): string {
 
 function setCookieHeader(headers: Record<string, unknown>): string {
   const raw = headers['set-cookie'];
-  return Array.isArray(raw) ? String(raw[0]) : String(raw ?? '');
+  if (Array.isArray(raw)) return String(raw[0]);
+  return typeof raw === 'string' ? raw : '';
 }
 
 describe.skipIf(!hasTestDatabase())('session auth', () => {

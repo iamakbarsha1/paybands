@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { buildApp } from '../app';
-import { hasTestDatabase, resetAndSeed, testPrisma } from './db';
+import { hasTestDatabase, resetAndSeed, testApp, testPrisma } from './db';
 import { FIXTURE, LANDMARKS } from './fixture';
 
 /**
@@ -103,7 +102,7 @@ describe.skipIf(!hasTestDatabase())('the integration harness', () => {
   });
 
   it('serves the app through inject while the database is loaded', async () => {
-    const app = buildApp({ prisma });
+    const app = testApp(prisma);
     const response = await app.inject({ method: 'GET', url: '/health' });
     expect(response.statusCode).toBe(200);
     await app.close();

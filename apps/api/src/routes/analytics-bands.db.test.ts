@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { buildApp, type App } from '../app';
-import { hasTestDatabase, resetAndSeed, testPrisma } from '../testing/db';
+import type { App } from '../app';
+import { hasTestDatabase, resetAndSeed, testApp, testPrisma } from '../testing/db';
 import { FIXTURE, LANDMARKS } from '../testing/fixture';
 
 interface BandRow {
@@ -25,7 +25,7 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/bands', () => {
   beforeAll(async () => {
     prisma = testPrisma();
     await resetAndSeed(prisma);
-    app = buildApp({ prisma });
+    app = testApp(prisma);
     bands = (await read()).bands;
   });
 

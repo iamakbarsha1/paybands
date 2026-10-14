@@ -1,3 +1,4 @@
+import cookie from '@fastify/cookie';
 import Fastify, {
   type FastifyBaseLogger,
   type FastifyInstance,
@@ -10,6 +11,7 @@ import { z, type ZodError, type ZodType } from 'zod';
 import { CURRENCY_CODES, GENDERS, SALARY_REASONS } from '@paybands/core';
 import type { PrismaClient } from '../generated/prisma/client';
 import { registerAnalyticsRoutes } from './routes/analytics';
+import { registerAuthRoutes } from './routes/auth';
 import { registerEmployeeRoutes } from './routes/employees';
 
 /**
@@ -37,6 +39,11 @@ export interface BuildAppOptions {
    * so there is no build of this app that is missing half its routes.
    */
   prisma: PrismaClient;
+  /**
+   * Signs the session cookie. Required for the same reason the client is: an app built
+   * without it would answer every request as a stranger and look like a routing bug.
+   */
+  sessionSecret: string;
 }
 
 /** Strict, so `?departmant=2` is a 400 rather than a filter that quietly did nothing. */
@@ -83,6 +90,9 @@ export function buildApp(options: BuildAppOptions): App {
     }),
   );
 
+  app.register(cookie, { secret: options.sessionSecret });
+
+  registerAuthRoutes(app, options.prisma);
   registerEmployeeRoutes(app, options.prisma);
   registerAnalyticsRoutes(app, options.prisma);
 
