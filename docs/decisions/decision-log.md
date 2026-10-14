@@ -766,3 +766,22 @@ The empty-group arm is decision 38's rule applied again, not a new call: an empt
 
 **Cheaper:** Return the raw double and let the report round. Rejected because it puts the rounding in the API layer and the web layer, which is two places to disagree, and because a `number` salary in a package whose first decision was integer minor units invites exactly the arithmetic decision 1 removed.
 **Falsifier:** Percentiles computed only in SQL, with the TypeScript version deleted. Then Postgres owns the rounding and this entry is about a function that no longer exists.
+
+---
+
+### 40. `outliers` takes salaries already joined to their band, and reports four buckets rather than three
+
+**SOUND** · reversal: cheap in code, moderate once PB-046 shapes a response around it · 2026-10-14 · phase 4, `outliers`
+
+**Decision:** The signature is `outliers(rows, threshold)` where each row is `{ employeeId, salary, band }`, not the `outliers(employees, bands, threshold)` that `tasks/user-stories-PART1.md:325` sketched. It returns four lists — below band, above band, comp ratio out of range, and no band — and the threshold is a required argument with an exported default rather than a built-in constant.
+
+**Evidence:** The band join is by `(job_level_id, country_code)` and is effective-dated: `apps/api/prisma/schema.prisma:167` gives `pay_band` its own `effective_from`/`effective_to` pair, and decision 35 made those windows half-open. Doing that lookup inside `packages/core` would mean passing an as-of date into a function about outliers and reimplementing a window scan that `apps/api/src/seed/generate.ts:300` already does with a map and that SQL does with a join. `docs/glossary.md:30` names the three conditions and says they are "reported separately rather than merged into one count", and `glossary.md:23` requires an employee with no band to stay visible rather than being dropped — a three-bucket return has nowhere to put them, so they would vanish from the one report whose job is finding people the bands do not cover. `glossary.md:38` says the comp-ratio threshold "is shown in the report rather than buried in the code", which an argument satisfies and a module constant does not.
+
+- **D** — Yes for all three. The fourth bucket is the only one that would otherwise be a silent drop, which is the phase 3 failure class exactly: outliers planted on employees the reports filter out.
+- **O** — Cheap now. PB-046 serialises this shape into a response body, which is where it becomes a wire contract.
+- **U** — No measurement. The claim is that the join is effective-dated, which the schema states rather than implies.
+- **B** — `outliers` and PB-046. The caller owns the active-employee filter too, which is deliberate: decision 29 defines the planted counts over active employees, and a pure function has no opinion about who is still employed.
+- **T** — Gives up a one-call "give me the outliers for this company" convenience. The caller now joins and filters first, which is the work SQL was going to do anyway.
+
+**Cheaper:** Keep the sketched signature and pass a band table plus an as-of date. Rejected on the evidence above: it moves an effective-dated lookup into the one package that is not allowed to know about the database, to save the caller a join it is already making.
+**Falsifier:** Bands made non-effective-dated — one current row per level and country. Then the lookup is a plain map and belongs wherever it is cheapest, including here.
