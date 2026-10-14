@@ -259,13 +259,14 @@ export type EmployeePatch = { readonly [K in keyof EmployeeInput]?: EmployeeInpu
  * else holds, a reference to a row that is not there, or an employee that is not there.
  * Returned rather than thrown, so the Prisma error codes stay inside this file.
  */
+export interface WriteFailure {
+  readonly ok: false;
+  readonly reason: 'duplicate' | 'unknown-reference' | 'not-found';
+  readonly detail: string;
+}
+
 export type EmployeeWriteResult =
-  | { readonly ok: true; readonly employee: EmployeeListRow }
-  | {
-      readonly ok: false;
-      readonly reason: 'duplicate' | 'unknown-reference' | 'not-found';
-      readonly detail: string;
-    };
+  { readonly ok: true; readonly employee: EmployeeListRow } | WriteFailure;
 
 export async function createEmployee(
   prisma: PrismaClient,
@@ -321,7 +322,7 @@ function midnight(day: string): Date {
   return new Date(`${day}T00:00:00.000Z`);
 }
 
-function failure(error: unknown): EmployeeWriteResult {
+function failure(error: unknown): WriteFailure {
   const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : null;
 
   if (code === 'P2002') {
@@ -351,4 +352,103 @@ function fieldsIn(error: unknown): string {
   if (Array.isArray(target)) return target.join(', ');
   if (typeof target === 'string') return target;
   return 'a field';
+}
+
+export interface SalaryChangeInput {
+  readonly amountMinor: bigint;
+  readonly currencyCode: string;
+  readonly effectiveFrom: string;
+  readonly reason: SalaryReason;
+}
+
+export type SalaryChangeResult =
+  | { readonly ok: true; readonly record: SalaryRecordDetail }
+  | {
+      readonly ok: false;
+      readonly reason:
+        'duplicate' | 'unknown-reference' | 'not-found' | 'out-of-order' | 'currency-mismatch';
+      readonly detail: string;
+    };
+
+/**
+ * Closing the open record and opening the next one is one transaction, because a history with
+ * two open records — or none — is worse than a failed raise. The partial unique index is the
+ * backstop underneath it (decision 18): two of these landing together, the loser hits P2002.
+ */
+export async function recordSalaryChange(
+  prisma: PrismaClient,
+  employeeId: number,
+  input: SalaryChangeInput,
+): Promise<SalaryChangeResult> {
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (employee === null) return { ok: false, reason: 'not-found', detail: 'no such employee' };
+
+  const open = await prisma.salaryRecord.findFirst({ where: { employeeId, effectiveTo: null } });
+  const effectiveFrom = midnight(input.effectiveFrom);
+
+  if (open !== null) {
+    if (effectiveFrom <= open.effectiveFrom) {
+      return {
+        ok: false,
+        reason: 'out-of-order',
+        detail: `the open record starts ${day(open.effectiveFrom)}; a new one has to start after it`,
+      };
+    }
+    if (open.currencyCode !== input.currencyCode) {
+      return {
+        ok: false,
+        reason: 'currency-mismatch',
+        detail: `this timeline is in ${open.currencyCode}, not ${input.currencyCode}`,
+      };
+    }
+  }
+
+  const writes = [
+    ...(open === null
+      ? []
+      : [
+          prisma.salaryRecord.update({
+            where: { id: open.id },
+            data: { effectiveTo: effectiveFrom },
+          }),
+        ]),
+    prisma.salaryRecord.create({
+      data: {
+        employeeId,
+        amountMinor: input.amountMinor,
+        currencyCode: input.currencyCode,
+        effectiveFrom,
+        effectiveTo: null,
+        reason: input.reason,
+      },
+    }),
+  ];
+
+  try {
+    const written = await prisma.$transaction(writes);
+    const created = written.at(-1);
+    if (created === undefined) throw new Error('the transaction wrote nothing');
+
+    return {
+      ok: true,
+      record: {
+        id: created.id,
+        amountMinor: created.amountMinor,
+        currencyCode: created.currencyCode,
+        effectiveFrom: day(created.effectiveFrom),
+        effectiveTo: created.effectiveTo === null ? null : day(created.effectiveTo),
+        reason: created.reason,
+      },
+    };
+  } catch (error) {
+    const failed = failure(error);
+    // Only one unique constraint can fire here, and naming it beats echoing a column list.
+    return failed.reason === 'duplicate'
+      ? {
+          ok: false,
+          reason: 'duplicate',
+          detail: 'another raise opened a record for this employee first',
+        }
+      : failed;
+  }
 }

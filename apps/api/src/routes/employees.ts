@@ -1,6 +1,7 @@
 import {
   compRatio,
   GENDERS,
+  isCurrencyCode,
   money,
   rangePenetration,
   SALARY_REASONS,
@@ -15,6 +16,7 @@ import {
   EMPLOYEE_STATUSES,
   findEmployeeDetail,
   listEmployees,
+  recordSalaryChange,
   updateEmployee,
   type EmployeeCursor,
   type MoneyRow,
@@ -134,12 +136,29 @@ const patchBody = createBody
   .partial()
   .refine((patch) => Object.keys(patch).length > 0, { message: 'name at least one field' });
 
-/** The three states a write can fail in, each with the status the client should read. */
+/** Each state a write can fail in, with the status the client should read. */
 const WRITE_FAILURE_STATUS = {
   duplicate: 409,
   'unknown-reference': 400,
   'not-found': 404,
+  'out-of-order': 400,
+  'currency-mismatch': 400,
 } as const;
+
+const salaryBody = z.strictObject({
+  // A string, for the same reason the response sends one: this is money in minor units.
+  amountMinor: z.string().regex(/^[1-9]\d*$/, 'minor units, a positive whole number'),
+  currencyCode: z.string().refine(isCurrencyCode, 'unknown currency'),
+  effectiveFrom: day,
+  reason: z.enum(SALARY_REASONS),
+});
+
+const salaryRecordResponse = moneySchema.extend({
+  id: z.number(),
+  effectiveFrom: z.string(),
+  effectiveTo: z.string().nullable(),
+  reason: z.enum(SALARY_REASONS),
+});
 
 function onWire(row: MoneyRow): { amountMinor: string; currencyCode: string } {
   return { amountMinor: row.amountMinor.toString(), currencyCode: row.currencyCode };
@@ -240,6 +259,34 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
       const written = await updateEmployee(prisma, request.params.id, request.body);
       return written.ok
         ? reply.send(written.employee)
+        : reply.code(WRITE_FAILURE_STATUS[written.reason]).send({ message: written.detail });
+    },
+  );
+
+  app.post(
+    '/employees/:id/salary',
+    {
+      schema: {
+        params: idParam,
+        body: salaryBody,
+        response: {
+          201: salaryRecordResponse,
+          400: badRequest,
+          404: notFound,
+          409: notFound,
+        },
+      },
+    },
+    async (request, reply) => {
+      const written = await recordSalaryChange(prisma, request.params.id, {
+        amountMinor: BigInt(request.body.amountMinor),
+        currencyCode: request.body.currencyCode,
+        effectiveFrom: request.body.effectiveFrom,
+        reason: request.body.reason,
+      });
+
+      return written.ok
+        ? reply.code(201).send({ ...written.record, ...onWire(written.record) })
         : reply.code(WRITE_FAILURE_STATUS[written.reason]).send({ message: written.detail });
     },
   );
