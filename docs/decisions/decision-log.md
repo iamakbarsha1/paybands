@@ -846,3 +846,56 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Call `schema.parse()` at the top of each handler and skip the hooks. Rejected because it validates requests only, leaves responses unchecked against the schema the ticket requires, and repeats itself once per route — which is where the two halves start to disagree.
 **Falsifier:** An OpenAPI document entering scope. Then the library generates it from the same schemas and earns its peers.
+
+---
+
+### 44. The integration test database is a local Postgres container, not a Neon branch
+
+**SOUND** · reversal: cheap, the harness reads a connection string and does not care who serves it · 2026-10-15 · phase 5, `PB-042`
+
+**Decision:** `docker-compose.yml` runs Postgres 17 locally and CI runs the same image as a service container. The harness reads `TEST_DATABASE_URL`. A Neon test branch is not used.
+
+**Evidence:** `.github/workflows/ci.yml` has no `services` block and no secrets; a Neon branch would need `TEST_DATABASE_URL` added as a repository secret before CI could run a single integration test, and secrets are not reviewable from a public repo. Nothing in the API is Neon-specific: `apps/api/prisma.config.ts` passes a plain connection string, the adapter is `@prisma/adapter-pg` over TCP, and the one hand-written index (decision 18) is standard Postgres.
+
+- **D** — The database has to exist for the ticket; the question was only who hosts it.
+- **O** — Cheap. One environment variable points the harness anywhere, including a Neon branch, without touching test code.
+- **U** — Not a speed claim. The claim is that no Neon feature is in use, read off the adapter and the migration.
+- **B** — Adds `docker-compose.yml`, a CI service block, and a Docker requirement for contributors who want to run the DB tests.
+- **T** — Gives up testing against the pooled endpoint and Neon's connection limits. Phase 13 deploys against Neon, and that gap is real; it belongs to the deploy smoke test, not to every test run.
+
+**Cheaper:** A Neon test branch, created once by the MCP server. Rejected because CI cannot use it without a secret, which would leave the integration tests skipped in the only place a reviewer sees them run.
+**Falsifier:** The API starting to depend on a Neon feature — the pooler's session behaviour, or branch-level time travel. Then the harness has to run where that feature exists.
+
+### 45. The harness seeds about fifty explicit employees, not the shipped ten thousand
+
+**WEAK** · reversal: cheap, the fixture is one file the tests import · 2026-10-15 · phase 5, `PB-042`
+
+**Decision:** The harness reuses the seed's reference tables verbatim — `CURRENCIES`, `COUNTRIES`, `FX_RATES`, `DEPARTMENTS`, `JOB_LEVELS`, `buildPayBands()` from `src/seed/reference.ts` — and writes about fifty hand-specified employees with their salary records, instead of running `src/seed/index.ts`.
+
+**Evidence:** `reference.ts:54` fixes `EMPLOYEE_COUNT` at 10,000; `generate.ts:131` derives every level's headcount from that constant, and `generate.ts:291` plants 40 below-band and 25 above-band outliers as absolute counts. Scaling those to fifty people by parameter would change how much randomness is consumed, which is exactly the trap `lessons.md` records under "A number measured on one RNG stream does not compare to one measured on another" — and `generate.test.ts` asserts a hash of the generated data.
+
+- **D** — Needs to exist only because the shipped seed is too slow to run per test run; the reference half does not, which is why it is imported rather than retyped.
+- **O** — Cheap. Tests that assert on fixture rows would need rewriting, nothing else.
+- **U** — "Too slow" is the untested half of this. The shipped seed's own timing print is the measurement, and it has not been taken against a local container.
+- **B** — One new file plus whatever phase 5 and 6 tests assert against it. It is a second description of the domain's shape, and it has to track every schema change the shipped seed tracks.
+- **T** — Gives up the planted statistical properties at their shipped scale: a 11.7% Sales gap measured over hundreds of people, and a Legal department of exactly 11. The fixture has to plant equivalents at fifty, and they will be coarser.
+
+**Cheaper:** Truncate and run the shipped seed once per test run, with the suite asserting the properties `generate.test.ts` already names. Rejected on run time, which is the claim above that has not been measured. If a full seed against a local container turns out to cost seconds rather than minutes, this entry is the one to revisit.
+**Falsifier:** A measured full-seed time against the container under about twenty seconds, or a report test that needs seed-scale statistics to be meaningful. Either makes the second fixture the more expensive option.
+
+### 46. Database tests skip themselves without `TEST_DATABASE_URL`, and CI refuses to let them
+
+**SOUND** · reversal: cheap, two guards in one setup file · 2026-10-15 · phase 5, `PB-042`
+
+**Decision:** Tests needing Postgres live in `*.db.test.ts` and skip when `TEST_DATABASE_URL` is unset, so `pnpm test` stays green for a reviewer with no Docker. The global setup throws instead of skipping when `CI` is set.
+
+**Evidence:** `.github/workflows/ci.yml` runs `pnpm test` as its only test gate. Without the CI guard, a service container that failed to start, or an environment variable that was renamed, would produce a green build with the integration tests silently absent.
+
+- **D** — The skip exists for the clone-and-run path the README promises; the throw exists because a skip in CI is indistinguishable from a pass.
+- **O** — Cheap both ways.
+- **U** — No claim beyond the two code paths.
+- **B** — One vitest project, one global setup file, one `skipIf` per database test file.
+- **T** — Gives up local enforcement: a contributor can commit a change that breaks the SQL and see green until CI runs.
+
+**Cheaper:** No skip — let the tests fail without a database. Rejected because it makes a fresh clone fail its own test command, which is the first thing a reviewer runs.
+**Falsifier:** The harness starting the container itself, through testcontainers or a global setup that shells out to compose. Then there is no unset case to skip on.
