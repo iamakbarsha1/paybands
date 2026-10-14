@@ -55,3 +55,21 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-15.** Three tests this session were written against code that already existed: the seed-to-outlier agreement, the seed-to-gap agreement, and the measures-agree file. All three passed on the first run, which proves nothing about whether they can fail.
 
 **Rule:** when a test cannot be watched failing because its subject already works, break the subject on purpose and watch it fail then. Record the mutation and its effect in the commit body — "clamping range penetration at 0 turns two of these red" is evidence; "added tests" is not.
+
+## A strict response schema on a status the framework also produces turns a 400 into a 500
+
+**2026-10-15.** `POST /employees` declared `400: z.strictObject({ message })`. Our own 400s matched it; Fastify's validation errors did not, because their body also carries `statusCode` and `error`. The serializer parsed the framework's error against our schema, threw, and the client got a 500 for sending a bad body — the one case the schema existed to describe.
+
+**Rule:** only declare a response schema for a status this code is the sole author of. Where the framework answers on the same status, the schema has to be loose enough for its shape, or absent.
+
+## A mutation that changes no behaviour is a void experiment, not a missing test
+
+**2026-10-15.** To check that the PATCH tests would catch a handler overwriting fields it was not given, the conditional spreads in `toColumns` were replaced with unconditional assignments. Every test stayed green. The tests were not blind: Prisma reads an explicit `undefined` exactly as an absent key, so the mutant behaved identically. A second mutation — rewriting the hire date unconditionally — turned exactly one test red.
+
+**Rule:** before reading a surviving mutant as a coverage gap, check the mutant actually changes observable behaviour. Framework normalisation makes a void experiment look like a blind test.
+
+## Simplifying for the runtime can break the type checker, and the type checker was the reason
+
+**2026-10-15.** Following the void mutation above, those conditional spreads looked like ceremony worth deleting. Deleting them compiled under no flag we run: with `exactOptionalPropertyTypes`, a property explicitly set to `undefined` is not assignable to an optional property, so the spread form is what makes the object type-check. The tests passed the whole time; only `pnpm typecheck` disagreed.
+
+**Rule:** when a construct looks redundant, run the full gate before removing it — redundant at runtime and redundant to the compiler are different claims. Record which of the two a construct serves when it serves only one.
