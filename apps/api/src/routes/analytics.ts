@@ -3,6 +3,7 @@ import {
   DEFAULT_COMP_RATIO_THRESHOLD,
   money,
   outliers,
+  payGap,
   percentiles,
   toUsd,
   type FxRate,
@@ -17,11 +18,13 @@ import {
   bandOccupancy,
   compRatioSlices,
   fxRates,
+  genderedSalaries,
   salaryDistribution,
   SLICE_GROUPS,
   type BandRow,
   type CompRatioSlice,
   type DistributionSlice,
+  type GenderedSlice,
   type OutlierCandidate,
 } from '../repositories/analytics';
 
@@ -116,6 +119,31 @@ const outliersResponse = z.strictObject({
 /** Strict and empty: the report takes no parameters, so a parameter is a mistake worth a 400. */
 const noQuery = z.strictObject({});
 
+/**
+ * Policy, and the same floor the seed plants Legal under. A gap over three people is noise
+ * with a decimal point on it (`docs/glossary.md`), so the figure is withheld rather than
+ * published small. It travels in the response because a refusal has to be readable.
+ */
+const MIN_GROUP_SIZE = 5;
+
+const gapSchema = z.strictObject({
+  headcount: z.number(),
+  compared: z.strictObject({ male: z.number(), female: z.number() }),
+  excluded: z.number(),
+  suppressed: z.boolean(),
+  reason: z.string().nullable(),
+  meanGap: z.number().nullable(),
+  medianGap: z.number().nullable(),
+});
+
+const payGapResponse = z.strictObject({
+  groupBy: z.enum(SLICE_GROUPS),
+  currency: z.literal('USD'),
+  minGroupSize: z.number(),
+  overall: gapSchema,
+  groups: z.array(gapSchema.extend({ key: z.string(), name: z.string() })),
+});
+
 export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
   app.get(
     '/analytics/bands',
@@ -208,6 +236,46 @@ export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
         aboveBand: listed(found.aboveBand, byId),
         compRatioOutOfRange: listed(found.compRatioOutOfRange, byId),
         noBand: listed(found.noBand, byId),
+      };
+    },
+  );
+
+  app.get(
+    '/analytics/pay-gap',
+    { schema: { querystring: sliceQuery, response: { 200: payGapResponse } } },
+    async (request) => {
+      const [slices, rates] = await Promise.all([
+        genderedSalaries(prisma, request.query.groupBy),
+        fxRates(prisma),
+      ]);
+      const onDate = new Date();
+
+      // A slice can span countries, and `payGap` refuses a mixed-currency one, so the
+      // conversion is the caller's to make. The gap is a ratio, so USD is a common scale
+      // rather than a claim about anyone's pay.
+      const gapOf = (people: GenderedSlice['people']) =>
+        payGap(
+          people.map((person) => ({
+            gender: person.gender,
+            salary: toUsd(
+              money(person.salary.amountMinor, person.salary.currencyCode),
+              rates,
+              onDate,
+            ),
+          })),
+          { minGroupSize: MIN_GROUP_SIZE },
+        );
+
+      return {
+        groupBy: request.query.groupBy,
+        currency: 'USD' as const,
+        minGroupSize: MIN_GROUP_SIZE,
+        overall: gapOf(slices.flatMap((slice) => [...slice.people])),
+        groups: slices.map((slice) => ({
+          key: slice.key,
+          name: slice.name,
+          ...gapOf(slice.people),
+        })),
       };
     },
   );

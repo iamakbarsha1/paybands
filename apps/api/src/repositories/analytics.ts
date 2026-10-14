@@ -1,4 +1,4 @@
-import { isCurrencyCode, type FxRate } from '@paybands/core';
+import { isCurrencyCode, type FxRate, type Gender } from '@paybands/core';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { MoneyRow } from './employees';
 
@@ -252,6 +252,61 @@ export async function compRatioSlices(
     key: group.key,
     name: group.name,
     headcount: headcounts.get(group.key) ?? 0,
+    people: people.get(group.key) ?? [],
+  }));
+}
+
+export interface GenderedSlice {
+  readonly key: string;
+  readonly name: string;
+  /** Everyone still here with pay on record. `payGap` counts its own exclusions from this. */
+  readonly people: readonly { readonly gender: Gender; readonly salary: MoneyRow }[];
+}
+
+/**
+ * The slice with its genders attached, so the headcount and the exclusions come from the same
+ * split rather than two queries that could disagree (decision 41). Unpaid people are left out
+ * here because a gap is computed over salaries; everyone else is counted, compared or not.
+ */
+export async function genderedSalaries(
+  prisma: PrismaClient,
+  groupBy: SliceGroup,
+): Promise<GenderedSlice[]> {
+  const [groups, employees] = await Promise.all([
+    groupRows(prisma, groupBy),
+    prisma.employee.findMany({
+      where: { terminationDate: null },
+      select: {
+        gender: true,
+        countryCode: true,
+        departmentId: true,
+        jobLevelId: true,
+        salaryRecords: {
+          where: { effectiveTo: null },
+          select: { amountMinor: true, currencyCode: true },
+        },
+      },
+    }),
+  ]);
+
+  const people = new Map<string, { gender: Gender; salary: MoneyRow }[]>();
+
+  for (const employee of employees) {
+    const open = employee.salaryRecords[0];
+    if (open === undefined) continue;
+
+    const key = sliceKey(employee, groupBy);
+    const held = people.get(key) ?? [];
+    held.push({
+      gender: employee.gender,
+      salary: { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
+    });
+    people.set(key, held);
+  }
+
+  return groups.map((group) => ({
+    key: group.key,
+    name: group.name,
     people: people.get(group.key) ?? [],
   }));
 }
