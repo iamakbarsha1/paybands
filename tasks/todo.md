@@ -117,7 +117,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 ## Phase 8 — Web: employees
 
 - [x] Next.js 16 App Router, shadcn/ui + Tailwind, one layout with nav and one API client
-- [ ] Login page
+- [x] Login page, with a session gate in front of the app and sign out in the nav
 - [ ] Employee list — server-side pagination, filters, sort. Never ship 10,000 rows to the browser.
 - [ ] Employee detail — salary timeline, band position, comp ratio
 - [ ] Add / edit employee, add salary change
@@ -168,7 +168,7 @@ Run the skills, fix what they find, commit the reports as artifacts.
 - [ ] Neon production branch, migrations applied, seed run
 - [ ] API deployed (Render or Fly), health check green
 - [ ] Web deployed on Vercel, pointed at the API
-- [ ] CORS locked to the web origin, not `*`
+- [x] CORS locked to the web origin, not `*` — pulled forward in phase 8, since the browser cannot reach the API without it
 - [ ] README: live URL, demo credentials, two-minute local setup
 - [ ] `docs/ai-usage.md` — the prompts, the skills, and where AI output was rejected and why
 - [ ] Demo video, 3–5 minutes, scripted in `docs/demo.md`
