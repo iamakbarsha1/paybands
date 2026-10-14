@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 42 of 90 done (phases 0–4 complete, phase 5 under way).
+**Progress** — 43 of 90 done (phases 0–4 complete, phase 5 under way).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -18,7 +18,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 2 Schema                | 6       | 6    |
 | 3 Seed                  | 10      | 10   |
 | 4 Comp maths            | 8       | 8    |
-| 5 API employees         | 7       | 5    |
+| 5 API employees         | 7       | 6    |
 | 6 API analytics         | 6       | 0    |
 | 7 Auth                  | 5       | 0    |
 | 8 Web employees         | 6       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-039 | Create and edit an employee             | next   | —          |
+| PB-040 | Record a salary change                  | next   | —          |
 
 ---
 
@@ -106,8 +106,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-036 | Fastify app with zod at the boundary             | done   | —              |
 | PB-037 | `GET /employees`                                 | done   | —              |
 | PB-038 | `GET /employees/:id`                             | done   | —              |
-| PB-039 | Create and edit an employee                      | next   | —              |
-| PB-040 | Record a salary change                           | todo   | PB-039         |
+| PB-039 | Create and edit an employee                      | done   | —              |
+| PB-040 | Record a salary change                           | next   | —              |
 | PB-041 | Repository layer separate from handlers          | done   | —              |
 | PB-042 | Integration test harness against a real database | done   | —              |
 
