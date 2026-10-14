@@ -118,7 +118,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 - [x] Next.js 16 App Router, shadcn/ui + Tailwind, one layout with nav and one API client
 - [x] Login page, with a session gate in front of the app and sign out in the nav
-- [ ] Employee list — server-side pagination, filters, sort. Never ship 10,000 rows to the browser.
+- [x] Employee list — server-side pagination, filters, sort, all of it in the query string. Never ship 10,000 rows to the browser.
 - [ ] Employee detail — salary timeline, band position, comp ratio
 - [ ] Add / edit employee, add salary change
 - [ ] Loading and empty states that are not an afterthought
