@@ -1,8 +1,11 @@
 import { hash } from '@node-rs/argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
+import { sign } from '@fastify/cookie';
+import type { InjectOptions } from 'fastify';
 import { buildApp, type App } from '../app';
 import { ARGON2ID } from '../auth/password';
+import { SESSION_COOKIE, SESSION_TTL_MS } from '../auth/session';
 import { FIXTURE, FIXTURE_PASSWORD } from './fixture';
 
 /**
@@ -61,9 +64,34 @@ function assertDisposable(url: string): void {
 /** Fixed, so a test can forge a cookie the app will accept and then prove it rejects it. */
 export const TEST_SESSION_SECRET = 'paybands-test-session-secret-0123456789';
 
-/** One place that knows what a test app is built with, rather than twelve call sites. */
-export function testApp(prisma: PrismaClient): App {
-  return buildApp({ prisma, sessionSecret: TEST_SESSION_SECRET });
+/** A live session for the fixture's one user, as the `Cookie` header a browser would send. */
+export function sessionCookie(): string {
+  const value = `${FIXTURE.appUsers[0]?.id ?? 1}.${Date.now() + SESSION_TTL_MS}`;
+  return `${SESSION_COOKIE}=${encodeURIComponent(sign(value, TEST_SESSION_SECRET))}`;
+}
+
+/**
+ * One place that knows what a test app is built with, rather than twelve call sites.
+ *
+ * Signed in by default: every route is behind the guard (`PB-051`), and a test of the band
+ * report should be reading bands rather than logging in first. The cookie is forged with the
+ * test secret and attached to every `inject` that does not set one of its own, so a test can
+ * still send a cookie of its own and have it win. Pass `{ signedIn: false }` for the tests
+ * whose subject is the guard.
+ */
+export function testApp(prisma: PrismaClient, options: { signedIn?: boolean } = {}): App {
+  const app = buildApp({ prisma, sessionSecret: TEST_SESSION_SECRET });
+  if (options.signedIn === false) return app;
+
+  const cookie = sessionCookie();
+
+  // Fastify's `inject` is overloaded past what a wrapper can restate, so the casts say
+  // "same function, one header added" rather than reimplementing every signature.
+  const inject = app.inject.bind(app) as (options: InjectOptions) => unknown;
+  app.inject = ((options_: InjectOptions) =>
+    inject({ ...options_, headers: { cookie, ...options_.headers } })) as typeof app.inject;
+
+  return app;
 }
 
 export function testPrisma(): PrismaClient {

@@ -45,7 +45,7 @@ describe.skipIf(!hasTestDatabase())('the guard', () => {
   beforeAll(async () => {
     prisma = testPrisma();
     await resetAndSeed(prisma);
-    app = testApp(prisma);
+    app = testApp(prisma, { signedIn: false });
 
     const login = await app.inject({
       method: 'POST',

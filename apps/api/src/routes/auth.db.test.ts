@@ -32,7 +32,7 @@ describe.skipIf(!hasTestDatabase())('session auth', () => {
   beforeAll(async () => {
     prisma = testPrisma();
     await resetAndSeed(prisma);
-    app = testApp(prisma);
+    app = testApp(prisma, { signedIn: false });
   });
 
   afterAll(async () => {

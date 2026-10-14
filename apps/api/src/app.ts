@@ -10,6 +10,7 @@ import Fastify, {
 import { z, type ZodError, type ZodType } from 'zod';
 import { CURRENCY_CODES, GENDERS, SALARY_REASONS } from '@paybands/core';
 import type { PrismaClient } from '../generated/prisma/client';
+import { registerGuard } from './auth/guard';
 import { registerAnalyticsRoutes } from './routes/analytics';
 import { registerAuthRoutes } from './routes/auth';
 import { registerEmployeeRoutes } from './routes/employees';
@@ -91,6 +92,7 @@ export function buildApp(options: BuildAppOptions): App {
   );
 
   app.register(cookie, { secret: options.sessionSecret });
+  registerGuard(app);
 
   registerAuthRoutes(app, options.prisma);
   registerEmployeeRoutes(app, options.prisma);
