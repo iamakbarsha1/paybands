@@ -107,9 +107,9 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 - [x] Argon2id password hashing ([decision 49](../docs/decisions/decision-log.md))
 - [x] Session cookie: httpOnly, secure, sameSite strict ([decision 50](../docs/decisions/decision-log.md))
-- [ ] Every route except `/health` and `/auth/login` behind the guard
+- [x] Every route except `/health`, `/auth/login` and `/auth/logout` behind the guard
 - [ ] Rate limit on login
-- [ ] Tests: unauthenticated request is rejected on every protected route
+- [x] Tests: unauthenticated request is rejected on every protected route, enumerated from Fastify's own route table
 - [ ] Commit: `feat(api): session auth`
 
 > One role, no RBAC. One persona in the brief; a permissions matrix would serve a user that does not exist.
