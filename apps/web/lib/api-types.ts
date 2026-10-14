@@ -57,6 +57,15 @@ export interface EmployeeDetail {
   readonly rangePenetration: number | null;
 }
 
+export interface ReferenceData {
+  readonly currencies: readonly CurrencyCode[];
+  readonly genders: readonly Gender[];
+  readonly salaryReasons: readonly SalaryReason[];
+  readonly countries: readonly { readonly code: string; readonly name: string }[];
+  readonly departments: readonly { readonly id: number; readonly name: string }[];
+  readonly jobLevels: readonly { readonly id: number; readonly name: string }[];
+}
+
 export interface SessionUser {
   readonly user: { readonly id: number; readonly email: string; readonly displayName: string };
 }
