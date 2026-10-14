@@ -13,6 +13,25 @@ jobs:
   check:
     runs-on: ubuntu-latest
 
+    # The integration tests run against this, not a mock and not a cloud branch (decision 44).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: paybands
+          POSTGRES_PASSWORD: paybands
+          POSTGRES_DB: paybands_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U paybands -d paybands_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      TEST_DATABASE_URL: postgresql://paybands:paybands@localhost:5432/paybands_test
+
     steps:
       - uses: actions/checkout@v7
 

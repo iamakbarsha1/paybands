@@ -1,0 +1,25 @@
+# The database the integration tests run against. Postgres 17, the version Neon serves,
+# so the SQL under test is the SQL that ships (decision 44).
+#
+#   docker compose up -d
+#   export TEST_DATABASE_URL='postgresql://paybands:paybands@localhost:5433/paybands_test'
+#   pnpm test
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: paybands-test-db
+    environment:
+      POSTGRES_USER: paybands
+      POSTGRES_PASSWORD: paybands
+      POSTGRES_DB: paybands_test
+    ports:
+      # 5433, so a Postgres already running on the default port keeps it.
+      - '5433:5432'
+    # The data is rebuilt by every test run, so it never needs to survive the container.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U paybands -d paybands_test']
+      interval: 2s
+      timeout: 3s
+      retries: 15
