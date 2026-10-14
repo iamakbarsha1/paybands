@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { FastifyInstance } from 'fastify';
-import { buildApp } from './app';
+import { buildApp, type App } from './app';
+import { z } from 'zod';
 
-let app: FastifyInstance;
+const brokenResponseSchema = z.object({ count: z.number() });
+
+let app: App;
 
 beforeAll(() => {
   app = buildApp();
@@ -39,5 +41,50 @@ describe('an unknown route', () => {
     const response = await app.inject({ method: 'GET', url: '/nope' });
 
     expect(response.statusCode).toBe(404);
+  });
+});
+
+describe('the zod boundary', () => {
+  it('rejects an unknown query parameter rather than ignoring it', async () => {
+    const response = await app.inject({ method: 'GET', url: '/reference?departmant=2' });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('names the offending field in the error, so a typo is findable', async () => {
+    const response = await app.inject({ method: 'GET', url: '/reference?departmant=2' });
+
+    expect(JSON.stringify(response.json())).toMatch(/departmant/);
+  });
+
+  it('leaves /health open to a probe that adds its own query string', async () => {
+    const response = await app.inject({ method: 'GET', url: '/health?probe=k8s' });
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('serialises the response through its schema, dropping nothing the schema declares', async () => {
+    const response = await app.inject({ method: 'GET', url: '/reference' });
+
+    expect(Object.keys(response.json<object>()).sort()).toEqual([
+      'currencies',
+      'genders',
+      'salaryReasons',
+    ]);
+  });
+
+  it('answers 500 rather than a malformed body when a handler breaks its response schema', async () => {
+    const broken = buildApp();
+    // The cast is the point: without it the type provider refuses to compile this
+    // handler, which is the compile-time half of what the 500 proves at runtime.
+    broken.get(
+      '/broken',
+      { schema: { response: { 200: brokenResponseSchema } } },
+      () => ({ count: 'not a number' }) as unknown as { count: number },
+    );
+    const response = await broken.inject({ method: 'GET', url: '/broken' });
+    await broken.close();
+
+    expect(response.statusCode).toBe(500);
   });
 });
