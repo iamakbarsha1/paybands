@@ -1,6 +1,7 @@
 import { hash } from '@node-rs/argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
+import { ARGON2ID } from '../auth/password';
 import { FIXTURE, FIXTURE_PASSWORD } from './fixture';
 
 /**
@@ -61,7 +62,7 @@ export function testPrisma(): PrismaClient {
 }
 
 export async function resetAndSeed(prisma: PrismaClient): Promise<void> {
-  const passwordHash = await hash(FIXTURE_PASSWORD, { salt: SALT });
+  const passwordHash = await hash(FIXTURE_PASSWORD, { ...ARGON2ID, salt: SALT });
 
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${TABLES.map((table) => `"${table}"`).join(', ')} RESTART IDENTITY CASCADE`,

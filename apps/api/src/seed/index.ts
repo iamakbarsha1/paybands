@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { hash } from '@node-rs/argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
+import { ARGON2ID } from '../auth/password';
 import { SEED, generate } from './generate';
 import { EMPLOYEE_COUNT } from './reference';
 
@@ -28,7 +29,7 @@ const TABLES = [
 
 /** The demo login. The password ships in the README, so it is a constant here rather than a secret. */
 const HR_PASSWORD = 'paybands-demo-2026';
-/** Fixed so `app_user` is byte-identical on every reseed. Phase 7 hashes real passwords with a random salt. */
+/** Fixed so `app_user` is byte-identical on every reseed. The login path salts at random. */
 const HR_SALT = Buffer.from('paybands-seed-01');
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
@@ -81,7 +82,9 @@ async function main(): Promise<void> {
   const startedAt = Date.now();
   await assertSafeToTruncate();
   const data = generate(SEED);
-  const passwordHash = await hash(HR_PASSWORD, { salt: HR_SALT });
+  // The salt is the seed's, the cost is the login path's, so the demo row is hashed the
+  // same way a real one would be.
+  const passwordHash = await hash(HR_PASSWORD, { ...ARGON2ID, salt: HR_SALT });
   const appUsers = data.appUsers.map((user) => ({ ...user, passwordHash }));
 
   await prisma.$executeRawUnsafe(
