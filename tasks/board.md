@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 28 of 90 done (phases 0–3 complete, phase 4 under way).
+**Progress** — 29 of 90 done (phases 0–3 complete, phase 4 under way).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -17,7 +17,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 1 Workspace skeleton    | 4       | 4    |
 | 2 Schema                | 6       | 6    |
 | 3 Seed                  | 10      | 10   |
-| 4 Comp maths            | 8       | 1    |
+| 4 Comp maths            | 8       | 2    |
 | 5 API employees         | 7       | 0    |
 | 6 API analytics         | 6       | 0    |
 | 7 Auth                  | 5       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                      | Status | Blocked by |
 | ------ | ------------------------------------------ | ------ | ---------- |
-| PB-029 | `toUsd` — effective-dated FX lookup | next   | —          |
+| PB-030 | `compRatio` — salary against band midpoint | next   | —          |
 | PB-D03 | Push local commits to `origin/main` | todo   | —          |
 
 ---
@@ -92,8 +92,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | ID     | Story                                       | Status | Blocked by     |
 | ------ | ------------------------------------------- | ------ | -------------- |
 | PB-028 | `Money`                                     | done   | —              |
-| PB-029 | `toUsd` — effective-dated FX lookup         | next   | —              |
-| PB-030 | `compRatio`                                 | todo   | PB-028         |
+| PB-029 | `toUsd` — effective-dated FX lookup         | done   | —              |
+| PB-030 | `compRatio`                                 | next   | —              |
 | PB-031 | `rangePenetration`                          | todo   | PB-030         |
 | PB-032 | `percentiles`                               | todo   | PB-028         |
 | PB-033 | `outliers`                                  | todo   | PB-030, PB-031 |
