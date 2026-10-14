@@ -7,3 +7,5 @@ export {
   minorUnitsFor,
 } from './domain';
 export type { Gender, SalaryReason, CurrencyCode } from './domain';
+export { money, addMoney, compareMoney } from './money';
+export type { Money } from './money';
