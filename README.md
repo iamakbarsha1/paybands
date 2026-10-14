@@ -56,6 +56,31 @@ pnpm test                                      # migrations apply, then the suit
 
 The harness loads 50 people rather than the shipped 10,000 — the same reference tables, a population small enough to reload between runs, and one planted example of every case a report has to render ([decision 45](docs/decisions/decision-log.md)). It refuses any database whose name does not end in `_test`.
 
+## API
+
+| Route | What it answers |
+|---|---|
+| `GET /health` | liveness, unauthenticated, no query schema |
+| `GET /reference` | the currency, gender and salary-reason vocabularies |
+| `GET /employees` | a page of employees |
+
+`GET /employees` is keyset paginated, not offset: the response carries `nextCursor`, an opaque
+base64url token naming the last row read, and a cursor this API did not issue is a 400. Pages
+never exceed `limit`, which caps at 100.
+
+| Query | Values | Default |
+|---|---|---|
+| `country` | ISO-2 code | all |
+| `department`, `level` | id | all |
+| `status` | `active`, `left`, `all` | `active` |
+| `sort` | `name` (surname), `hireDate`, `id` | `name` |
+| `direction` | `asc`, `desc` | `asc` |
+| `limit` | 1–100 | 25 |
+| `cursor` | a `nextCursor` from a previous page | — |
+
+Every sort breaks ties on `id`, which is what keeps a page boundary stable when two people
+share a surname. Unknown query parameters are rejected rather than ignored.
+
 ## Layout
 
 ```
