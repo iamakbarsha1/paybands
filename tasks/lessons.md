@@ -73,3 +73,21 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-15.** Following the void mutation above, those conditional spreads looked like ceremony worth deleting. Deleting them compiled under no flag we run: with `exactOptionalPropertyTypes`, a property explicitly set to `undefined` is not assignable to an optional property, so the spread form is what makes the object type-check. The tests passed the whole time; only `pnpm typecheck` disagreed.
 
 **Rule:** when a construct looks redundant, run the full gate before removing it — redundant at runtime and redundant to the compiler are different claims. Record which of the two a construct serves when it serves only one.
+
+## An assertion no fixture row can violate is not a test
+
+**2026-10-15.** `GET /analytics/outliers` asserted that no leaver appears in any list. It passed with the leaver filter deleted from the query: none of the four seeded leavers is an outlier, so there was nothing for the assertion to catch. The mutation that should have turned it red turned nothing red.
+
+**Rule:** an assertion about a filter needs a row the filter has to remove. Where the fixture has none, make one inside the test — terminating the planted below-band employee and reading the report again is what tests the filter — and restore it afterwards.
+
+## A number in an acceptance criterion belongs to the dataset it was measured on
+
+**2026-10-15.** PB-047 names "Sales at 11.7%", so the endpoint test asserted the gap comes out positive. It came out at −8.7%: in the fifty-person fixture the level and country mix outweighs the planted 0.92/1.04 comp ratios and the sign flips. The endpoint was right and matched `payGap` to the digit the whole time.
+
+**Rule:** before asserting a planted statistic, check which dataset it was planted in. Structure belongs in the fixture test, statistics belong where the sample is large enough to carry them — the split decision 42 already made for Legal.
+
+## Scripted edits to a tracked file cost the whole file
+
+**2026-10-15.** Two board updates were made with a Python heredoc rather than the editing tool. The harness re-read both files in full to update its view — around two hundred lines of board and plan — to apply four string replacements.
+
+**Rule:** edit tracked files through the editing tool and keep the shell for what the tool cannot express. The cost of a shell edit is not the script, it is everything the harness has to re-read afterwards.
