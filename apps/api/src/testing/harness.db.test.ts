@@ -103,7 +103,7 @@ describe.skipIf(!hasTestDatabase())('the integration harness', () => {
   });
 
   it('serves the app through inject while the database is loaded', async () => {
-    const app = buildApp();
+    const app = buildApp({ prisma });
     const response = await app.inject({ method: 'GET', url: '/health' });
     expect(response.statusCode).toBe(200);
     await app.close();

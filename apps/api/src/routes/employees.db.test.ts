@@ -28,7 +28,7 @@ describe.skipIf(!hasTestDatabase())('GET /employees', () => {
 
   async function get(url: string): Promise<{ status: number; body: Page }> {
     const response = await app.inject({ method: 'GET', url });
-    return { status: response.statusCode, body: response.json() as Page };
+    return { status: response.statusCode, body: response.json<Page>() };
   }
 
   it('answers with a page, not the table', async () => {
@@ -59,9 +59,8 @@ describe.skipIf(!hasTestDatabase())('GET /employees', () => {
   });
 
   it('returns an empty page rather than a 404 when nothing matches', async () => {
-    const { status, body } = await get(
-      `/employees?country=US&department=${LANDMARKS.legalDepartmentId}`,
-    );
+    // Level 7 is a rung nobody in the fixture holds.
+    const { status, body } = await get('/employees?level=7');
 
     expect(status).toBe(200);
     expect(body.employees).toEqual([]);

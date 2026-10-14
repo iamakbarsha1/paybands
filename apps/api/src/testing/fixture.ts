@@ -102,7 +102,8 @@ function buildEmployees(): EmployeeRow[] {
       id,
       employeeCode: `T-${String(id).padStart(4, '0')}`,
       firstName: `Test${id}`,
-      lastName: `Person${id}`,
+      // Every fifth person shares a surname, so a keyset page boundary has to land on a tie.
+      lastName: id % 5 === 0 ? 'Shared' : `Person${id}`,
       email: `test${id}@paybands.example`,
       gender: genderOf(id, departmentId),
       hireDate,
