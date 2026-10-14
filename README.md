@@ -66,6 +66,7 @@ The harness loads 50 people rather than the shipped 10,000 — the same referenc
 | `GET /employees/:id` | one employee, their salary timeline, band position and comp ratio |
 | `POST /employees` | add a joiner |
 | `PATCH /employees/:id` | correct a record, or set a leaving date |
+| `POST /employees/:id/salary` | record a raise: closes the open record and opens the new one |
 
 `GET /employees` is keyset paginated, not offset: the response carries `nextCursor`, an opaque
 base64url token naming the last row read, and a cursor this API did not issue is a 400. Pages
