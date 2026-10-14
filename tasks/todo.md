@@ -2,6 +2,7 @@
 
 Repo: `github.com/iamakbarsha1/paybands` (public, remote via `github.com-personal`)
 Design decisions live in [`docs/design-notes.md`](../docs/design-notes.md). This file is the build order.
+Per-ticket detail is in [`user-stories-PART1.md`](user-stories-PART1.md) and [`user-stories-PART2.md`](user-stories-PART2.md); ticket status is in [`board.md`](board.md). A checkbox here and a status there move in the same change.
 
 Rules for every phase:
 
