@@ -100,7 +100,7 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/outliers', () => {
     expect(body.noBand.every((row) => row.compRatio === null)).toBe(true);
   });
 
-  it('never reports someone who has left', () => {
+  it('never reports someone who has left', async () => {
     const everyone = [
       ...body.belowBand,
       ...body.aboveBand,
@@ -109,6 +109,23 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/outliers', () => {
     ];
     for (const leaver of LANDMARKS.leaverEmployeeIds) {
       expect(everyone.some((row) => row.employeeId === leaver)).toBe(false);
+    }
+
+    // None of the seeded leavers is an outlier, so the assertion above passes whether or not
+    // the query filters them. Making one of the outliers leave is what tests the filter.
+    const id = LANDMARKS.belowBandEmployeeId;
+    try {
+      await prisma.employee.update({
+        where: { id },
+        data: { terminationDate: new Date(Date.UTC(2026, 0, 1)) },
+      });
+      const after = (await app.inject({ method: 'GET', url: '/analytics/outliers' })).json<Body>();
+
+      expect(after.belowBand.some((row) => row.employeeId === id)).toBe(false);
+      expect(after.belowBand).toHaveLength(body.belowBand.length - 1);
+      expect(after.compRatioOutOfRange.some((row) => row.employeeId === id)).toBe(false);
+    } finally {
+      await prisma.employee.update({ where: { id }, data: { terminationDate: null } });
     }
   });
 
