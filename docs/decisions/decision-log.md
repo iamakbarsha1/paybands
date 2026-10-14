@@ -899,3 +899,20 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** No skip — let the tests fail without a database. Rejected because it makes a fresh clone fail its own test command, which is the first thing a reviewer runs.
 **Falsifier:** The harness starting the container itself, through testcontainers or a global setup that shells out to compose. Then there is no unset case to skip on.
+
+### 47. Queries live in `src/repositories`, and the Prisma client is a required argument to `buildApp`
+
+**SOUND** · reversal: moderate, every route added after this one follows the same shape · 2026-10-15 · phase 5, `PB-041`, `PB-037`
+
+**Decision:** `createPrismaClient` in `src/db.ts` is the only construction site. Repository functions take the client as their first argument and return plain rows; route handlers call repositories and never touch Prisma. An ESLint rule bans value imports of the client outside `src/db.ts`, `src/repositories`, `src/seed` and `src/testing`; type-only imports are allowed, because naming a type cannot run a query. `buildApp` takes the client as a required option rather than an optional one.
+
+**Evidence:** The boundary that already works in this repo is enforced, not conventional — `eslint.config.js` bans framework and I/O imports inside `packages/core` (decision 4), and that rule is why the core stayed clean through phase 4. The required option is the same reasoning applied to configuration: an optional client means a build of the app that registers `/health` and silently omits `/employees`, which looks identical to a routing bug. `apps/api/src/testing/db.ts` gives the tests that never query a client that throws on first use instead.
+
+- **D** — Needed now, not speculatively: `GET /employees` is its first caller, which is why the layer and the endpoint landed in the same session.
+- **O** — Moderate. Undoing it means moving queries back into handlers across every endpoint phases 5 and 6 add.
+- **U** — No performance claim. The claim is enforcement, and the rule is tested by adding a banned import and watching lint fail.
+- **B** — Every route file from here on, plus `index.ts` and the two test entry points.
+- **T** — Gives up Prisma's fluent relation loading at the handler, and adds a hop for queries that would have been one line. The hop is what makes the query testable without HTTP.
+
+**Cheaper:** Decorate the Fastify instance with the client and let handlers call it. Rejected because it is the same coupling with a longer name, and nothing then stops a handler from writing its own query.
+**Falsifier:** A second consumer of the repositories never appearing — if phases 5 and 6 end up with one endpoint each calling one function, the layer is ceremony and the handlers should hold the queries.
