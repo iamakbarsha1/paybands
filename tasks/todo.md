@@ -105,7 +105,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 7 — Auth
 
-- [ ] Argon2id password hashing
+- [x] Argon2id password hashing ([decision 49](../docs/decisions/decision-log.md))
 - [ ] Session cookie: httpOnly, secure, sameSite strict
 - [ ] Every route except `/health` and `/auth/login` behind the guard
 - [ ] Rate limit on login

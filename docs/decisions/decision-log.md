@@ -933,3 +933,20 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** `percentile_cont` in SQL with the rate table joined in. Rejected because it duplicates decisions 33 to 36 in a second language; kept as the first thing to try if `PB-070` finds the fetch too slow, and single-currency slices need no conversion at all.
 **Falsifier:** A measurement in `PB-070` showing the row fetch dominates the request. Then the split moves for the grouped reports and the parity test becomes the thing that keeps the SQL honest.
+
+### 49. Argon2id at OWASP's 19 MiB profile, with the algorithm held by a test rather than a flag
+
+**SOUND** · reversal: cheap, the parameters live in one constant and a raise costs a rehash on next login · 2026-10-15 · phase 7, `PB-049`
+
+**Decision:** `hashPassword` hashes at memory 19,456 KiB, time cost 2, parallelism 1, and takes no salt argument — argon2 generates one per call and encodes it. `verifyPassword` returns false for a stored value it cannot parse instead of throwing. The algorithm is left to the library's default, which is argon2id, and `password.test.ts` asserts the `$argon2id$` prefix.
+
+**Evidence:** `@node-rs/argon2`'s `Algorithm` is an ambient `const enum` (`index.d.ts:3`), and `tsc` refuses to read one under `verbatimModuleSyntax`, which `apps/api/tsconfig.json` sets. Naming the algorithm is therefore a compile error; the same file documents argon2id as the default. The parameters are OWASP's second recommended argon2id configuration, the one sized for a 19 MiB pool per thread.
+
+- **D** — Needed now: `app_user.password_hash` already exists and the seed already writes one. This is the first code that reads it.
+- **O** — Cheap. The cost is encoded in every hash, so raising it later is a rehash on next login, not a migration.
+- **U** — No timing claim measured on this machine. The claim is only that the parameters are the published profile and that they are the ones actually used, which the test holds by quoting the literals.
+- **B** — The seed, the test harness and the login route in `PB-050`. All three hash through the same constant.
+- **T** — Gives up compile-time enforcement of the algorithm. A library default that changed would be caught by a failing test rather than a type error, which is one release later than ideal.
+
+**Cheaper:** Passing the numeric enum value directly, `algorithm: 2`. Rejected because a magic number in a security parameter is worse than a default plus an assertion; it reads as deliberate while telling the next person nothing.
+**Falsifier:** `@node-rs/argon2` publishing `Algorithm` as a plain enum, or the project dropping `verbatimModuleSyntax`. Either makes naming the algorithm free, and then it should be named.
