@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { AppNav } from '../components/app-nav';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -8,13 +7,11 @@ export const metadata: Metadata = {
   description: 'Salary management and pay analytics',
 };
 
+/** Chrome lives in the `(app)` group, so the login page does not get a nav to nowhere. */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen">
-        <AppNav />
-        <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
-      </body>
+      <body className="min-h-screen">{children}</body>
     </html>
   );
 }

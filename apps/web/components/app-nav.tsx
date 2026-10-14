@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { api } from '../lib/api';
 import { cn } from '../lib/utils';
+import { Button } from './ui/button';
 
 /** One declaration. A screen that is not here is not reachable, which is easier to notice. */
 const NAV = [
@@ -12,6 +14,14 @@ const NAV = [
 
 export function AppNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function signOut(): Promise<void> {
+    // The cookie is cleared by the API; a failure here still sends them to the login page,
+    // because a browser that cannot reach the API has no session worth keeping on screen.
+    await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
+    router.replace('/login');
+  }
 
   return (
     <header className="border-b border-border">
@@ -36,6 +46,10 @@ export function AppNav() {
             </li>
           ))}
         </ul>
+
+        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => void signOut()}>
+          Sign out
+        </Button>
       </nav>
     </header>
   );
