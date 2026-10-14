@@ -745,3 +745,24 @@ The first draft of this entry divided in `bigint` scaled to micros, reusing deci
 
 **Cheaper:** Require `PayBand` and let the caller skip the call. Genuinely close, and rejected on one point: a caller that forgets produces no error, just a missing row, which is the failure the glossary line exists to prevent. Throwing instead was the first draft and is worse — a throw inside a 10,000-row map fails the whole report for one unbanded employee.
 **Falsifier:** Band lookup made total — a default band per level, or a `NOT NULL` link from employee to band. Then the `undefined` arm is dead code and the signature should tighten to `PayBand`.
+
+---
+
+### 39. A percentile is a `Money` rounded to the minor unit; an empty group returns null
+
+**SOUND** · reversal: cheap in code, moderate in trust — the rounding point moves a published figure by a cent · 2026-10-14 · phase 4, `percentiles`
+
+**Decision:** `percentiles` returns `Money` values, interpolated in `bigint` and rounded half away from zero at the one division, reusing decision 36's rule. An empty group returns `null` rather than zeros or an empty list of points.
+
+**Evidence:** The interpolation method is not decided here — `docs/glossary.md:47` already fixes it as linear interpolation between closest ranks, naming NumPy's default and Postgres `PERCENTILE_CONT`, and the same line promises "the SQL aggregation and the TypeScript implementation agree without either emulating the other". That promise is what forces this entry: `PERCENTILE_CONT` returns `double precision`, so an interpolated p50 arrives from SQL unrounded and has to be rounded somewhere. Deciding it once, here, is what makes the two agree. `docs/data-model.md:99` already lists "percentiles between two values" among the divisions that must not drift.
+
+- **D** — Yes. A percentile of integer minor units lands between two of them whenever the group size and the point do not divide evenly, which is most of the time: p25 of a four-person group sits a quarter of the way between two salaries.
+- **O** — Cheap in code, one expression. The cost of changing it later is that every published p25/p50/p75/p90 moves by up to one minor unit, which reads as a data change rather than a formatting change.
+- **U** — No measurement. The claim is that two implementations of one documented method must round identically to agree, which follows from the method, not from a benchmark. It is checkable at PB-044, where the SQL and the TypeScript run over the same slice.
+- **B** — `percentiles` and PB-034's median gap, which reads p50. It also moves `divideHalfAwayFromZero` out of `fx.ts` into `money.ts`, which decision 37's blast radius predicted would happen at this ticket rather than the last one.
+- **T** — Gives up reporting a percentile as an exact fraction. Nobody wants a p50 of £62,400.004, and `Money` has nowhere to put it.
+
+The empty-group arm is decision 38's rule applied again, not a new call: an empty slice is a filter that matched nobody, which the distribution report has to render, so it gets a value rather than an exception. A single `null` beats one null per requested point — every point is undefined for the same reason, and the caller branches once.
+
+**Cheaper:** Return the raw double and let the report round. Rejected because it puts the rounding in the API layer and the web layer, which is two places to disagree, and because a `number` salary in a package whose first decision was integer minor units invites exactly the arithmetic decision 1 removed.
+**Falsifier:** Percentiles computed only in SQL, with the TypeScript version deleted. Then Postgres owns the rounding and this entry is about a function that no longer exists.
