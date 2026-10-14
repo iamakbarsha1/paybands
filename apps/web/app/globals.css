@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+/*
+ * The shadcn token names, declared as Tailwind 4 theme variables so `bg-background` and
+ * `text-muted-foreground` resolve. One light palette: a dark mode nobody asked for is a
+ * second set of contrast bugs to check.
+ */
+@theme {
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.21 0.01 260);
+  --color-muted: oklch(0.97 0.01 260);
+  --color-muted-foreground: oklch(0.52 0.02 260);
+  --color-border: oklch(0.92 0.01 260);
+  --color-primary: oklch(0.42 0.13 260);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --color-destructive: oklch(0.55 0.21 25);
+  --color-destructive-foreground: oklch(0.99 0 0);
+  --radius: 0.5rem;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}

@@ -1,11 +1,6 @@
-import { CURRENCY_CODES } from '@paybands/core';
+import { redirect } from 'next/navigation';
 
+/** There is no landing page to write: the product opens on the people it is about. */
 export default function HomePage() {
-  return (
-    <main>
-      <h1>paybands</h1>
-      <p>Salary management and pay analytics. The UI lands in phase 8.</p>
-      <p>Currencies in scope: {CURRENCY_CODES.join(', ')}</p>
-    </main>
-  );
+  redirect('/employees');
 }

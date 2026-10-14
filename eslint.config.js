@@ -22,7 +22,9 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ['*.ts', '*.js'] },
+        // The web app's PostCSS config is not in any tsconfig: it is configuration Next
+        // reads at build time, and it still gets linted.
+        projectService: { allowDefaultProject: ['*.ts', '*.js', 'apps/web/*.mjs'] },
         tsconfigRootDir: import.meta.dirname,
       },
     },
