@@ -172,3 +172,86 @@ export async function fxRates(prisma: PrismaClient): Promise<FxRate[]> {
       : [],
   );
 }
+
+export interface BandRow {
+  readonly min: MoneyRow;
+  readonly mid: MoneyRow;
+  readonly max: MoneyRow;
+}
+
+export interface RatedPerson {
+  /** Null when nothing is on record, which is not the same as having no band to measure against. */
+  readonly salary: MoneyRow | null;
+  readonly band: BandRow | null;
+}
+
+export interface CompRatioSlice {
+  readonly key: string;
+  readonly name: string;
+  readonly headcount: number;
+  readonly people: readonly RatedPerson[];
+}
+
+/**
+ * Everyone still here with their open salary record and the band in force for their level and
+ * country. Both sides of the comparison come back in their own currency: a comp ratio measures
+ * a salary against its own band and never passes through USD (decision 11).
+ */
+export async function compRatioSlices(
+  prisma: PrismaClient,
+  groupBy: SliceGroup,
+): Promise<CompRatioSlice[]> {
+  const [groups, employees, bands] = await Promise.all([
+    groupRows(prisma, groupBy),
+    prisma.employee.findMany({
+      where: { terminationDate: null },
+      select: {
+        countryCode: true,
+        departmentId: true,
+        jobLevelId: true,
+        salaryRecords: {
+          where: { effectiveTo: null },
+          select: { amountMinor: true, currencyCode: true },
+        },
+      },
+    }),
+    prisma.payBand.findMany({ where: { effectiveTo: null } }),
+  ]);
+
+  const bandFor = new Map(
+    bands.map((band) => [
+      `${band.jobLevelId}:${band.countryCode}`,
+      {
+        min: { amountMinor: band.minMinor, currencyCode: band.currencyCode },
+        mid: { amountMinor: band.midMinor, currencyCode: band.currencyCode },
+        max: { amountMinor: band.maxMinor, currencyCode: band.currencyCode },
+      },
+    ]),
+  );
+
+  const people = new Map<string, RatedPerson[]>();
+  const headcounts = new Map<string, number>();
+
+  for (const employee of employees) {
+    const key = sliceKey(employee, groupBy);
+    headcounts.set(key, (headcounts.get(key) ?? 0) + 1);
+
+    const open = employee.salaryRecords[0];
+    const held = people.get(key) ?? [];
+    held.push({
+      salary:
+        open === undefined
+          ? null
+          : { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
+      band: bandFor.get(`${employee.jobLevelId}:${employee.countryCode}`) ?? null,
+    });
+    people.set(key, held);
+  }
+
+  return groups.map((group) => ({
+    key: group.key,
+    name: group.name,
+    headcount: headcounts.get(group.key) ?? 0,
+    people: people.get(group.key) ?? [],
+  }));
+}

@@ -1,12 +1,14 @@
-import { money, percentiles, toUsd, type FxRate } from '@paybands/core';
+import { compRatio, money, percentiles, toUsd, type FxRate } from '@paybands/core';
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import {
   bandOccupancy,
+  compRatioSlices,
   fxRates,
   salaryDistribution,
   SLICE_GROUPS,
+  type CompRatioSlice,
   type DistributionSlice,
 } from '../repositories/analytics';
 
@@ -33,7 +35,7 @@ const bandsResponse = z.strictObject({
 /** The four points the distribution report answers in, fixed rather than asked for. */
 const POINTS = [25, 50, 75, 90] as const;
 
-const distributionQuery = z.strictObject({ groupBy: z.enum(SLICE_GROUPS) });
+const sliceQuery = z.strictObject({ groupBy: z.enum(SLICE_GROUPS) });
 
 const distributionResponse = z.strictObject({
   groupBy: z.enum(SLICE_GROUPS),
@@ -48,6 +50,34 @@ const distributionResponse = z.strictObject({
         .nullable(),
     }),
   ),
+});
+
+/**
+ * Twenty per cent either side of the midpoint, which is where a band's own min and max
+ * usually sit, then a bucket past each end for the people outside it. Stated in the
+ * response because a histogram whose boundaries are not on the page is unreadable.
+ */
+const BUCKETS = [
+  { from: null, to: 0.8 },
+  { from: 0.8, to: 0.9 },
+  { from: 0.9, to: 1.0 },
+  { from: 1.0, to: 1.1 },
+  { from: 1.1, to: 1.2 },
+  { from: 1.2, to: null },
+] as const;
+
+const summarySchema = z.strictObject({
+  headcount: z.number(),
+  measured: z.number(),
+  unbanded: z.number(),
+  counts: z.array(z.number()),
+});
+
+const compRatioResponse = z.strictObject({
+  groupBy: z.enum(SLICE_GROUPS),
+  buckets: z.array(z.strictObject({ from: z.number().nullable(), to: z.number().nullable() })),
+  overall: summarySchema,
+  groups: z.array(summarySchema.extend({ key: z.string(), name: z.string() })),
 });
 
 export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
@@ -73,7 +103,7 @@ export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
 
   app.get(
     '/analytics/distribution',
-    { schema: { querystring: distributionQuery, response: { 200: distributionResponse } } },
+    { schema: { querystring: sliceQuery, response: { 200: distributionResponse } } },
     async (request) => {
       const [slices, rates] = await Promise.all([
         salaryDistribution(prisma, request.query.groupBy),
@@ -94,6 +124,71 @@ export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
       };
     },
   );
+
+  app.get(
+    '/analytics/comp-ratio',
+    { schema: { querystring: sliceQuery, response: { 200: compRatioResponse } } },
+    async (request) => {
+      const slices = await compRatioSlices(prisma, request.query.groupBy);
+
+      return {
+        groupBy: request.query.groupBy,
+        buckets: BUCKETS.map((bucket) => ({ from: bucket.from, to: bucket.to })),
+        // The org is every slice put together, counted once rather than summed from the
+        // groups, so the overall figure cannot drift from the detail that makes it up.
+        overall: summarise({
+          headcount: slices.reduce((sum, slice) => sum + slice.headcount, 0),
+          people: slices.flatMap((slice) => [...slice.people]),
+        }),
+        groups: slices.map((slice) => ({
+          key: slice.key,
+          name: slice.name,
+          ...summarise(slice),
+        })),
+      };
+    },
+  );
+}
+
+/**
+ * A slice counted into the buckets. `unbanded` is the people there is nothing to measure
+ * against — the band table does not cover their level and country — which the report shows
+ * rather than quietly leaving out of the denominator.
+ */
+function summarise(slice: Pick<CompRatioSlice, 'headcount' | 'people'>): {
+  headcount: number;
+  measured: number;
+  unbanded: number;
+  counts: number[];
+} {
+  const counts: number[] = BUCKETS.map(() => 0);
+  let measured = 0;
+  let unbanded = 0;
+
+  for (const person of slice.people) {
+    if (person.band === null) {
+      unbanded += 1;
+      continue;
+    }
+    // Nothing on record is not the same as nothing to measure against, so it counts as neither.
+    if (person.salary === null) continue;
+
+    const ratio = compRatio(money(person.salary.amountMinor, person.salary.currencyCode), {
+      min: money(person.band.min.amountMinor, person.band.min.currencyCode),
+      mid: money(person.band.mid.amountMinor, person.band.mid.currencyCode),
+      max: money(person.band.max.amountMinor, person.band.max.currencyCode),
+    });
+    if (ratio === null) {
+      unbanded += 1;
+      continue;
+    }
+
+    const index = BUCKETS.findIndex((bucket) => bucket.to === null || ratio < bucket.to);
+    counts[index] = (counts[index] ?? 0) + 1;
+    measured += 1;
+  }
+
+  return { headcount: slice.headcount, measured, unbanded, counts };
 }
 
 /**
