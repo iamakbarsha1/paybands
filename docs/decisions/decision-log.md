@@ -625,3 +625,83 @@ Blind spot, stated rather than discovered later: a production branch holding onl
 
 **Cheaper:** A separate `SEED_DATABASE_URL` that the writer reads instead of `DATABASE_URL`. Rejected because its failure mode is "the seed does not run", which people fix by copying `DATABASE_URL` into it, and a guard that trains you to defeat it is worse than none. A database-name check cannot work either: both Neon URLs end in `/paybands`, and a branch is identified by its endpoint host.
 **Falsifier:** If `EMPLOYEE_COUNT` is ever changed, a legitimate reseed of the previous dataset is refused once. If that friction recurs, gate on a marker row rather than a count.
+
+---
+
+### 33. Conversion carries a minor-unit scale factor, because the rate is quoted between major units
+
+**SOUND** · reversal: cheap today, expensive the moment a USD report ships — a 100× error in one country's salaries is a number nobody checks twice · 2026-10-14 · phase 4, `toUsd`
+
+**Decision:** `toUsd` is `amountMinor × rateMicros × 10^(2 − sourceMinorUnits) / 1_000_000`, not the `amountMinor × rateMicros / 1_000_000` that decision 9 and the schema comment state. The scale factor corrects for a source currency whose minor unit is not USD's.
+
+**Evidence:** `apps/api/prisma/schema.prisma:66` defines the rate as "one unit of this currency in USD millionths" and gives the two-term formula. `apps/api/src/seed/reference.ts:86` sets JPY at `8_300` micros — $0.0083 per yen, a rate between *major* units, consistent with GBP at `1_380_000`. But `packages/core/src/domain.ts:21` gives JPY zero minor units. ¥4,500,000 is `amountMinor = 4_500_000`; the two-term formula returns `37_350`, read as $373.50. The true value is $37,350. The error is exactly 10², the gap between JPY's scale and USD's, and it lands on every employee in Japan — a seeded country (`reference.ts:76`).
+
+The seed settles the question rather than leaving it to interpretation: `buildPayBands` at `reference.ts:223` multiplies by `localScale = 10 ** minorUnits` before dividing by the rate, with a comment at `reference.ts:225` working through why the basis-point and USD-minor scales cancel. Band amounts for Japan are therefore plain yen — the L1 band midpoint lands at ¥6,800,000, which is $45,560 at `6_700` micros and $455.60 under the two-term formula. The seed applies the scale factor; `toUsd` has to apply its inverse or disagree with the data it reads.
+
+- **D** — Yes. Two of the five reports compare across countries, and decision 11 keeps comp ratio in local currency precisely so USD conversion is confined to the reports that need it. Those reports are the ones that would be wrong.
+- **O** — The formula is one function in one package with no callers yet, so changing it is free today. It becomes a one-way door the moment a distribution report is published and someone remembers last quarter's Japan number.
+- **U** — Not a claim, an arithmetic identity: a rate quoted major-to-major applied to minor units is only correct when both scales match. Five of the six seeded currencies have two decimals, which is why the defect hides — a fixture without JPY cannot catch it.
+- **B** — `toUsd` and its tests. Decision 9's entry and the schema comment both carry the incomplete formula and are corrected by this entry rather than edited, since the log records what was decided when.
+- **T** — Gives up the two-term formula that reads cleanly in the schema comment. In exchange the function has to know each currency's scale, which it already can: `minorUnitsFor` has been in `domain.ts:33` since phase 1.
+
+The class of defect is the one `tasks/lessons.md` names: two correct halves in two different files with nothing relating them. The rate table is correct. The minor-unit table is correct. Nothing asserted that the two agree on what "one unit" means. The test that catches it is JPY → USD, by name.
+
+**Cheaper:** Store the rate minor-to-minor instead, making the two-term formula right. Rejected because `JPY 8_300` then has to become `83`, which no longer reads as an exchange rate to anyone looking at the table, and the scale knowledge moves from one function into the seed, the migration and every future rate update.
+**Falsifier:** Drop JPY — or any currency whose minor unit is not 2 — from the model and the scale factor is dead code that always evaluates to 1.
+
+---
+
+### 34. A missing rate on the date throws, rather than returning a typed "no rate"
+
+**SOUND** · reversal: cheap now at zero call sites, expensive once six analytics paths each branch on it · 2026-10-14 · phase 4, `toUsd`
+
+**Decision:** `toUsd` throws when the rate table has no row covering `onDate` for that currency. It does not return `null`, and it does not fall back to a neighbouring period.
+
+**Evidence:** Decision 30 dates every reference table from before the earliest row it serves: `reference.ts:96` opens period one at `HIRE_FROM`, `reference.ts:56` puts that at 2014-01-01, and every salary record is dated at or after its employee's hire date. Period two is open-ended (`effectiveTo: null`, `reference.ts:104`). For the seeded dataset the uncovered case is unreachable; reaching it means the caller invented a date or the rate table was not loaded.
+
+- **D** — Yes. A conversion with no rate has no answer, and the alternative to saying so is inventing one.
+- **O** — Cheap today: zero call sites exist. The door closes in phase 6, where six endpoints would each need a branch. That is the argument for settling it now rather than when the first report is written.
+- **U** — The claim "unreachable in the seeded data" is checkable, not assumed: period one starts at the hire-date floor and period two never ends. It is not yet asserted; the phase 6 report tests are where a missing-rate exclusion count would show up if the claim is false.
+- **B** — Every analytics path that converts. Throwing keeps that one behaviour rather than N branches, which is the point: the leaver defect in phase 3 happened because a filter applied in one place was forgotten in another.
+- **T** — Gives up partial results. A report cannot say "9,998 of 10,000 converted"; it fails whole. That ceiling belongs to the API layer, not to a pure function — if a partial answer is ever wanted, phase 6 catches and counts, and `toUsd` keeps its contract.
+
+**Cheaper:** Return `Money | null` and let each caller decide. Rejected on the evidence above: the same shape as a nullable `gender`, which decision 10 refused for the same reason — a row quietly dropped in a report about counting people is the worst available failure.
+**Falsifier:** An import path for employee data outside the seed's date range, which is a non-goal today (`docs/requirements.md`). Add one and the uncovered case becomes a user-facing state that needs a value, not an exception.
+
+---
+
+### 35. Rate windows are half-open, `[effectiveFrom, effectiveTo)`
+
+**SOUND** · reversal: expensive — the convention is already baked into committed seed data · 2026-10-14 · phase 4, `toUsd`
+
+**Decision:** A rate row covers `effectiveFrom <= date < effectiveTo`, with a null `effectiveTo` meaning open-ended. The boundary date belongs to the later period.
+
+**Evidence:** `reference.ts:89-107` writes two rows per currency where period one's `effectiveTo` and period two's `effectiveFrom` are the same value, `FX_PERIOD_TWO_FROM` at `reference.ts:52`. A closed-closed lookup matches both rows on 2024-01-01 and returns whichever the scan reaches first, which makes a converted salary depend on row order in a system whose whole seed is deterministic by decision 24.
+
+- **D** — Yes. Two adjacent periods sharing a boundary date is the normal shape of a rate table, and something has to say which one owns the boundary.
+- **O** — Expensive, and already decided by data rather than by code: 12 committed rate rows and 48 pay-band rows use the shared-boundary shape. Choosing closed-closed now would mean rewriting the seed and reseeding.
+- **U** — No performance or precision claim. The claim is about determinism, and the failure it prevents is observable: one date, two matching rows.
+- **B** — `toUsd` today. The same convention has to hold for `pay_band` validity windows (`schema.prisma`, same `effectiveFrom`/`effectiveTo` pair) and for `salary_record`, so it is a house rule rather than one function's detail.
+- **T** — Gives up nothing except the intuition that `effectiveTo` is the last day the rate applied. It is not; it is the first day it did not. The glossary is where that goes.
+
+**Cheaper:** None. The alternative is not cheaper, it is a different convention with the same cost, plus a reseed.
+**Falsifier:** A rate table where periods are written with a gap (one period ending 2023-12-31, the next starting 2024-01-01). Then either convention works, and the choice is free — but the committed seed does not do that.
+
+---
+
+### 36. Rounded half away from zero at the single division, not truncated
+
+**WEAK** · reversal: cheap, one line in one function · 2026-10-14 · phase 4, `toUsd`
+
+**Decision:** The division by 1,000,000 rounds to the nearest minor unit, ties away from zero, and is the only division in the conversion. BigInt's native `/` truncates toward zero; that is explicitly not used.
+
+**Evidence:** `schema.prisma:68` already promises the conversion is "divided once at a documented rounding point". This is the entry that documents it. `packages/core/src/money.ts` allows negative amounts, so the mode has to be defined for them too.
+
+- **D** — Yes, in the sense that a rounding mode is not optional: the division happens and something decides the last unit. No, in the sense that the *choice* between modes is near-free either way, which is why this entry is WEAK rather than SOUND.
+- **O** — Cheap. One expression, one function, no stored value.
+- **U** — This is the thin part, stated plainly. Truncation biases every conversion downward by up to one minor unit, averaging half a unit. Across 10,000 employees that is about $50 against a seeded payroll in the hundreds of millions — roughly one part in ten million, which moves no percentile, no comp ratio and no gap percentage. The bias is real and immaterial. The honest reason for half-away-from-zero is not the bias: it is that "rounded to the nearest cent" is explainable to the HR manager reading the report, and that truncation toward zero is asymmetric across the sign, rounding a negative delta up and a positive one down.
+- **B** — One function. No stored value depends on it, so changing the mode later changes a displayed number and nothing else.
+- **T** — Gives up the one-line native `/` for three lines carrying an explicit tie rule. Also gives up exact reproducibility against any external tool that truncates.
+
+**Cheaper:** `(amountMinor * rateMicros * scale) / 1_000_000n`, BigInt truncation, one line and no tie rule. It is genuinely defensible at this scale, and if the three lines ever get in the way this is what replaces them.
+**Falsifier:** A report that sums converted USD across all 10,000 employees and is reconciled against an external figure. Then the rounding mode has to match whatever that source does, and this choice is made by them rather than by us.
