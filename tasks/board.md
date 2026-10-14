@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 49 of 90 done (phases 0–5 complete, phase 6 in flight).
+**Progress** — 50 of 90 done (phases 0–6 complete, phase 7 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -19,7 +19,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 3 Seed                  | 10      | 10   |
 | 4 Comp maths            | 8       | 8    |
 | 5 API employees         | 7       | 7    |
-| 6 API analytics         | 6       | 5    |
+| 6 API analytics         | 6       | 6    |
 | 7 Auth                  | 5       | 0    |
 | 8 Web employees         | 6       | 0    |
 | 9 Web reports           | 5       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-047 | `GET /analytics/pay-gap`                | next   | —          |
+| PB-049 | Passwords hashed with argon2id          | next   | —          |
 
 ---
 
@@ -119,14 +119,14 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-044 | `GET /analytics/distribution`     | done   | —              |
 | PB-045 | `GET /analytics/comp-ratio`       | done   | —              |
 | PB-046 | `GET /analytics/outliers`         | done   | —              |
-| PB-047 | `GET /analytics/pay-gap`          | next   | —              |
+| PB-047 | `GET /analytics/pay-gap`          | done   | —              |
 | PB-048 | Aggregation split stated and held | done   | —              |
 
 ## Phase 7 — Auth
 
 | ID     | Story                                        | Status | Blocked by |
 | ------ | -------------------------------------------- | ------ | ---------- |
-| PB-049 | Passwords hashed with argon2id               | todo   | —          |
+| PB-049 | Passwords hashed with argon2id               | next   | —          |
 | PB-050 | Session cookie                               | todo   | PB-049     |
 | PB-051 | Every route behind the guard                 | todo   | PB-050     |
 | PB-052 | Login rate limit                             | todo   | PB-050     |
