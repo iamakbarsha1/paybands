@@ -91,3 +91,15 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-15.** Two board updates were made with a Python heredoc rather than the editing tool. The harness re-read both files in full to update its view — around two hundred lines of board and plan — to apply four string replacements.
 
 **Rule:** edit tracked files through the editing tool and keep the shell for what the tool cannot express. The cost of a shell edit is not the script, it is everything the harness has to re-read afterwards.
+
+## A test that quotes the constant it checks moves with the mistake
+
+**2026-10-15.** `password.test.ts` asserted that the hash carried `m=${ARGON2ID.memoryCost},t=${ARGON2ID.timeCost}`. Raising the time cost to three kept it green: the assertion read its expectation out of the value under test, so both sides moved together.
+
+**Rule:** pin a policy constant to its literal in the test. The assertion exists so that changing the number is a deliberate edit in two places, and reading the number back from the thing being checked removes exactly that.
+
+## A guard turns every existing test into an auth test
+
+**2026-10-15.** The `onRequest` guard for PB-051 took seventy-one passing tests to 401 in one commit. The choice was a cookie on forty `inject` calls across nine files, or one in the harness that builds the test app.
+
+**Rule:** when a cross-cutting requirement lands late, give the test harness the credential and an opt-out, rather than editing every call site. Tests whose subject is the new requirement pass `{ signedIn: false }`; tests of the band report go on reading bands.
