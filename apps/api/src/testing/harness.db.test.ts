@@ -61,7 +61,9 @@ describe.skipIf(!hasTestDatabase())('the integration harness', () => {
           reason: 'merit',
         },
       }),
-    ).rejects.toThrow(/unique/i);
+      // Named, because a primary-key collision also says "unique" — and would say it even
+      // if the partial index had never been created.
+    ).rejects.toThrow(/one_open_salary_per_employee/);
   });
 
   it('carries one of every case the reports have to render', async () => {
