@@ -75,7 +75,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [x] `Money` — minor units, currency, add/compare, no float arithmetic anywhere
 - [x] `toUsd(money, rateTable, onDate)` — effective-dated FX lookup
 - [x] `compRatio(salary, band)` — salary ÷ midpoint. Returns a plain `number`; a missing band returns `null` rather than throwing, because the glossary says the employee still appears in the report ([decisions 37–38](../docs/decisions/decision-log.md))
-- [ ] `rangePenetration(salary, band)` — position in band, 0–1
+- [x] `rangePenetration(salary, band)` — position in band, 0–1, unclamped outside it. No new decision: the glossary already settles both the no-clamp rule and the flat band
 - [ ] `percentiles(values, [25,50,75,90])` — one documented interpolation method, tested at the edges
 - [ ] `outliers(employees, bands, threshold)` — below min, above max, comp ratio out of range
 - [ ] `payGap(groupA, groupB, { minGroupSize })` — mean and median gap, **suppressed below minimum headcount**
