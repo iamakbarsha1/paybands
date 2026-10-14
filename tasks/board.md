@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 54 of 90 done (phases 0–6 complete, phase 7 in flight).
+**Progress** — 55 of 90 done (phases 0–7 complete, phase 8 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -20,7 +20,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 4 Comp maths            | 8       | 8    |
 | 5 API employees         | 7       | 7    |
 | 6 API analytics         | 6       | 6    |
-| 7 Auth                  | 5       | 4    |
+| 7 Auth                  | 5       | 5    |
 | 8 Web employees         | 6       | 0    |
 | 9 Web reports           | 5       | 0    |
 | 10 Ask bar (optional)   | 5       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-052 | Login rate limit                        | next   | —          |
+| PB-054 | App shell                               | next   | —          |
 
 ---
 
@@ -129,7 +129,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-049 | Passwords hashed with argon2id               | done   | —          |
 | PB-050 | Session cookie                               | done   | —          |
 | PB-051 | Every route behind the guard                 | done   | —          |
-| PB-052 | Login rate limit                             | next   | —          |
+| PB-052 | Login rate limit                             | done   | —          |
 | PB-053 | Unauthenticated requests rejected everywhere | done   | —          |
 
 ## Phase 8 — Web: employees

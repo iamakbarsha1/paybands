@@ -967,3 +967,20 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Nothing cheaper exists that still survives a restart — an in-memory session map would lose every session on deploy, on a demo that is deployed often.
 **Falsifier:** A requirement to sign one specific user out, or any second user of the system. Either makes the table worth its migration, and `PB-073` is where that gets argued.
+
+### 51. The login limit counts in memory, in one process
+
+**WEAK** · reversal: cheap, the limiter is one function behind one hook · 2026-10-15 · phase 7, `PB-052`
+
+**Decision:** Five attempts per address per fifteen minutes, counted in a `Map` inside the process, applied to `POST /auth/login` and nothing else. Successful attempts count too. Over ten thousand tracked addresses the expired windows are pruned, then the oldest insertions.
+
+**Evidence:** `apps/api/src/auth/rate-limit.ts` holds the whole of it, and `auth-rate-limit.db.test.ts` drives it through the route with five addresses. `@fastify/rate-limit` would bring a plugin, its own store interface and a configuration surface for one route that needs one rule.
+
+- **D** — Needed now: `PB-051` leaves `/auth/login` as the one route a stranger can reach, and it answers a password guess in about fifty milliseconds.
+- **O** — Cheap. One function behind one hook; a shared store changes its body and nothing else.
+- **U** — The claim that five attempts is the right number is not measured and cannot be: it is a judgement about how often a person mistypes a password they know. The window and the count are both named constants so the judgement is visible.
+- **B** — The login route. The rest of the API is untouched, which a test holds.
+- **T** — Gives up two things. Two instances mean two counters and twice the attempts, so the limit is per process rather than per deployment. And behind a proxy every request carries the proxy's address unless `trustProxy` is set, which would count the whole internet as one client — `PB-078` is where the deployment decides that, and it has to.
+
+**Cheaper:** Nothing cheaper that still counts. Refusing the second attempt within a second would be smaller and would stop nothing: a guesser waits a second.
+**Falsifier:** A second API instance, or a proxy in front of one. The first makes the counter wrong by a factor of however many instances there are; the second makes it wrong in the other direction, and dangerous.
