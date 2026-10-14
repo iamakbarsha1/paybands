@@ -257,6 +257,14 @@ describe('generate', () => {
     expect(legal.medianGap).toBeNull();
   });
 
+  it('spreads Legal across more than one job level', () => {
+    const legal = data.employees.filter((e) => e.departmentId === LEGAL.departmentId);
+    expect(legal).toHaveLength(LEGAL.male + LEGAL.female);
+    // Structural, so it holds at a group size where a statistical assertion
+    // would not. Decision 42 records what is deliberately left uncovered.
+    expect(new Set(legal.map((e) => e.jobLevelId)).size).toBeGreaterThan(1);
+  });
+
   it('has a pay band and an FX rate in force on every salary record date', () => {
     const employeeById = new Map(data.employees.map((employee) => [employee.id, employee]));
     const uncovered = data.salaryRecords.filter((record) => {
