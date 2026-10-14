@@ -9,3 +9,5 @@ export {
 export type { Gender, SalaryReason, CurrencyCode } from './domain';
 export { money, addMoney, compareMoney } from './money';
 export type { Money } from './money';
+export { toUsd } from './fx';
+export type { FxRate } from './fx';
