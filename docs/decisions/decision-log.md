@@ -705,3 +705,43 @@ The class of defect is the one `tasks/lessons.md` names: two correct halves in t
 
 **Cheaper:** `(amountMinor * rateMicros * scale) / 1_000_000n`, BigInt truncation, one line and no tie rule. It is genuinely defensible at this scale, and if the three lines ever get in the way this is what replaces them.
 **Falsifier:** A report that sums converted USD across all 10,000 employees and is reconciled against an external figure. Then the rounding mode has to match whatever that source does, and this choice is made by them rather than by us.
+
+---
+
+### 37. Comp ratio is a plain number from one double division, not a scaled integer division
+
+**SOUND** · reversal: cheap, one expression in one function with no callers · 2026-10-14 · phase 4, `compRatio`
+
+**Decision:** `compRatio` returns `number`, not `Money` and not a scaled integer. Integers stop at exactly one place: `Number(salary.amount) / Number(band.mid.amount)`. Nothing in `packages/core` rounds the result — it is the correctly-rounded double of the exact ratio, and a report that wants `0.95` rounds at the edge.
+
+**Evidence:** `docs/glossary.md:15` defines comp ratio as `salary ÷ midpoint` and calls it unitless, so a `Money` return would carry a currency the quantity does not have.
+
+The first draft of this entry divided in `bigint` scaled to micros, reusing decision 36's rounding helper, on the argument that `Number(bigint)` is lossy above `2^53` and `packages/core/src/fx.test.ts:113` proves `Money` reaches there. The argument does not survive the arithmetic. `Number()` on each operand carries a relative error under `2^-53`, and the two errors compose rather than compound, so the quotient is accurate to about `2.2e-16`. Scaling to micros caps the result at `1e-6`. The scaled version is the *less* precise of the two at every magnitude below roughly `1e26` minor units, which is where a relative error of `2^-53` first exceeds one part in a million. It was written to protect against a loss it is ten orders of magnitude worse than.
+
+- **D** — The return type has to be decided; the function cannot avoid producing a quotient. The scaling was the part that did not need to exist.
+- **O** — Cheap. One expression, no stored value, no caller until PB-045.
+- **U** — Not a measurement, an error analysis, and it is the reason this entry reversed before any code was written. "Integer arithmetic is more exact" is true of `toUsd`, where the result is money and the division is the last step. It is false here, where the result is a ratio and the division is the only step.
+- **B** — One function, one line. `divideHalfAwayFromZero` stays private to `fx.ts`; PB-032's percentile interpolation returns a `Money` and is the ticket that will want it shared.
+- **T** — Gives up a stated decimal precision. `0.3333333333333333` reaches a caller where `0.333333` would have, so formatting has to round, which it was always going to do.
+
+**Cheaper:** None. This is the cheapest form, and the alternative considered above is both longer and worse.
+**Falsifier:** A requirement to reconcile comp ratio bit-for-bit against a fixed-point payroll system. Then the precision has to be stated rather than inherited, and the scaled division comes back on its own terms.
+
+---
+
+### 38. A missing band returns null; a mismatched currency or a non-positive midpoint throws
+
+**SOUND** · reversal: cheap at zero call sites, expensive once five analytics endpoints each handle the result · 2026-10-14 · phase 4, `compRatio`
+
+**Decision:** `compRatio` takes `PayBand | undefined` and returns `null` when the band is absent. It throws when the salary's currency differs from the band's, and when the midpoint is zero or negative.
+
+**Evidence:** `docs/glossary.md:23` already settles the no-band case: "An employee with no band has no comp ratio — shown as 'no band', not as `0`, and not by dropping them from the headcount." That is a user-facing state with a specified rendering, which is exactly the condition decision 34's own falsifier names as the point where a value beats an exception. The two throws have no such state: `glossary.md:11` calls a zero-width band "a data error, not a divide-by-zero to swallow", and decision 11 requires the conversion helper to be unreachable from this path, so a GBP salary against a USD band has no answer to render.
+
+- **D** — Yes, and decision 37 is what makes the midpoint guard load-bearing rather than cosmetic. Integer division by zero raises; `Number(0n)` does not, so a zero midpoint returns `Infinity` and a zero salary over it returns `NaN`. Either one travels through a mean and a percentile without raising anything, which is the silent-wrong failure phase 3 already paid for. A negative midpoint is worse: it divides cleanly and returns a plausible negative ratio.
+- **O** — Cheap today. The door closes at PB-045 and PB-046, where each endpoint would otherwise pick its own convention.
+- **U** — That a band can be missing is structural, not measured: the seed writes 48 bands for 48 level-country pairs (`apps/api/src/seed/reference.ts:217`), so it never misses today. Adding a country or a level without a band makes it reachable, and `apps/api/prisma/schema.prisma:174` indexes the pair without guaranteeing a row.
+- **B** — One function. The caller branches once, at the cell that has to print "no band" anyway, so the null arm costs no branch that display did not already need.
+- **T** — Gives up a uniform `number` return, so every caller's type widens by one arm.
+
+**Cheaper:** Require `PayBand` and let the caller skip the call. Genuinely close, and rejected on one point: a caller that forgets produces no error, just a missing row, which is the failure the glossary line exists to prevent. Throwing instead was the first draft and is worse — a throw inside a 10,000-row map fails the whole report for one unbanded employee.
+**Falsifier:** Band lookup made total — a default band per level, or a `NOT NULL` link from employee to band. Then the `undefined` arm is dead code and the signature should tighten to `PayBand`.
