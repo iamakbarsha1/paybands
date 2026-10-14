@@ -8,6 +8,8 @@ import Fastify, {
 } from 'fastify';
 import { z, type ZodError, type ZodType } from 'zod';
 import { CURRENCY_CODES, GENDERS, SALARY_REASONS } from '@paybands/core';
+import type { PrismaClient } from '../generated/prisma/client';
+import { registerEmployeeRoutes } from './routes/employees';
 
 /**
  * Routes declare zod schemas and Fastify reads them through the two compilers
@@ -29,6 +31,11 @@ export type App = FastifyInstance<
 
 export interface BuildAppOptions {
   logger?: boolean;
+  /**
+   * Reaches the repositories and nothing else (decision 47). Required rather than optional,
+   * so there is no build of this app that is missing half its routes.
+   */
+  prisma: PrismaClient;
 }
 
 /** Strict, so `?departmant=2` is a 400 rather than a filter that quietly did nothing. */
@@ -43,7 +50,7 @@ const referenceResponse = z.strictObject({
 });
 
 /** Builds the instance without starting it, so tests drive it through `inject()` and never bind a port. */
-export function buildApp(options: BuildAppOptions = {}): App {
+export function buildApp(options: BuildAppOptions): App {
   const app = Fastify({ logger: options.logger ?? false }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(({ schema }) => (data) => {
@@ -74,6 +81,8 @@ export function buildApp(options: BuildAppOptions = {}): App {
       salaryReasons: SALARY_REASONS,
     }),
   );
+
+  registerEmployeeRoutes(app, options.prisma);
 
   return app;
 }

@@ -74,6 +74,34 @@ export default tseslint.config(
     },
   },
 
+  // Handlers talk to repositories, repositories talk to Prisma (decision 47). Type-only
+  // imports are allowed through, because a handler naming the client's type still cannot
+  // run a query with it.
+  {
+    files: ['apps/api/src/**/*.ts'],
+    ignores: [
+      'apps/api/src/db.ts',
+      'apps/api/src/repositories/**',
+      'apps/api/src/seed/**',
+      'apps/api/src/testing/**',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/generated/prisma/**', '@prisma/client', '@prisma/adapter-pg'],
+              allowTypeImports: true,
+              message:
+                'Queries live in apps/api/src/repositories. See docs/decisions/decision-log.md, decision 47.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   {
     files: ['**/*.js'],
     extends: [tseslint.configs.disableTypeChecked],

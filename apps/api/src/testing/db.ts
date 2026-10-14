@@ -88,3 +88,18 @@ export async function resetAndSeed(prisma: PrismaClient): Promise<void> {
     );
   }
 }
+
+/**
+ * For tests of routes that never query. A `buildApp` without a client would mean a build of
+ * the app missing half its routes, so the client is required and this one throws the moment
+ * anything reaches for it.
+ */
+export function unusedPrisma(): PrismaClient {
+  return new Proxy({} as PrismaClient, {
+    get(_target, property) {
+      throw new Error(
+        `this app was built without a database, but something read prisma.${String(property)}`,
+      );
+    },
+  });
+}

@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp, type App } from './app';
+import { unusedPrisma } from './testing/db';
 import { z } from 'zod';
 
 const brokenResponseSchema = z.object({ count: z.number() });
@@ -7,7 +8,7 @@ const brokenResponseSchema = z.object({ count: z.number() });
 let app: App;
 
 beforeAll(() => {
-  app = buildApp();
+  app = buildApp({ prisma: unusedPrisma() });
 });
 
 afterAll(async () => {
@@ -74,7 +75,7 @@ describe('the zod boundary', () => {
   });
 
   it('answers 500 rather than a malformed body when a handler breaks its response schema', async () => {
-    const broken = buildApp();
+    const broken = buildApp({ prisma: unusedPrisma() });
     // The cast is the point: without it the type provider refuses to compile this
     // handler, which is the compile-time half of what the 500 proves at runtime.
     broken.get(
