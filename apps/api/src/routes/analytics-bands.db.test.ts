@@ -39,7 +39,7 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/bands', () => {
     return { status: response.statusCode, bands: response.json<{ bands: BandRow[] }>().bands };
   }
 
-  it('lists every band, not only the occupied ones', async () => {
+  it('lists every band, not only the occupied ones', () => {
     expect(bands).toHaveLength(FIXTURE.payBands.length);
     expect(bands.some((band) => band.headcount === 0)).toBe(true);
   });
