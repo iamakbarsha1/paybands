@@ -94,8 +94,13 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/pay-gap', () => {
     expect(sales?.reason).toBeNull();
     expect(sales?.meanGap).toBe(expected.meanGap);
     expect(sales?.medianGap).toBe(expected.medianGap);
-    // Planted so that women are paid less, which is a positive gap against the male reference.
-    expect(sales?.meanGap ?? 0).toBeGreaterThan(0);
+    expect(sales?.compared.male).toBeGreaterThanOrEqual(LANDMARKS.suppressionFloor);
+    expect(sales?.compared.female).toBeGreaterThanOrEqual(LANDMARKS.suppressionFloor);
+
+    // The direction of the planted gap is a fact about the shipped seed, not about this
+    // fixture: over fifty people the level and country mix outweighs the 0.92/1.04 plant and
+    // the sign flips. `seed/generate.test.ts` is where Sales at 11.7% is asserted, the same
+    // split decision 42 makes for Legal.
   });
 
   it('withholds the department that is too small to compare, and says why', () => {
