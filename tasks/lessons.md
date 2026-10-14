@@ -31,3 +31,27 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-14.** The seed shipped with eight assertions, all passing, and four adversarial reviewers then found five defects. Every assertion checked a number the generator had been written to emit: row counts, planted outlier counts, the one-open-record invariant. Every defect was a relationship between two fields set in two different functions with nothing relating them — salary records dated after a termination, outliers planted on employees the reports filter out, reference tables whose validity windows did not cover the dates they served.
 
 **Rule:** a test written from the same mental model as the code can only confirm that model. For generated data, ask the domain's questions instead: for every field that ends something, look for activity after it; for every pair of dates, check the ordering; for every child row, check it falls inside its parent's lifetime. Phases 4 to 6 write far more tests than this one did.
+
+## Integer arithmetic is not automatically more exact than a double
+
+**2026-10-15.** Decision 37 first ruled that `compRatio` should divide in `bigint` scaled to micros rather than converting both operands with `Number()`, on the argument that `Number(bigint)` is lossy above `2^53` and `fx.test.ts` proves `Money` reaches there. The argument is wrong. `Number()` on each operand carries a relative error under `2^-53`, so the quotient is accurate to about `2.2e-16`, while scaling to micros caps the result at `1e-6`. The "exact" version is ten orders of magnitude worse, and only overtakes the double somewhere past `1e26` minor units. It was caught while designing the tests, before any code was written.
+
+**Rule:** "integers are more exact" holds when the result is money and the division is the last step. It does not hold when the result is a ratio and the division is the only step. Before choosing fixed point over a double, compute the crossover: compare the relative error of the conversion against the relative precision the fixed point gives up.
+
+## A red test can pass for the wrong reason
+
+**2026-10-15.** Three times this session a test asserting `.toThrow(TypeError)` passed during the red phase, because a function that does not exist yet throws `TypeError: x is not a function`. The red run reported "9 failed, 1 passed", and the one that passed was the one testing a refusal that had not been written.
+
+**Rule:** a red-phase assertion on an error must match the message, not the class, when the class is one the absent function would produce anyway. Read the passed count on a red run; a green test in a red suite is a test that is not yet testing anything.
+
+## A fixture helper with a default parameter lies when you pass undefined
+
+**2026-10-15.** `row(5, 6_000_000n, undefined)` was meant to build a row with no band. A defaulted parameter takes the default when the argument is `undefined`, so it built a banded row and two tests failed against correct code.
+
+**Rule:** give the absent case its own named helper rather than a defaulted argument. `unbanded(5, …)` cannot be misread and cannot silently substitute.
+
+## A test written after the code must be mutated before it is believed
+
+**2026-10-15.** Three tests this session were written against code that already existed: the seed-to-outlier agreement, the seed-to-gap agreement, and the measures-agree file. All three passed on the first run, which proves nothing about whether they can fail.
+
+**Rule:** when a test cannot be watched failing because its subject already works, break the subject on purpose and watch it fail then. Record the mutation and its effect in the commit body — "clamping range penetration at 0 turns two of these red" is evidence; "added tests" is not.
