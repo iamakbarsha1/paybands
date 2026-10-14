@@ -63,11 +63,16 @@ model FxRate {
   id Int @id @default(autoincrement())
 
   currencyCode String @map("currency_code") @db.VarChar(3)
-  /// One unit of this currency in USD millionths. Integer, like every other
-  /// money column: conversion is amount_minor * rate_micros / 1_000_000,
-  /// divided once at a documented rounding point.
+  /// One *major* unit of this currency in USD millionths. Integer, like every
+  /// other money column. Conversion is
+  /// amount_minor * rate_micros * 10^(2 - minor_units) / 1_000_000, divided
+  /// once at a documented rounding point: the scale term is what keeps a JPY
+  /// amount from landing 100x low (decision 33).
   rateToUsdMicros Int @map("rate_to_usd_micros")
 
+  /// Half-open: effective_from <= date < effective_to, null being open-ended.
+  /// Adjacent periods share a boundary date, so the window that owns it has to
+  /// be stated (decision 35).
   effectiveFrom DateTime  @map("effective_from") @db.Date
   effectiveTo   DateTime? @map("effective_to") @db.Date
 
