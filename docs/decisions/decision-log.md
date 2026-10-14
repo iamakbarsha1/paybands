@@ -806,3 +806,24 @@ The suppression key is settled by the seed rather than by preference. `apps/api/
 
 **Cheaper:** Two pre-split arrays plus a separate `excluded` count passed in by the caller. Rejected because the caller then owns a rule the glossary states once, and a caller that splits slightly differently publishes a gap over a group the report says it suppressed.
 **Falsifier:** Gender arriving already aggregated from SQL — a `GROUP BY gender` returning sums and counts rather than rows. Then the split has happened before the function is reached and the sketched signature is the right one.
+
+---
+
+### 42. Legal's level mix is covered structurally, and its statistics are deliberately left uncovered
+
+**SOUND** · reversal: cheap, the uncovered assertion can be added whenever it becomes stable · 2026-10-15 · phase 4, closing PB-D02
+
+**Decision:** The Legal department gets a structural assertion — 11 employees, 8 male and 3 female, spread across more than one job level — and no assertion about its mean or median pay. PB-D02 offered either a stable assertion or a written reason; this is the reason, plus the part that is stable.
+
+**Evidence:** `apps/api/src/seed/reference.ts:125` fixes Legal at 8 male and 3 female. A mean over 3 people moves by a third of itself when one person's salary changes, so any threshold an assertion picked would either pass everything or break on the next unrelated change to the generator's random stream — the trap `tasks/lessons.md` records from phase 3, where two observers measured the same quantity on two different streams and agreed on the wrong answer.
+
+Decision 41 is what makes this safe rather than merely pragmatic. Suppression keys on the size of each compared group, so Legal is withheld because 3 is below the minimum, not because of anything about its levels or its pay. The level mix cannot change what the report publishes about Legal; it can only change a number the report refuses to publish. The assertion that matters is therefore the one now in `generate.test.ts` — that Legal comes back suppressed — and it is exact.
+
+- **D** — Yes, as a written reason. A missing test with no note reads as forgotten, which is why PB-D02 was raised rather than closed silently.
+- **O** — Cheap. If the department is ever resized above the suppression floor, the statistical assertion becomes both possible and necessary.
+- **U** — The instability claim is arithmetic on a group of three, not a measurement.
+- **B** — One test and this entry. Nothing in the product depends on it.
+- **T** — Gives up catching a regression that silently changed Legal's pay distribution. Acceptable only because the published outcome for Legal is "not reported" either way.
+
+**Cheaper:** Assert the realised mean with a wide tolerance. Rejected because a tolerance wide enough to be stable at n=3 admits any regression worth catching, which is a test that passes rather than a test that checks.
+**Falsifier:** Legal resized above the suppression floor, or the floor lowered below 3. Then Legal publishes a number, the number needs covering, and this entry is wrong.
