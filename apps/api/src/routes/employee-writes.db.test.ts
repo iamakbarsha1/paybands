@@ -21,7 +21,7 @@ describe.skipIf(!hasTestDatabase())('writing an employee', () => {
   let prisma: PrismaClient;
   let app: App;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     prisma = testPrisma();
     app = buildApp({ prisma });
   });
@@ -36,11 +36,11 @@ describe.skipIf(!hasTestDatabase())('writing an employee', () => {
     await prisma.$disconnect();
   });
 
-  function post(payload: unknown) {
+  function post(payload: Record<string, unknown>) {
     return app.inject({ method: 'POST', url: '/employees', payload });
   }
 
-  function patch(id: number, payload: unknown) {
+  function patch(id: number, payload: Record<string, unknown>) {
     return app.inject({ method: 'PATCH', url: `/employees/${id}`, payload });
   }
 

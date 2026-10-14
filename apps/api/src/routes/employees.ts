@@ -10,10 +10,12 @@ import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import {
+  createEmployee,
   EMPLOYEE_SORTS,
   EMPLOYEE_STATUSES,
   findEmployeeDetail,
   listEmployees,
+  updateEmployee,
   type EmployeeCursor,
   type MoneyRow,
 } from '../repositories/employees';
@@ -104,6 +106,41 @@ const detailResponse = z.strictObject({
 
 const notFound = z.strictObject({ message: z.string() });
 
+/**
+ * Loose, because a 400 can come from this code or from Fastify's own validation error, whose
+ * body carries `statusCode` and `error` too. A strict schema here turns a 400 into a 500.
+ */
+const badRequest = z.looseObject({ message: z.string() });
+
+/** A calendar day, not a timestamp: the columns behind these are `date`. */
+const day = z.iso.date();
+
+const createBody = z.strictObject({
+  employeeCode: z.string().min(1).max(32),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.email(),
+  gender: z.enum(GENDERS),
+  hireDate: day,
+  terminationDate: day.nullable().optional(),
+  countryCode: z.string().length(2),
+  departmentId: z.number().int().positive(),
+  jobLevelId: z.number().int().positive(),
+  managerId: z.number().int().positive().nullable().optional(),
+});
+
+// An edit that names no field is a mistake worth a 400, not a no-op that answers 200.
+const patchBody = createBody
+  .partial()
+  .refine((patch) => Object.keys(patch).length > 0, { message: 'name at least one field' });
+
+/** The three states a write can fail in, each with the status the client should read. */
+const WRITE_FAILURE_STATUS = {
+  duplicate: 409,
+  'unknown-reference': 400,
+  'not-found': 404,
+} as const;
+
 function onWire(row: MoneyRow): { amountMinor: string; currencyCode: string } {
   return { amountMinor: row.amountMinor.toString(), currencyCode: row.currencyCode };
 }
@@ -171,6 +208,39 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
         compRatio: salary === null ? null : compRatio(salary, band),
         rangePenetration: salary === null ? null : rangePenetration(salary, band),
       });
+    },
+  );
+
+  app.post(
+    '/employees',
+    {
+      schema: {
+        body: createBody,
+        response: { 201: employeeSchema, 400: badRequest, 404: notFound, 409: notFound },
+      },
+    },
+    async (request, reply) => {
+      const written = await createEmployee(prisma, request.body);
+      return written.ok
+        ? reply.code(201).send(written.employee)
+        : reply.code(WRITE_FAILURE_STATUS[written.reason]).send({ message: written.detail });
+    },
+  );
+
+  app.patch(
+    '/employees/:id',
+    {
+      schema: {
+        params: idParam,
+        body: patchBody,
+        response: { 200: employeeSchema, 400: badRequest, 404: notFound, 409: notFound },
+      },
+    },
+    async (request, reply) => {
+      const written = await updateEmployee(prisma, request.params.id, request.body);
+      return written.ok
+        ? reply.send(written.employee)
+        : reply.code(WRITE_FAILURE_STATUS[written.reason]).send({ message: written.detail });
     },
   );
 }

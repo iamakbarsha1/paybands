@@ -236,3 +236,119 @@ export async function findEmployeeDetail(
           },
   };
 }
+
+export interface EmployeeInput {
+  readonly employeeCode: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly email: string;
+  readonly gender: Gender;
+  readonly hireDate: string;
+  readonly terminationDate?: string | null | undefined;
+  readonly countryCode: string;
+  readonly departmentId: number;
+  readonly jobLevelId: number;
+  readonly managerId?: number | null | undefined;
+}
+
+/** `Partial` alone drops the explicit `undefined` that `exactOptionalPropertyTypes` wants. */
+export type EmployeePatch = { readonly [K in keyof EmployeeInput]?: EmployeeInput[K] | undefined };
+
+/**
+ * A write either lands or hits one of three states the client can act on: a value somebody
+ * else holds, a reference to a row that is not there, or an employee that is not there.
+ * Returned rather than thrown, so the Prisma error codes stay inside this file.
+ */
+export type EmployeeWriteResult =
+  | { readonly ok: true; readonly employee: EmployeeListRow }
+  | {
+      readonly ok: false;
+      readonly reason: 'duplicate' | 'unknown-reference' | 'not-found';
+      readonly detail: string;
+    };
+
+export async function createEmployee(
+  prisma: PrismaClient,
+  input: EmployeeInput,
+): Promise<EmployeeWriteResult> {
+  try {
+    // The route's schema is what guarantees every required column is present; the shared
+    // column builder, which also serves patches, cannot express that.
+    const data = toColumns(input) as Prisma.EmployeeUncheckedCreateInput;
+    const row = await prisma.employee.create({ data });
+    return { ok: true, employee: toListRow(row) };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+export async function updateEmployee(
+  prisma: PrismaClient,
+  id: number,
+  patch: EmployeePatch,
+): Promise<EmployeeWriteResult> {
+  try {
+    const row = await prisma.employee.update({ where: { id }, data: toColumns(patch) });
+    return { ok: true, employee: toListRow(row) };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Only the keys that were sent: a patch that omits a field must not null it. */
+function toColumns(input: EmployeePatch): Prisma.EmployeeUncheckedUpdateInput {
+  return {
+    ...(input.employeeCode === undefined ? {} : { employeeCode: input.employeeCode }),
+    ...(input.firstName === undefined ? {} : { firstName: input.firstName }),
+    ...(input.lastName === undefined ? {} : { lastName: input.lastName }),
+    ...(input.email === undefined ? {} : { email: input.email }),
+    ...(input.gender === undefined ? {} : { gender: input.gender }),
+    ...(input.hireDate === undefined ? {} : { hireDate: midnight(input.hireDate) }),
+    ...(input.terminationDate === undefined
+      ? {}
+      : {
+          terminationDate: input.terminationDate === null ? null : midnight(input.terminationDate),
+        }),
+    ...(input.countryCode === undefined ? {} : { countryCode: input.countryCode }),
+    ...(input.departmentId === undefined ? {} : { departmentId: input.departmentId }),
+    ...(input.jobLevelId === undefined ? {} : { jobLevelId: input.jobLevelId }),
+    ...(input.managerId === undefined ? {} : { managerId: input.managerId }),
+  };
+}
+
+/** The column is a `date`; a local-time parse would shift it a day for half the world. */
+function midnight(day: string): Date {
+  return new Date(`${day}T00:00:00.000Z`);
+}
+
+function failure(error: unknown): EmployeeWriteResult {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : null;
+
+  if (code === 'P2002') {
+    return { ok: false, reason: 'duplicate', detail: `${fieldsIn(error)} already taken` };
+  }
+  if (code === 'P2003') {
+    return {
+      ok: false,
+      reason: 'unknown-reference',
+      detail: `${fieldsIn(error)} names a row that does not exist`,
+    };
+  }
+  if (code === 'P2025') {
+    return { ok: false, reason: 'not-found', detail: 'no such employee' };
+  }
+  throw error;
+}
+
+/** Prisma names the constraint's columns in `meta`; the message is for the client, so it matters. */
+function fieldsIn(error: unknown): string {
+  const meta =
+    typeof error === 'object' && error !== null && 'meta' in error
+      ? (error.meta as { target?: unknown; field_name?: unknown } | null)
+      : null;
+  const target = meta?.target ?? meta?.field_name;
+
+  if (Array.isArray(target)) return target.join(', ');
+  if (typeof target === 'string') return target;
+  return 'a field';
+}
