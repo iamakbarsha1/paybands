@@ -11,5 +11,5 @@ export { money, addMoney, compareMoney } from './money';
 export type { Money } from './money';
 export { toUsd } from './fx';
 export type { FxRate } from './fx';
-export { compRatio } from './band';
+export { compRatio, rangePenetration } from './band';
 export type { PayBand } from './band';
