@@ -9,6 +9,7 @@ import Fastify, {
 import { z, type ZodError, type ZodType } from 'zod';
 import { CURRENCY_CODES, GENDERS, SALARY_REASONS } from '@paybands/core';
 import type { PrismaClient } from '../generated/prisma/client';
+import { registerAnalyticsRoutes } from './routes/analytics';
 import { registerEmployeeRoutes } from './routes/employees';
 
 /**
@@ -83,6 +84,7 @@ export function buildApp(options: BuildAppOptions): App {
   );
 
   registerEmployeeRoutes(app, options.prisma);
+  registerAnalyticsRoutes(app, options.prisma);
 
   return app;
 }
