@@ -827,3 +827,22 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Assert the realised mean with a wide tolerance. Rejected because a tolerance wide enough to be stable at n=3 admits any regression worth catching, which is a test that passes rather than a test that checks.
 **Falsifier:** Legal resized above the suppression floor, or the floor lowered below 3. Then Legal publishes a number, the number needs covering, and this entry is wrong.
+
+---
+
+### 43. zod reaches Fastify through its own compiler hooks, not through `fastify-type-provider-zod`
+
+**SOUND** · reversal: cheap, the library drops in behind the same route definitions · 2026-10-15 · phase 5, `PB-036`
+
+**Decision:** `buildApp` sets `setValidatorCompiler` and `setSerializerCompiler` to run zod, and routes declare plain zod schemas. The usual integration library is not installed.
+
+**Evidence:** `fastify-type-provider-zod@7.0.0` declares `@fastify/swagger` `>=9.5.1` and `openapi-types` `^12.1.3` as peer dependencies with no `peerDependenciesMeta`, so both are required rather than optional. Nothing in `docs/requirements.md`, `docs/design-notes.md` or `tasks/todo.md` mentions OpenAPI; the deliverable is a web app over five reports, not a published API contract. The two hooks the library wraps are Fastify's own public API, and what they need from us is about fifteen lines.
+
+- **D** — The hooks need to exist, because `tasks/user-stories-PART1.md:336` requires schemas on every request and response and Fastify validates with JSON Schema by default. The *library* is the part that did not need to exist here.
+- **O** — Cheap both ways. Route definitions look the same either way, so swapping in the library later changes one file.
+- **U** — Not a performance claim. The peer requirement is read off the published manifest, not assumed.
+- **B** — One file, `apps/api/src/app.ts`, plus every route added from PB-037 on. Adding the library instead would put an OpenAPI toolchain in the dependency tree, in the lockfile, and in the audit surface PB-073 has to review.
+- **T** — Gives up the library's schema-to-OpenAPI generation and its maintenance of Fastify API changes. The first is not wanted; the second is a real cost, paid in fifteen lines we own.
+
+**Cheaper:** Call `schema.parse()` at the top of each handler and skip the hooks. Rejected because it validates requests only, leaves responses unchecked against the schema the ticket requires, and repeats itself once per route — which is where the two halves start to disagree.
+**Falsifier:** An OpenAPI document entering scope. Then the library generates it from the same schemas and earns its peers.
