@@ -1,4 +1,5 @@
 import cookie from '@fastify/cookie';
+import cors from '@fastify/cors';
 import Fastify, {
   type FastifyBaseLogger,
   type FastifyInstance,
@@ -45,6 +46,11 @@ export interface BuildAppOptions {
    * without it would answer every request as a stranger and look like a routing bug.
    */
   sessionSecret: string;
+  /**
+   * The one browser origin allowed to call this API with its cookie. A list would be a
+   * list to keep accurate; there is one web app (PB-080).
+   */
+  webOrigin?: string;
 }
 
 /** Strict, so `?departmant=2` is a 400 rather than a filter that quietly did nothing. */
@@ -90,6 +96,21 @@ export function buildApp(options: BuildAppOptions): App {
       salaryReasons: SALARY_REASONS,
     }),
   );
+
+  // Exactly one origin, and only if one was given: an API with no browser in front of it
+  // should not be answering preflights at all.
+  if (options.webOrigin !== undefined) {
+    const allowed = options.webOrigin;
+    app.register(cors, {
+      credentials: true,
+      // A string here would echo the configured origin back at every caller and leave the
+      // refusal to the browser. Deciding per request means a stranger gets no header at all.
+      origin(origin, callback) {
+        // No `Origin` at all is not a browser: curl, a health check, the API's own tests.
+        callback(null, origin === undefined || origin === allowed);
+      },
+    });
+  }
 
   app.register(cookie, { secret: options.sessionSecret });
   registerGuard(app);
