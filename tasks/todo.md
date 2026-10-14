@@ -90,7 +90,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [ ] `POST /employees`, `PATCH /employees/:id`
 - [ ] `POST /employees/:id/salary` — new effective-dated record, closes the previous one in a transaction
 - [ ] Repository layer separate from route handlers; handlers stay thin
-- [ ] Integration tests via `fastify.inject` against a test database
+- [x] Integration tests via `fastify.inject` against a test database — Postgres in a container, fifty-person fixture, migrations applied by the vitest global setup ([decisions 44–46](../docs/decisions/decision-log.md))
 - [ ] Commit per endpoint group
 
 ## Phase 6 — API: analytics
