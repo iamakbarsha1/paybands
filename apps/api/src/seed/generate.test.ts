@@ -1,12 +1,25 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_COMP_RATIO_THRESHOLD, money, outliers, type BandedSalary } from '@paybands/core';
+import {
+  DEFAULT_COMP_RATIO_THRESHOLD,
+  money,
+  outliers,
+  payGap,
+  toUsd,
+  type BandedSalary,
+  type FxRate,
+  type GenderedSalary,
+} from '@paybands/core';
 import { SEED, generate, type EmployeeRow, type SalaryRecordRow, type SeedData } from './generate';
 import {
   COMP_RATIO_MAX,
   COMP_RATIO_MIN,
+  COMP_RATIO_SALES_FEMALE,
+  COMP_RATIO_SALES_MALE,
+  LEGAL,
   OUTLIERS_ABOVE_BAND,
   OUTLIERS_BELOW_BAND,
+  SALES_DEPARTMENT_ID,
 } from './reference';
 
 /**
@@ -202,6 +215,46 @@ describe('generate', () => {
     expect(found.belowBand).toHaveLength(OUTLIERS_BELOW_BAND.count);
     expect(found.aboveBand).toHaveLength(OUTLIERS_ABOVE_BAND.count);
     expect(found.noBand).toEqual([]);
+  });
+
+  it('gives Sales a reportable gap and suppresses Legal, through the core report', () => {
+    const rates: FxRate[] = data.fxRates.map((rate) => ({
+      currency: rate.currencyCode,
+      rateToUsdMicros: rate.rateToUsdMicros,
+      effectiveFrom: rate.effectiveFrom,
+      effectiveTo: rate.effectiveTo,
+    }));
+    const onDate = new Date(Date.UTC(2026, 0, 1));
+    const sliceFor = (departmentId: number): GenderedSalary[] =>
+      data.employees
+        .filter((e) => e.departmentId === departmentId && e.terminationDate === null)
+        .map((e) => {
+          const record = currentSalary(e);
+          return {
+            gender: e.gender,
+            salary: toUsd(money(record.amountMinor, record.currencyCode), rates, onDate),
+          };
+        });
+
+    // What the seed set out to plant, read from its own constants rather than
+    // from a number measured once and pasted in.
+    const planted =
+      (COMP_RATIO_SALES_MALE.center - COMP_RATIO_SALES_FEMALE.center) /
+      COMP_RATIO_SALES_MALE.center;
+
+    const sales = payGap(sliceFor(SALES_DEPARTMENT_ID), { minGroupSize: 5 });
+    expect(sales.suppressed).toBe(false);
+    expect(sales.meanGap).toBeCloseTo(planted, 2);
+    expect(sales.medianGap).toBeCloseTo(planted, 2);
+    expect(sales.headcount).toBe(sales.compared.male + sales.compared.female + sales.excluded);
+    expect(sales.excluded).toBeGreaterThan(0);
+
+    // 11 is the row count; three have left, so the report sees 8 (decision 29).
+    const legal = payGap(sliceFor(LEGAL.departmentId), { minGroupSize: 5 });
+    expect(legal.suppressed).toBe(true);
+    expect(legal.compared.female).toBe(3);
+    expect(legal.meanGap).toBeNull();
+    expect(legal.medianGap).toBeNull();
   });
 
   it('has a pay band and an FX rate in force on every salary record date', () => {
