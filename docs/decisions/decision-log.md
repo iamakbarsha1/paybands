@@ -785,3 +785,24 @@ The empty-group arm is decision 38's rule applied again, not a new call: an empt
 
 **Cheaper:** Keep the sketched signature and pass a band table plus an as-of date. Rejected on the evidence above: it moves an effective-dated lookup into the one package that is not allowed to know about the database, to save the caller a join it is already making.
 **Falsifier:** Bands made non-effective-dated — one current row per level and country. Then the lookup is a plain map and belongs wherever it is cheapest, including here.
+
+---
+
+### 41. `payGap` takes the slice with its genders and splits it, and suppression keys on each compared group
+
+**SOUND** · reversal: cheap in code, expensive in trust — a published gap over three people is the failure the feature exists to prevent · 2026-10-15 · phase 4, `payGap`
+
+**Decision:** The signature is `payGap(people, { minGroupSize })`, where each person carries a gender and a salary, not the `payGap(groupA, groupB, …)` that `tasks/user-stories-PART1.md:336` sketched. It splits male and female itself, counts everyone else as excluded, and suppresses when *either* compared group falls below `minGroupSize` — not when the slice's headcount does. Male is the reference group, so the gap is `(mean(male) − mean(female)) ÷ mean(male)`.
+
+**Evidence:** `docs/glossary.md` requires that "employees with `other` or `undisclosed` gender count toward headcount and are excluded from the two-group comparison. The excluded count is stated, not silently dropped." A function handed two pre-split arrays cannot state either number — it never saw the people who were dropped — so the caller would compute headcount and exclusions separately from the split that produced the arrays. That is two correct halves in two places with nothing relating them, which `tasks/lessons.md` records as the defect class that survived twenty-one passing assertions in phase 3.
+
+The suppression key is settled by the seed rather than by preference. `apps/api/src/seed/reference.ts:125` sizes Legal at 8 male and 3 female, and its comment calls it "sized under any reportable threshold". The headcount is 11. A rule keyed on headcount with a floor of 5 publishes a gap for Legal computed over 3 women, which is precisely the number `docs/design-notes.md:39` says the product should refuse to produce.
+
+- **D** — Yes. Suppression is the one behaviour `docs/requirements.md:43` calls a feature rather than a limitation, and it has to key on something.
+- **O** — Cheap now. PB-047 serialises this into a response and the web report renders the suppression state, which is where the shape sets.
+- **U** — No measurement. The Legal case is arithmetic on committed seed constants, not an estimate.
+- **B** — `payGap`, PB-047, and the gap screen at PB-064. It also settles PB-D02, whose missing test is about Legal's level mix.
+- **T** — Gives up a `payGap` that works for any two groups, which would serve a department-versus-department comparison that nothing asks for. Hardcoding male as the reference group also ties the function to statutory gender reporting rather than to gaps in general.
+
+**Cheaper:** Two pre-split arrays plus a separate `excluded` count passed in by the caller. Rejected because the caller then owns a rule the glossary states once, and a caller that splits slightly differently publishes a gap over a group the report says it suppressed.
+**Falsifier:** Gender arriving already aggregated from SQL — a `GROUP BY gender` returning sums and counts rather than rows. Then the split has happened before the function is reached and the sketched signature is the right one.
