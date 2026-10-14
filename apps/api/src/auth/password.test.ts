@@ -12,12 +12,13 @@ describe('password hashing', () => {
     expect(encoded).not.toContain(PASSWORD);
   });
 
-  it('names the parameters in the hash, so a future change of cost can be seen', async () => {
-    const encoded = await hashPassword(PASSWORD);
+  it('hashes at the documented cost, and says so in the hash', async () => {
+    // Pinned to the literals rather than read back off ARGON2ID: a test that quotes the
+    // constant moves with it, and the whole point is that a changed cost is deliberate.
+    expect(ARGON2ID).toMatchObject({ memoryCost: 19_456, timeCost: 2, parallelism: 1 });
 
-    expect(encoded).toContain(
-      `m=${ARGON2ID.memoryCost},t=${ARGON2ID.timeCost},p=${ARGON2ID.parallelism}`,
-    );
+    const encoded = await hashPassword(PASSWORD);
+    expect(encoded).toContain('m=19456,t=2,p=1');
   });
 
   it('salts every hash, so two people with the same password do not match in the table', async () => {
