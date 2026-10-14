@@ -95,7 +95,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 6 — API: analytics
 
-- [ ] `GET /analytics/bands` — band table with occupancy
+- [x] `GET /analytics/bands` — band table with occupancy
 - [ ] `GET /analytics/distribution` — p25/p50/p75/p90 + headcount, grouped by country | department | level
 - [ ] `GET /analytics/comp-ratio` — distribution overall and per slice
 - [ ] `GET /analytics/outliers`
