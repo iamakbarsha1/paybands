@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import { hashPassword, verifyPassword } from '../auth/password';
+import { createLoginLimiter, loginLimitHook } from '../auth/rate-limit';
 import { clearSession, issueSession, readSession } from '../auth/session';
 import { findUserByEmail, findUserById, type AppUserRow } from '../repositories/users';
 
@@ -28,9 +29,14 @@ function onWire(user: AppUserRow): z.infer<typeof userResponse> {
 }
 
 export function registerAuthRoutes(app: App, prisma: PrismaClient): void {
+  const take = createLoginLimiter();
+
   app.post(
     '/auth/login',
-    { schema: { body: credentials, response: { 200: userResponse, 401: unauthorized } } },
+    {
+      onRequest: loginLimitHook(take),
+      schema: { body: credentials, response: { 200: userResponse, 401: unauthorized } },
+    },
     async (request, reply) => {
       const user = await findUserByEmail(prisma, request.body.email);
 
