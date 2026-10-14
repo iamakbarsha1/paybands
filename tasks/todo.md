@@ -97,7 +97,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 - [x] `GET /analytics/bands` — band table with occupancy
 - [x] `GET /analytics/distribution` — p25/p50/p75/p90 + headcount, grouped by country | department | level
-- [ ] `GET /analytics/comp-ratio` — distribution overall and per slice
+- [x] `GET /analytics/comp-ratio` — distribution overall and per slice
 - [ ] `GET /analytics/outliers`
 - [ ] `GET /analytics/pay-gap` — with suppression, and the suppression stated in the response rather than silently omitted
 - [x] Aggregation in SQL where the database is better at it; `packages/core` keeps the maths that must be exact ([decision 48](../docs/decisions/decision-log.md))
