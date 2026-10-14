@@ -106,7 +106,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 ## Phase 7 — Auth
 
 - [x] Argon2id password hashing ([decision 49](../docs/decisions/decision-log.md))
-- [ ] Session cookie: httpOnly, secure, sameSite strict
+- [x] Session cookie: httpOnly, secure, sameSite strict ([decision 50](../docs/decisions/decision-log.md))
 - [ ] Every route except `/health` and `/auth/login` behind the guard
 - [ ] Rate limit on login
 - [ ] Tests: unauthenticated request is rejected on every protected route

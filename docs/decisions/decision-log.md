@@ -950,3 +950,20 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Passing the numeric enum value directly, `algorithm: 2`. Rejected because a magic number in a security parameter is worse than a default plus an assertion; it reads as deliberate while telling the next person nothing.
 **Falsifier:** `@node-rs/argon2` publishing `Algorithm` as a plain enum, or the project dropping `verbatimModuleSyntax`. Either makes naming the algorithm free, and then it should be named.
+
+### 50. The session is a signed cookie with no server-side record
+
+**SOUND** · reversal: moderate, a session table means a migration and a lookup on every request · 2026-10-15 · phase 7, `PB-050`
+
+**Decision:** The session cookie holds `userId.expiresAtMillis`, signed by `@fastify/cookie` with `SESSION_SECRET`, and nothing is written server-side. Logout clears the cookie. The expiry lives inside the signed value as well as in `Max-Age`, and `/auth/me` re-reads the user from the database on every request, so a deleted account loses its session immediately.
+
+**Evidence:** `app_user` is one row in this build — the seeded HR manager (`seed/index.ts:84`) — and the brief names one persona. A `session` table would be a migration, an insert on login, a lookup on every request and a sweep for expired rows, all to serve revocation nobody has asked for. The signed value is verified by `request.unsignCookie`, which returns a null value for anything it cannot verify; `auth.db.test.ts` forges a tampered, an unsigned and an expired cookie against the app's own secret.
+
+- **D** — Needed now: `PB-051` puts every route behind it, and the web app in phase 8 has nothing else to authenticate with.
+- **O** — Moderate. Adding a table later means a migration and a lookup per request, but the cookie name, the route shapes and the client code all stay.
+- **U** — No load claim. The claim is that a tampered or expired cookie is refused, and three tests hold it.
+- **B** — Every protected route from `PB-051`, the login page in `PB-055`, and `SESSION_SECRET` in the deployment.
+- **T** — Gives up revocation. A cookie stolen before logout stays valid until it expires, because clearing it only removes the browser's copy. Eight hours is the exposure, and rotating `SESSION_SECRET` is the blunt instrument that ends every live session at once.
+
+**Cheaper:** Nothing cheaper exists that still survives a restart — an in-memory session map would lose every session on deploy, on a demo that is deployed often.
+**Falsifier:** A requirement to sign one specific user out, or any second user of the system. Either makes the table worth its migration, and `PB-073` is where that gets argued.
