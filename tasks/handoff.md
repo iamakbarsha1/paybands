@@ -4,7 +4,7 @@ Written at the end of the session that finished phase 4. Read this, then `board.
 
 ## Where the build is
 
-Phases 0 to 4 are complete. Phase 5 has one ticket done. 37 of 90 tickets, 134 tests green, typecheck and lint clean.
+Phases 0 to 4 are complete. Phase 5 has one ticket done. 38 of 90 tickets, 134 tests green, typecheck and lint clean, and `origin/main` is level with local.
 
 `packages/core` now holds the whole comp maths surface, all of it pure and framework-free:
 
@@ -31,13 +31,9 @@ What it needs before work can begin:
 
 PB-036 left the pattern the endpoints follow: routes declare zod schemas, `buildApp` wires them through `setValidatorCompiler` and `setSerializerCompiler`, and query schemas are `z.strictObject` so a mistyped filter is a 400. `apps/api/src/app.ts` is the whole of it.
 
-## Two items only you can clear
+## One item only you can clear
 
-**PB-D03 — 51 commits are unpushed.** The `block-dangerous-git.sh` hook blocks `git push`, so this needs a human. The remote routes through `github.com-personal`:
-
-```
-git push origin main
-```
+PB-D03 is closed — 53 commits pushed to `origin/main` at the end of that session. Note for next time: `block-dangerous-git.sh` blocks `git push`, so the push always has to be run by a human, and the board entry stays open until it is.
 
 **PB-D04 — six clarifying questions are still unanswered** (`docs/clarifications.md`). Each has a stated default and the build has proceeded on those defaults, so nothing is blocked; the risk is that a default turns out wrong late.
 

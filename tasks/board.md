@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 37 of 90 done (phases 0–4 complete, phase 5 under way).
+**Progress** — 38 of 90 done (phases 0–4 complete, phase 5 under way).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -27,7 +27,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 11 Performance          | 3       | 0    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 0    |
-| Debt and missed         | 6       | 1    |
+| Debt and missed         | 6       | 2    |
 
 ---
 
@@ -36,7 +36,6 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | ID     | Story                                      | Status | Blocked by |
 | ------ | ------------------------------------------ | ------ | ---------- |
 | PB-042 | Integration test harness against a real database | next   | —          |
-| PB-D03 | Push local commits to `origin/main` | todo   | —          |
 
 ---
 
@@ -200,7 +199,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | ------ | ---------------------------------------------------------- | ------------ | ---------- |
 | PB-D01 | Database-level determinism assertion (decision 24 is WEAK) | blocked      | PB-042     |
 | PB-D02 | The Legal level-mix fix has no test                        | done         | —          |
-| PB-D03 | Local commits are not pushed                               | todo         | —          |
+| PB-D03 | Local commits are not pushed                               | done         | —          |
 | PB-D04 | Six clarifying questions still unanswered                  | todo         | —          |
 | PB-D05 | The `packages/core` collapse test (decision 4)             | blocked      | PB-064     |
 | PB-D06 | Audit log of salary edits                                  | out of scope | —          |
