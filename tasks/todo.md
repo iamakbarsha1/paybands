@@ -100,7 +100,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [ ] `GET /analytics/comp-ratio` — distribution overall and per slice
 - [ ] `GET /analytics/outliers`
 - [ ] `GET /analytics/pay-gap` — with suppression, and the suppression stated in the response rather than silently omitted
-- [ ] Aggregation in SQL where the database is better at it; `packages/core` keeps the maths that must be exact
+- [x] Aggregation in SQL where the database is better at it; `packages/core` keeps the maths that must be exact ([decision 48](../docs/decisions/decision-log.md))
 - [ ] Commit per report
 
 ## Phase 7 — Auth

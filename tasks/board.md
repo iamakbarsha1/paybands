@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 46 of 90 done (phases 0–5 complete, phase 6 in flight).
+**Progress** — 47 of 90 done (phases 0–5 complete, phase 6 in flight).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -19,7 +19,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 3 Seed                  | 10      | 10   |
 | 4 Comp maths            | 8       | 8    |
 | 5 API employees         | 7       | 7    |
-| 6 API analytics         | 6       | 2    |
+| 6 API analytics         | 6       | 3    |
 | 7 Auth                  | 5       | 0    |
 | 8 Web employees         | 6       | 0    |
 | 9 Web reports           | 5       | 0    |
@@ -120,7 +120,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-045 | `GET /analytics/comp-ratio`       | next   | —              |
 | PB-046 | `GET /analytics/outliers`         | todo   | PB-033, PB-042 |
 | PB-047 | `GET /analytics/pay-gap`          | todo   | PB-034, PB-042 |
-| PB-048 | Aggregation split stated and held | todo   | —              |
+| PB-048 | Aggregation split stated and held | done   | —              |
 
 ## Phase 7 — Auth
 
