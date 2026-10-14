@@ -30,6 +30,15 @@ export function addMoney(a: Money, b: Money): Money {
   return { amount: a.amount + b.amount, currency: a.currency };
 }
 
+/**
+ * Integer division rounded to nearest, ties away from zero. One copy of the rule,
+ * so the conversion and the percentile cannot round apart (decisions 36, 39).
+ */
+export function divideHalfAwayFromZero(numerator: bigint, denominator: bigint): bigint {
+  const sign = numerator < 0n ? -1n : 1n;
+  return (sign * (sign * numerator * 2n + denominator)) / (denominator * 2n);
+}
+
 /** Negative, zero or positive, so it works as a comparator passed straight to `sort`. */
 export function compareMoney(a: Money, b: Money): number {
   assertSameCurrency(a, b);

@@ -6,7 +6,7 @@
  */
 
 import { minorUnitsFor, type CurrencyCode } from './domain';
-import { money, type Money } from './money';
+import { divideHalfAwayFromZero, money, type Money } from './money';
 
 export type FxRate = {
   readonly currency: CurrencyCode;
@@ -53,10 +53,4 @@ function findRate(
 
 function pow10(exponent: number): bigint {
   return 10n ** BigInt(exponent);
-}
-
-/** The only division in the conversion. Ties go away from zero so the sign is symmetric. */
-function divideHalfAwayFromZero(numerator: bigint, denominator: bigint): bigint {
-  const sign = numerator < 0n ? -1n : 1n;
-  return (sign * (sign * numerator * 2n + denominator)) / (denominator * 2n);
 }
