@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_COMP_RATIO_THRESHOLD, money, outliers, type BandedSalary } from '@paybands/core';
 import { SEED, generate, type EmployeeRow, type SalaryRecordRow, type SeedData } from './generate';
 import {
   COMP_RATIO_MAX,
@@ -166,6 +167,41 @@ describe('generate', () => {
     );
     expect(below).toHaveLength(40);
     expect(above).toHaveLength(25);
+  });
+
+  it('agrees with the core outlier report on exactly who is out of band', () => {
+    // The seed plants outliers by comp ratio; the report finds them by comparing
+    // against min and max. Nothing related the two until this test.
+    const active = data.employees.filter((employee) => employee.terminationDate === null);
+    const rows: BandedSalary[] = active.map((employee) => {
+      const band = bandByEmployee(employee);
+      const record = currentSalary(employee);
+      return {
+        employeeId: employee.id,
+        salary: money(record.amountMinor, record.currencyCode),
+        band: {
+          min: money(band.minMinor, band.currencyCode),
+          mid: money(band.midMinor, band.currencyCode),
+          max: money(band.maxMinor, band.currencyCode),
+        },
+      };
+    });
+
+    const found = outliers(rows, DEFAULT_COMP_RATIO_THRESHOLD);
+    const byHand = {
+      below: active
+        .filter((e) => currentSalary(e).amountMinor < bandByEmployee(e).minMinor)
+        .map((e) => e.id),
+      above: active
+        .filter((e) => currentSalary(e).amountMinor > bandByEmployee(e).maxMinor)
+        .map((e) => e.id),
+    };
+
+    expect(found.belowBand.map((entry) => entry.employeeId)).toEqual(byHand.below);
+    expect(found.aboveBand.map((entry) => entry.employeeId)).toEqual(byHand.above);
+    expect(found.belowBand).toHaveLength(OUTLIERS_BELOW_BAND.count);
+    expect(found.aboveBand).toHaveLength(OUTLIERS_ABOVE_BAND.count);
+    expect(found.noBand).toEqual([]);
   });
 
   it('has a pay band and an FX rate in force on every salary record date', () => {
