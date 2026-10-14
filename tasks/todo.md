@@ -84,7 +84,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 5 — API: employees
 
-- [ ] Fastify 5, typed routes, zod schemas at the boundary
+- [x] Fastify 5, typed routes, zod schemas at the boundary. zod reaches Fastify through its own validator and serializer compilers rather than `fastify-type-provider-zod`, whose required peers pull in an OpenAPI toolchain ([decision 43](../docs/decisions/decision-log.md)). Query schemas are strict
 - [ ] `GET /employees` — keyset pagination, filter by country/department/level/status, sort
 - [ ] `GET /employees/:id` — detail + salary timeline
 - [ ] `POST /employees`, `PATCH /employees/:id`

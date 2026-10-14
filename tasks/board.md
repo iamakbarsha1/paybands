@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 36 of 90 done (phases 0–4 complete, phase 5 next).
+**Progress** — 37 of 90 done (phases 0–4 complete, phase 5 under way).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -18,7 +18,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 2 Schema                | 6       | 6    |
 | 3 Seed                  | 10      | 10   |
 | 4 Comp maths            | 8       | 8    |
-| 5 API employees         | 7       | 0    |
+| 5 API employees         | 7       | 1    |
 | 6 API analytics         | 6       | 0    |
 | 7 Auth                  | 5       | 0    |
 | 8 Web employees         | 6       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                      | Status | Blocked by |
 | ------ | ------------------------------------------ | ------ | ---------- |
-| PB-036 | Fastify app with zod at the boundary | next   | —          |
+| PB-042 | Integration test harness against a real database | next   | —          |
 | PB-D03 | Push local commits to `origin/main` | todo   | —          |
 
 ---
@@ -104,13 +104,13 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                            | Status | Blocked by     |
 | ------ | ------------------------------------------------ | ------ | -------------- |
-| PB-036 | Fastify app with zod at the boundary             | todo   | —              |
+| PB-036 | Fastify app with zod at the boundary             | done   | —              |
 | PB-037 | `GET /employees`                                 | todo   | PB-036, PB-042 |
 | PB-038 | `GET /employees/:id`                             | todo   | PB-037, PB-030 |
-| PB-039 | Create and edit an employee                      | todo   | PB-036         |
+| PB-039 | Create and edit an employee                      | todo   | —              |
 | PB-040 | Record a salary change                           | todo   | PB-039         |
-| PB-041 | Repository layer separate from handlers          | todo   | PB-036         |
-| PB-042 | Integration test harness against a real database | todo   | PB-036         |
+| PB-041 | Repository layer separate from handlers          | todo   | —              |
+| PB-042 | Integration test harness against a real database | next   | —              |
 
 ## Phase 6 — API: analytics
 
@@ -127,7 +127,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                        | Status | Blocked by |
 | ------ | -------------------------------------------- | ------ | ---------- |
-| PB-049 | Passwords hashed with argon2id               | todo   | PB-036     |
+| PB-049 | Passwords hashed with argon2id               | todo   | —          |
 | PB-050 | Session cookie                               | todo   | PB-049     |
 | PB-051 | Every route behind the guard                 | todo   | PB-050     |
 | PB-052 | Login rate limit                             | todo   | PB-050     |
