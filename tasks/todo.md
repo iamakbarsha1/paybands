@@ -116,7 +116,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 8 — Web: employees
 
-- [ ] Next.js 16 App Router, shadcn/ui + Tailwind
+- [x] Next.js 16 App Router, shadcn/ui + Tailwind, one layout with nav and one API client
 - [ ] Login page
 - [ ] Employee list — server-side pagination, filters, sort. Never ship 10,000 rows to the browser.
 - [ ] Employee detail — salary timeline, band position, comp ratio

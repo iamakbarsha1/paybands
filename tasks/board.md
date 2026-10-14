@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 55 of 90 done (phases 0–7 complete, phase 8 next).
+**Progress** — 56 of 90 done (phases 0–7 complete, phase 8 in flight).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -21,13 +21,13 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 5 API employees         | 7       | 7    |
 | 6 API analytics         | 6       | 6    |
 | 7 Auth                  | 5       | 5    |
-| 8 Web employees         | 6       | 0    |
+| 8 Web employees         | 6       | 1    |
 | 9 Web reports           | 5       | 0    |
 | 10 Ask bar (optional)   | 5       | 0    |
 | 11 Performance          | 3       | 0    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 0    |
-| Debt and missed         | 6       | 2    |
+| Debt and missed         | 7       | 2    |
 
 ---
 
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-054 | App shell                               | next   | —          |
+| PB-055 | Login page                              | next   | —          |
 
 ---
 
@@ -136,8 +136,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                    | Status | Blocked by             |
 | ------ | ---------------------------------------- | ------ | ---------------------- |
-| PB-054 | App shell                                | todo   | PB-042                 |
-| PB-055 | Login page                               | todo   | PB-050, PB-054         |
+| PB-054 | App shell                                | done   | —                      |
+| PB-055 | Login page                               | next   | —                      |
 | PB-056 | Employee list                            | todo   | PB-037, PB-054         |
 | PB-057 | Employee detail                          | todo   | PB-038, PB-054         |
 | PB-058 | Edit employee and record a salary change | todo   | PB-039, PB-040, PB-057 |
@@ -203,3 +203,4 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D04 | Six clarifying questions still unanswered                  | todo         | —          |
 | PB-D05 | The `packages/core` collapse test (decision 4)             | blocked      | PB-064     |
 | PB-D06 | Audit log of salary edits                                  | out of scope | —          |
+| PB-D07 | Web response types are aligned with the API's zod by hand  | todo         | —          |
