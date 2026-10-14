@@ -255,3 +255,69 @@ export async function compRatioSlices(
     people: people.get(group.key) ?? [],
   }));
 }
+
+export interface OutlierCandidate {
+  readonly employeeId: number;
+  readonly employeeCode: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly countryCode: string;
+  readonly departmentName: string;
+  readonly jobLevelName: string;
+  readonly salary: MoneyRow;
+  readonly band: BandRow | null;
+}
+
+/**
+ * Everyone still here whose pay is on record, joined to the band in force for their level and
+ * country, and carrying the fields a link to the employee needs. `outliers` wants rows already
+ * joined and already filtered, because neither the join nor "still employed" is something a
+ * pure function can work out (decision 40).
+ */
+export async function bandedSalaries(prisma: PrismaClient): Promise<OutlierCandidate[]> {
+  const [employees, bands] = await Promise.all([
+    prisma.employee.findMany({
+      where: { terminationDate: null, salaryRecords: { some: { effectiveTo: null } } },
+      include: {
+        department: true,
+        jobLevel: true,
+        salaryRecords: {
+          where: { effectiveTo: null },
+          select: { amountMinor: true, currencyCode: true },
+        },
+      },
+      orderBy: { id: 'asc' },
+    }),
+    prisma.payBand.findMany({ where: { effectiveTo: null } }),
+  ]);
+
+  const bandFor = new Map(
+    bands.map((band) => [
+      `${band.jobLevelId}:${band.countryCode}`,
+      {
+        min: { amountMinor: band.minMinor, currencyCode: band.currencyCode },
+        mid: { amountMinor: band.midMinor, currencyCode: band.currencyCode },
+        max: { amountMinor: band.maxMinor, currencyCode: band.currencyCode },
+      },
+    ]),
+  );
+
+  return employees.flatMap((employee) => {
+    const open = employee.salaryRecords[0];
+    if (open === undefined) return [];
+
+    return [
+      {
+        employeeId: employee.id,
+        employeeCode: employee.employeeCode,
+        firstName: employee.firstName,
+        lastName: employee.lastName,
+        countryCode: employee.countryCode,
+        departmentName: employee.department.name,
+        jobLevelName: employee.jobLevel.name,
+        salary: { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
+        band: bandFor.get(`${employee.jobLevelId}:${employee.countryCode}`) ?? null,
+      },
+    ];
+  });
+}

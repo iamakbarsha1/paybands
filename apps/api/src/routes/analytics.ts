@@ -1,15 +1,28 @@
-import { compRatio, money, percentiles, toUsd, type FxRate } from '@paybands/core';
+import {
+  compRatio,
+  DEFAULT_COMP_RATIO_THRESHOLD,
+  money,
+  outliers,
+  percentiles,
+  toUsd,
+  type FxRate,
+  type Outlier,
+  type PayBand,
+} from '@paybands/core';
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import {
+  bandedSalaries,
   bandOccupancy,
   compRatioSlices,
   fxRates,
   salaryDistribution,
   SLICE_GROUPS,
+  type BandRow,
   type CompRatioSlice,
   type DistributionSlice,
+  type OutlierCandidate,
 } from '../repositories/analytics';
 
 const bandsQuery = z.strictObject({
@@ -80,6 +93,29 @@ const compRatioResponse = z.strictObject({
   groups: z.array(summarySchema.extend({ key: z.string(), name: z.string() })),
 });
 
+const outlierRow = z.strictObject({
+  employeeId: z.number(),
+  employeeCode: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  countryCode: z.string(),
+  departmentName: z.string(),
+  jobLevelName: z.string(),
+  salary: z.strictObject({ amountMinor: z.string(), currencyCode: z.string() }),
+  compRatio: z.number().nullable(),
+});
+
+const outliersResponse = z.strictObject({
+  threshold: z.strictObject({ min: z.number(), max: z.number() }),
+  belowBand: z.array(outlierRow),
+  aboveBand: z.array(outlierRow),
+  compRatioOutOfRange: z.array(outlierRow),
+  noBand: z.array(outlierRow),
+});
+
+/** Strict and empty: the report takes no parameters, so a parameter is a mistake worth a 400. */
+const noQuery = z.strictObject({});
+
 export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
   app.get(
     '/analytics/bands',
@@ -148,6 +184,79 @@ export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
       };
     },
   );
+
+  app.get(
+    '/analytics/outliers',
+    { schema: { querystring: noQuery, response: { 200: outliersResponse } } },
+    async () => {
+      const candidates = await bandedSalaries(prisma);
+      const found = outliers(
+        candidates.map((row) => ({
+          employeeId: row.employeeId,
+          salary: money(row.salary.amountMinor, row.salary.currencyCode),
+          band: row.band === null ? undefined : asPayBand(row.band),
+        })),
+        DEFAULT_COMP_RATIO_THRESHOLD,
+      );
+
+      const byId = new Map(candidates.map((row) => [row.employeeId, row]));
+
+      return {
+        // Policy, not a fact about the band, so the report carries the line it judged against.
+        threshold: DEFAULT_COMP_RATIO_THRESHOLD,
+        belowBand: listed(found.belowBand, byId),
+        aboveBand: listed(found.aboveBand, byId),
+        compRatioOutOfRange: listed(found.compRatioOutOfRange, byId),
+        noBand: listed(found.noBand, byId),
+      };
+    },
+  );
+}
+
+function asPayBand(band: BandRow): PayBand {
+  return {
+    min: money(band.min.amountMinor, band.min.currencyCode),
+    mid: money(band.mid.amountMinor, band.mid.currencyCode),
+    max: money(band.max.amountMinor, band.max.currencyCode),
+  };
+}
+
+/** The person behind each finding, put back on it: a list of ids is not something to act on. */
+function listed(
+  found: readonly Outlier[],
+  byId: ReadonlyMap<number, OutlierCandidate>,
+): {
+  employeeId: number;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  countryCode: string;
+  departmentName: string;
+  jobLevelName: string;
+  salary: { amountMinor: string; currencyCode: string };
+  compRatio: number | null;
+}[] {
+  return found.flatMap((outlier) => {
+    const row = byId.get(outlier.employeeId);
+    if (row === undefined) return [];
+
+    return [
+      {
+        employeeId: row.employeeId,
+        employeeCode: row.employeeCode,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        countryCode: row.countryCode,
+        departmentName: row.departmentName,
+        jobLevelName: row.jobLevelName,
+        salary: {
+          amountMinor: row.salary.amountMinor.toString(),
+          currencyCode: row.salary.currencyCode,
+        },
+        compRatio: outlier.compRatio,
+      },
+    ];
+  });
 }
 
 /**
@@ -173,11 +282,10 @@ function summarise(slice: Pick<CompRatioSlice, 'headcount' | 'people'>): {
     // Nothing on record is not the same as nothing to measure against, so it counts as neither.
     if (person.salary === null) continue;
 
-    const ratio = compRatio(money(person.salary.amountMinor, person.salary.currencyCode), {
-      min: money(person.band.min.amountMinor, person.band.min.currencyCode),
-      mid: money(person.band.mid.amountMinor, person.band.mid.currencyCode),
-      max: money(person.band.max.amountMinor, person.band.max.currencyCode),
-    });
+    const ratio = compRatio(
+      money(person.salary.amountMinor, person.salary.currencyCode),
+      asPayBand(person.band),
+    );
     if (ratio === null) {
       unbanded += 1;
       continue;
