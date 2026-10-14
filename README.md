@@ -44,6 +44,18 @@ The seed is deterministic. Running it twice produces the same database, and `app
 
 It contains planted outliers, because a report that finds nothing demonstrates nothing: 40 employees paid below their band minimum, 25 above the maximum, one department with a real gender pay gap, and one department too small for a gap to be reportable.
 
+### Tests that need a database
+
+API tests ending in `.db.test.ts` run against real Postgres, not a mock. They skip themselves when `TEST_DATABASE_URL` is unset, so `pnpm test` works on a fresh clone; CI always sets it ([decision 46](docs/decisions/decision-log.md)).
+
+```bash
+docker compose up -d                           # Postgres 17 on :5433, data in tmpfs
+export TEST_DATABASE_URL='postgresql://paybands:paybands@localhost:5433/paybands_test'
+pnpm test                                      # migrations apply, then the suite runs
+```
+
+The harness loads 50 people rather than the shipped 10,000 — the same reference tables, a population small enough to reload between runs, and one planted example of every case a report has to render ([decision 45](docs/decisions/decision-log.md)). It refuses any database whose name does not end in `_test`.
+
 ## Layout
 
 ```
