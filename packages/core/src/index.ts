@@ -15,3 +15,5 @@ export { compRatio, rangePenetration } from './band';
 export type { PayBand } from './band';
 export { percentiles } from './stats';
 export type { Percentile } from './stats';
+export { outliers, DEFAULT_COMP_RATIO_THRESHOLD } from './outliers';
+export type { BandedSalary, CompRatioThreshold, Outlier, Outliers } from './outliers';
