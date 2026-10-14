@@ -86,7 +86,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 - [x] Fastify 5, typed routes, zod schemas at the boundary. zod reaches Fastify through its own validator and serializer compilers rather than `fastify-type-provider-zod`, whose required peers pull in an OpenAPI toolchain ([decision 43](../docs/decisions/decision-log.md)). Query schemas are strict
 - [x] `GET /employees` — keyset on (sort column, id), filters for country/department/level/status, sort on `name`, `hireDate` or `id` in either direction, limit capped at 100
-- [ ] `GET /employees/:id` — detail + salary timeline
+- [x] `GET /employees/:id` — detail, ordered salary timeline, band position and comp ratio from `packages/core`; 404 for an unknown id
 - [ ] `POST /employees`, `PATCH /employees/:id`
 - [ ] `POST /employees/:id/salary` — new effective-dated record, closes the previous one in a transaction
 - [x] Repository layer separate from route handlers; the client is constructed once in `src/db.ts` and an ESLint rule keeps Prisma out of handlers ([decision 47](../docs/decisions/decision-log.md))

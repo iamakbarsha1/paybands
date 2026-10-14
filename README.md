@@ -63,6 +63,7 @@ The harness loads 50 people rather than the shipped 10,000 — the same referenc
 | `GET /health` | liveness, unauthenticated, no query schema |
 | `GET /reference` | the currency, gender and salary-reason vocabularies |
 | `GET /employees` | a page of employees |
+| `GET /employees/:id` | one employee, their salary timeline, band position and comp ratio |
 
 `GET /employees` is keyset paginated, not offset: the response carries `nextCursor`, an opaque
 base64url token naming the last row read, and a cursor this API did not issue is a 400. Pages
@@ -77,6 +78,8 @@ never exceed `limit`, which caps at 100.
 | `direction` | `asc`, `desc` | `asc` |
 | `limit` | 1–100 | 25 |
 | `cursor` | a `nextCursor` from a previous page | — |
+
+Money crosses the wire as minor units in a string (`{ "amountMinor": "5500000", "currencyCode": "USD" }`), because JSON has no integer wide enough to be trusted with it. An employee the band table does not cover answers 200 with `band`, `compRatio` and `rangePenetration` all null, never a dropped row.
 
 Every sort breaks ties on `id`, which is what keeps a page boundary stable when two people
 share a surname. Unknown query parameters are rejected rather than ignored.
