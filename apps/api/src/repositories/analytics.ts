@@ -1,4 +1,6 @@
+import { isCurrencyCode, type FxRate } from '@paybands/core';
 import type { PrismaClient } from '../../generated/prisma/client';
+import type { MoneyRow } from './employees';
 
 export interface BandOccupancyQuery {
   readonly country?: string | undefined;
@@ -57,4 +59,109 @@ export async function bandOccupancy(
     maxMinor: band.maxMinor,
     headcount: headcounts.get(`${band.jobLevelId}:${band.countryCode}`) ?? 0,
   }));
+}
+
+export const DISTRIBUTION_GROUPS = ['country', 'department', 'level'] as const;
+export type DistributionGroup = (typeof DISTRIBUTION_GROUPS)[number];
+
+export interface DistributionSlice {
+  readonly key: string;
+  readonly name: string;
+  /** Everyone still here in the slice, including anyone whose pay is not on record. */
+  readonly headcount: number;
+  /** The open salary record of each of them that has one, in their own currency. */
+  readonly salaries: readonly MoneyRow[];
+}
+
+/**
+ * The grouping is a closed set because each member is a column the slice is keyed on, and
+ * a grouping the database cannot index is a report nobody waits for.
+ *
+ * The rows come back whole rather than aggregated: the percentiles are exact integer
+ * arithmetic over converted amounts, which is `packages/core`'s job and not SQL's
+ * (decision 48). What SQL does here is the grouping, the filtering and the join.
+ */
+export async function salaryDistribution(
+  prisma: PrismaClient,
+  groupBy: DistributionGroup,
+): Promise<DistributionSlice[]> {
+  const [groups, employees] = await Promise.all([
+    groupRows(prisma, groupBy),
+    prisma.employee.findMany({
+      where: { terminationDate: null },
+      select: {
+        countryCode: true,
+        departmentId: true,
+        jobLevelId: true,
+        salaryRecords: {
+          where: { effectiveTo: null },
+          select: { amountMinor: true, currencyCode: true },
+        },
+      },
+    }),
+  ]);
+
+  const headcounts = new Map<string, number>();
+  const salaries = new Map<string, MoneyRow[]>();
+
+  for (const employee of employees) {
+    const key =
+      groupBy === 'country'
+        ? employee.countryCode
+        : groupBy === 'department'
+          ? String(employee.departmentId)
+          : String(employee.jobLevelId);
+
+    headcounts.set(key, (headcounts.get(key) ?? 0) + 1);
+
+    const open = employee.salaryRecords[0];
+    if (open === undefined) continue;
+    const held = salaries.get(key) ?? [];
+    held.push({ amountMinor: open.amountMinor, currencyCode: open.currencyCode });
+    salaries.set(key, held);
+  }
+
+  return groups.map((group) => ({
+    key: group.key,
+    name: group.name,
+    headcount: headcounts.get(group.key) ?? 0,
+    salaries: salaries.get(group.key) ?? [],
+  }));
+}
+
+/** Every group the reference data knows about, so an empty one is reported rather than missing. */
+async function groupRows(
+  prisma: PrismaClient,
+  groupBy: DistributionGroup,
+): Promise<{ key: string; name: string }[]> {
+  if (groupBy === 'country') {
+    const rows = await prisma.country.findMany({ orderBy: { code: 'asc' } });
+    return rows.map((row) => ({ key: row.code, name: row.name }));
+  }
+  if (groupBy === 'department') {
+    const rows = await prisma.department.findMany({ orderBy: { id: 'asc' } });
+    return rows.map((row) => ({ key: String(row.id), name: row.name }));
+  }
+  const rows = await prisma.jobLevel.findMany({ orderBy: { rank: 'asc' } });
+  return rows.map((row) => ({ key: String(row.id), name: row.name }));
+}
+
+/**
+ * The whole rate table, which is small and effective-dated: `toUsd` picks the row covering
+ * the date it is given, so filtering here would only hide the rate it needs.
+ */
+export async function fxRates(prisma: PrismaClient): Promise<FxRate[]> {
+  const rows = await prisma.fxRate.findMany();
+  return rows.flatMap((row) =>
+    isCurrencyCode(row.currencyCode)
+      ? [
+          {
+            currency: row.currencyCode,
+            rateToUsdMicros: row.rateToUsdMicros,
+            effectiveFrom: row.effectiveFrom,
+            effectiveTo: row.effectiveTo,
+          },
+        ]
+      : [],
+  );
 }
