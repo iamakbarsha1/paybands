@@ -12,6 +12,7 @@ import { z, type ZodError, type ZodType } from 'zod';
 import { CURRENCY_CODES, GENDERS, SALARY_REASONS } from '@paybands/core';
 import type { PrismaClient } from '../generated/prisma/client';
 import { registerGuard } from './auth/guard';
+import { referenceLists } from './repositories/reference';
 import { registerAnalyticsRoutes } from './routes/analytics';
 import { registerAuthRoutes } from './routes/auth';
 import { registerEmployeeRoutes } from './routes/employees';
@@ -62,6 +63,9 @@ const referenceResponse = z.strictObject({
   currencies: z.array(z.string()).readonly(),
   genders: z.array(z.string()).readonly(),
   salaryReasons: z.array(z.string()).readonly(),
+  countries: z.array(z.strictObject({ code: z.string(), name: z.string() })),
+  departments: z.array(z.strictObject({ id: z.number(), name: z.string() })),
+  jobLevels: z.array(z.strictObject({ id: z.number(), name: z.string() })),
 });
 
 /** Builds the instance without starting it, so tests drive it through `inject()` and never bind a port. */
@@ -90,10 +94,11 @@ export function buildApp(options: BuildAppOptions): App {
   app.get(
     '/reference',
     { schema: { querystring: noQuery, response: { 200: referenceResponse } } },
-    () => ({
+    async () => ({
       currencies: CURRENCY_CODES,
       genders: GENDERS,
       salaryReasons: SALARY_REASONS,
+      ...(await referenceLists(options.prisma)),
     }),
   );
 

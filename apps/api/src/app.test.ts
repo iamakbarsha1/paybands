@@ -24,18 +24,8 @@ describe('GET /health', () => {
   });
 });
 
-describe('GET /reference', () => {
-  it('serves the domain vocabularies from @paybands/core', async () => {
-    const response = await app.inject({ method: 'GET', url: '/reference' });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({
-      currencies: ['USD', 'GBP', 'EUR', 'INR', 'SGD', 'JPY'],
-      genders: ['female', 'male', 'other', 'undisclosed'],
-      salaryReasons: ['hire', 'merit', 'promotion', 'market'],
-    });
-  });
-});
+// `/reference` reads the country, department and level tables, so its tests moved to
+// `reference.db.test.ts` where there is a database to read.
 
 describe('an unknown route', () => {
   it('answers 404 rather than falling through to a handler', async () => {
@@ -62,16 +52,6 @@ describe('the zod boundary', () => {
     const response = await app.inject({ method: 'GET', url: '/health?probe=k8s' });
 
     expect(response.statusCode).toBe(200);
-  });
-
-  it('serialises the response through its schema, dropping nothing the schema declares', async () => {
-    const response = await app.inject({ method: 'GET', url: '/reference' });
-
-    expect(Object.keys(response.json<object>()).sort()).toEqual([
-      'currencies',
-      'genders',
-      'salaryReasons',
-    ]);
   });
 
   it('answers 500 rather than a malformed body when a handler breaks its response schema', async () => {
