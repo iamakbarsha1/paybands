@@ -1,4 +1,4 @@
-import type { Gender } from '@paybands/core';
+import type { Gender, SalaryReason } from '@paybands/core';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
 /** Sorting is a closed set, because every column named here has to stay keyset-safe. */
@@ -155,4 +155,84 @@ function toListRow(row: {
 /** The column is a `date`, so the time half is noise the wire does not need. */
 function day(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+export interface MoneyRow {
+  readonly amountMinor: bigint;
+  readonly currencyCode: string;
+}
+
+export interface SalaryRecordDetail extends MoneyRow {
+  readonly id: number;
+  readonly effectiveFrom: string;
+  readonly effectiveTo: string | null;
+  readonly reason: SalaryReason;
+}
+
+export interface EmployeeDetail {
+  readonly employee: EmployeeListRow & {
+    readonly managerId: number | null;
+    readonly departmentName: string;
+    readonly jobLevelName: string;
+  };
+  readonly salaryHistory: SalaryRecordDetail[];
+  readonly currentSalary: MoneyRow | null;
+  readonly band: { readonly min: MoneyRow; readonly mid: MoneyRow; readonly max: MoneyRow } | null;
+}
+
+/**
+ * The person, their pay in order, and the band they are measured against. Null is "no such
+ * employee"; a null band is an employee the band table does not cover, which the report still
+ * has to show (decision 38).
+ */
+export async function findEmployeeDetail(
+  prisma: PrismaClient,
+  id: number,
+): Promise<EmployeeDetail | null> {
+  const row = await prisma.employee.findUnique({
+    where: { id },
+    include: {
+      department: true,
+      jobLevel: true,
+      salaryRecords: { orderBy: [{ effectiveFrom: 'asc' }, { id: 'asc' }] },
+    },
+  });
+  if (row === null) return null;
+
+  const band = await prisma.payBand.findFirst({
+    where: { jobLevelId: row.jobLevelId, countryCode: row.countryCode, effectiveTo: null },
+    orderBy: { effectiveFrom: 'desc' },
+  });
+
+  const salaryHistory = row.salaryRecords.map((record) => ({
+    id: record.id,
+    amountMinor: record.amountMinor,
+    currencyCode: record.currencyCode,
+    effectiveFrom: day(record.effectiveFrom),
+    effectiveTo: record.effectiveTo === null ? null : day(record.effectiveTo),
+    reason: record.reason,
+  }));
+  const open = row.salaryRecords.find((record) => record.effectiveTo === null);
+
+  return {
+    employee: {
+      ...toListRow(row),
+      managerId: row.managerId,
+      departmentName: row.department.name,
+      jobLevelName: row.jobLevel.name,
+    },
+    salaryHistory,
+    currentSalary:
+      open === undefined
+        ? null
+        : { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
+    band:
+      band === null
+        ? null
+        : {
+            min: { amountMinor: band.minMinor, currencyCode: band.currencyCode },
+            mid: { amountMinor: band.midMinor, currencyCode: band.currencyCode },
+            max: { amountMinor: band.maxMinor, currencyCode: band.currencyCode },
+          },
+  };
 }

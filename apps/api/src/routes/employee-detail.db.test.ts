@@ -64,12 +64,15 @@ describe.skipIf(!hasTestDatabase())('GET /employees/:id', () => {
   it('measures the planted outliers against their band', async () => {
     const { body: below } = await detail(LANDMARKS.belowBandEmployeeId);
     expect(below.compRatio).toBeCloseTo(0.7, 3);
-    // min is 80% of mid and max is 120%, so a 0.7 ratio sits a quarter of a band below the floor.
-    expect(below.rangePenetration).toBeCloseTo(-0.25, 3);
+    // Min is 80% of mid and max is 120%, so a 0.7 ratio sits about a quarter of a band below
+    // the floor — "about", because both edges are rounded to a whole unit of their currency.
+    expect(below.rangePenetration).toBeLessThan(0);
+    expect(below.rangePenetration).toBeCloseTo(-0.25, 1);
 
     const { body: above } = await detail(LANDMARKS.aboveBandEmployeeId);
     expect(above.compRatio).toBeCloseTo(1.3, 3);
-    expect(above.rangePenetration).toBeCloseTo(1.25, 3);
+    expect(above.rangePenetration).toBeGreaterThan(1);
+    expect(above.rangePenetration).toBeCloseTo(1.25, 1);
   });
 
   it('still answers for an employee with no band', async () => {

@@ -1,12 +1,21 @@
-import { GENDERS } from '@paybands/core';
+import {
+  compRatio,
+  GENDERS,
+  money,
+  rangePenetration,
+  SALARY_REASONS,
+  type Money,
+} from '@paybands/core';
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import {
   EMPLOYEE_SORTS,
   EMPLOYEE_STATUSES,
+  findEmployeeDetail,
   listEmployees,
   type EmployeeCursor,
+  type MoneyRow,
 } from '../repositories/employees';
 
 /**
@@ -68,6 +77,41 @@ const listResponse = z.strictObject({
   nextCursor: z.string().nullable(),
 });
 
+const idParam = z.strictObject({ id: z.coerce.number().int().positive() });
+
+/** Minor units as a string: JSON has no integer wide enough to be trusted with money. */
+const moneySchema = z.strictObject({ amountMinor: z.string(), currencyCode: z.string() });
+
+const detailResponse = z.strictObject({
+  employee: employeeSchema.extend({
+    managerId: z.number().nullable(),
+    departmentName: z.string(),
+    jobLevelName: z.string(),
+  }),
+  salaryHistory: z.array(
+    moneySchema.extend({
+      id: z.number(),
+      effectiveFrom: z.string(),
+      effectiveTo: z.string().nullable(),
+      reason: z.enum(SALARY_REASONS),
+    }),
+  ),
+  currentSalary: moneySchema.nullable(),
+  band: z.strictObject({ min: moneySchema, mid: moneySchema, max: moneySchema }).nullable(),
+  compRatio: z.number().nullable(),
+  rangePenetration: z.number().nullable(),
+});
+
+const notFound = z.strictObject({ message: z.string() });
+
+function onWire(row: MoneyRow): { amountMinor: string; currencyCode: string } {
+  return { amountMinor: row.amountMinor.toString(), currencyCode: row.currencyCode };
+}
+
+function asMoney(row: MoneyRow): Money {
+  return money(row.amountMinor, row.currencyCode);
+}
+
 export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
   app.get(
     '/employees',
@@ -89,6 +133,44 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
         employees: page.employees,
         nextCursor: page.nextCursor === null ? null : encodeCursor(page.nextCursor),
       };
+    },
+  );
+
+  app.get(
+    '/employees/:id',
+    { schema: { params: idParam, response: { 200: detailResponse, 404: notFound } } },
+    async (request, reply) => {
+      const detail = await findEmployeeDetail(prisma, request.params.id);
+      if (detail === null) {
+        return reply.code(404).send({ message: `No employee with id ${request.params.id}` });
+      }
+
+      const salary = detail.currentSalary === null ? null : asMoney(detail.currentSalary);
+      // `undefined` rather than null, because that is what core reads as "no band" (decision 38).
+      const band =
+        detail.band === null
+          ? undefined
+          : {
+              min: asMoney(detail.band.min),
+              mid: asMoney(detail.band.mid),
+              max: asMoney(detail.band.max),
+            };
+
+      return reply.send({
+        employee: detail.employee,
+        salaryHistory: detail.salaryHistory.map((record) => ({ ...record, ...onWire(record) })),
+        currentSalary: detail.currentSalary === null ? null : onWire(detail.currentSalary),
+        band:
+          detail.band === null
+            ? null
+            : {
+                min: onWire(detail.band.min),
+                mid: onWire(detail.band.mid),
+                max: onWire(detail.band.max),
+              },
+        compRatio: salary === null ? null : compRatio(salary, band),
+        rangePenetration: salary === null ? null : rangePenetration(salary, band),
+      });
     },
   );
 }
