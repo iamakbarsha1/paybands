@@ -916,3 +916,20 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Decorate the Fastify instance with the client and let handlers call it. Rejected because it is the same coupling with a longer name, and nothing then stops a handler from writing its own query.
 **Falsifier:** A second consumer of the repositories never appearing — if phases 5 and 6 end up with one endpoint each calling one function, the layer is ceremony and the handlers should hold the queries.
+
+### 48. SQL groups and filters; `packages/core` does the money arithmetic
+
+**SOUND** · reversal: moderate, the four remaining phase 6 endpoints follow whichever way this goes · 2026-10-15 · phase 6, `PB-044`, `PB-048`
+
+**Decision:** Analytics repositories group, filter and join in SQL and return whole rows. Percentiles, comp ratios, outlier thresholds and gap arithmetic are computed in `packages/core` over those rows. `GET /analytics/distribution` fetches the open salary record of every active employee and asks `percentiles` for the four points; the database is never asked for `percentile_cont` in production code.
+
+**Evidence:** The conversion the distribution report needs is `toUsd`, whose scale factor, window convention and single rounding point are decisions 33 to 36 and live in `packages/core/src/fx.ts`. Computing the percentiles in SQL means converting in SQL, which means a second implementation of those four rules against the `fx_rate` join — the same money arithmetic in two languages, with no test that can see both at once. `GET /analytics/bands` is the counter-example that sets the line: its headcounts are a `groupBy` in SQL, because a count is not money.
+
+- **D** — Needed now. Five endpoints in this phase read the same rows; without a stated line each one would answer the question differently.
+- **O** — Moderate. The response shape does not change if the arithmetic moves, so a reversal is contained to the repository and the handler of each endpoint.
+- **U** — No performance claim. The claim is that the two paths agree, and `analytics-distribution.db.test.ts` holds it: Postgres' own `percentile_cont` over the US slice matches the endpoint to the minor unit, because both interpolate linearly between closest ranks (decision 39, `docs/glossary.md`).
+- **B** — Every analytics repository and handler in phases 6 and 11, plus whatever the ask bar routes through in phase 10.
+- **T** — Gives up the aggregate the database is best at. Ten thousand open salary records cross the wire per distribution request where four numbers would have done, and nothing has measured what that costs. `PB-070` measures it against the full seed.
+
+**Cheaper:** `percentile_cont` in SQL with the rate table joined in. Rejected because it duplicates decisions 33 to 36 in a second language; kept as the first thing to try if `PB-070` finds the fetch too slow, and single-currency slices need no conversion at all.
+**Falsifier:** A measurement in `PB-070` showing the row fetch dominates the request. Then the split moves for the grouped reports and the parity test becomes the thing that keeps the SQL honest.
