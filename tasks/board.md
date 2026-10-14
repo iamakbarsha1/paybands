@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 34 of 90 done (phases 0–3 complete, phase 4 under way).
+**Progress** — 35 of 90 done (phases 0–4 complete, phase 5 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -17,7 +17,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 1 Workspace skeleton    | 4       | 4    |
 | 2 Schema                | 6       | 6    |
 | 3 Seed                  | 10      | 10   |
-| 4 Comp maths            | 8       | 7    |
+| 4 Comp maths            | 8       | 8    |
 | 5 API employees         | 7       | 0    |
 | 6 API analytics         | 6       | 0    |
 | 7 Auth                  | 5       | 0    |
@@ -35,7 +35,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                      | Status | Blocked by |
 | ------ | ------------------------------------------ | ------ | ---------- |
-| PB-035 | Edge-case coverage is named, not incidental | next   | —          |
+| PB-036 | Fastify app with zod at the boundary | next   | —          |
+| PB-D02 | The Legal level-mix fix has no test | next   | —          |
 | PB-D03 | Push local commits to `origin/main` | todo   | —          |
 
 ---
@@ -98,7 +99,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-032 | `percentiles`                               | done   | —              |
 | PB-033 | `outliers`                                  | done   | —              |
 | PB-034 | `payGap` with suppression                   | done   | —              |
-| PB-035 | Edge-case coverage is named, not incidental | next   | —              |
+| PB-035 | Edge-case coverage is named, not incidental | done   | —              |
 
 ## Phase 5 — API: employees
 

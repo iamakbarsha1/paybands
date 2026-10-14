@@ -79,8 +79,8 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [x] `percentiles(values, [25,50,75,90])` — linear interpolation between closest ranks, the method the glossary already named. Interpolates in `bigint` and rounds once, so the SQL and the TypeScript agree ([decision 39](../docs/decisions/decision-log.md))
 - [x] `outliers(rows, threshold)` — below min, above max, comp ratio out of range, plus a fourth list for employees with no band. Takes rows already joined and filtered rather than the sketched `(employees, bands, threshold)` ([decision 40](../docs/decisions/decision-log.md)). The seed fixture agreement is asserted in `apps/api`, where the generator lives
 - [x] `payGap(people, { minGroupSize })` — mean and median gap, **suppressed when either compared group is below the minimum**, not when the slice headcount is. Takes the slice with its genders so headcount and exclusions come from the same split ([decision 41](../docs/decisions/decision-log.md))
-- [ ] Edge cases, each a named test: empty group, single member, all-equal salaries, undisclosed gender, employee with no band, salary in a currency with no rate on that date
-- [ ] Commit per function: `test(core): …` then `feat(core): …`
+- [x] Edge cases, each a named test: empty group (`stats`, `gap`, `outliers`), single member (`stats`, `gap`), all-equal salaries (`stats`, `gap`), undisclosed gender (`gap`), employee with no band (`band` ×2, `outliers`), no rate on that date (`fx` ×2). `measures.test.ts` adds the one the list missed — that the three band measures agree with each other
+- [x] Commit per function: `test(core): …` then `feat(core): …`
 
 ## Phase 5 — API: employees
 
@@ -185,3 +185,4 @@ An index, not a second copy. Each phase's outcome is recorded in its own section
 | 0–1 | 1–14 | Project references dropped; the framework-free boundary is an ESLint rule, not a convention |
 | 2 | 15–21 | The partial unique index is hand-written into the migration, and verified by making the database reject a second open salary record |
 | 3 | 22–32 | Adversarial review found five cross-field defects that twenty-one passing assertions missed |
+| 4 | 33–41 | Decision 37 reversed before any code was written: scaling a ratio through integers is *less* precise than dividing two doubles. Three signatures depart from the sketch, each with its reason logged |
