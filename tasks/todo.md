@@ -78,7 +78,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [x] `rangePenetration(salary, band)` — position in band, 0–1, unclamped outside it. No new decision: the glossary already settles both the no-clamp rule and the flat band
 - [x] `percentiles(values, [25,50,75,90])` — linear interpolation between closest ranks, the method the glossary already named. Interpolates in `bigint` and rounds once, so the SQL and the TypeScript agree ([decision 39](../docs/decisions/decision-log.md))
 - [x] `outliers(rows, threshold)` — below min, above max, comp ratio out of range, plus a fourth list for employees with no band. Takes rows already joined and filtered rather than the sketched `(employees, bands, threshold)` ([decision 40](../docs/decisions/decision-log.md)). The seed fixture agreement is asserted in `apps/api`, where the generator lives
-- [ ] `payGap(groupA, groupB, { minGroupSize })` — mean and median gap, **suppressed below minimum headcount**
+- [x] `payGap(people, { minGroupSize })` — mean and median gap, **suppressed when either compared group is below the minimum**, not when the slice headcount is. Takes the slice with its genders so headcount and exclusions come from the same split ([decision 41](../docs/decisions/decision-log.md))
 - [ ] Edge cases, each a named test: empty group, single member, all-equal salaries, undisclosed gender, employee with no band, salary in a currency with no rate on that date
 - [ ] Commit per function: `test(core): …` then `feat(core): …`
 

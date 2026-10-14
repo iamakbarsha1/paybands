@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 33 of 90 done (phases 0–3 complete, phase 4 under way).
+**Progress** — 34 of 90 done (phases 0–3 complete, phase 4 under way).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -17,7 +17,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 1 Workspace skeleton    | 4       | 4    |
 | 2 Schema                | 6       | 6    |
 | 3 Seed                  | 10      | 10   |
-| 4 Comp maths            | 8       | 6    |
+| 4 Comp maths            | 8       | 7    |
 | 5 API employees         | 7       | 0    |
 | 6 API analytics         | 6       | 0    |
 | 7 Auth                  | 5       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                      | Status | Blocked by |
 | ------ | ------------------------------------------ | ------ | ---------- |
-| PB-034 | `payGap` — mean and median, suppressed below headcount | next   | —          |
+| PB-035 | Edge-case coverage is named, not incidental | next   | —          |
 | PB-D03 | Push local commits to `origin/main` | todo   | —          |
 
 ---
@@ -97,8 +97,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-031 | `rangePenetration`                          | done   | —              |
 | PB-032 | `percentiles`                               | done   | —              |
 | PB-033 | `outliers`                                  | done   | —              |
-| PB-034 | `payGap` with suppression                   | next   | —              |
-| PB-035 | Edge-case coverage is named, not incidental | todo   | PB-028…PB-034  |
+| PB-034 | `payGap` with suppression                   | done   | —              |
+| PB-035 | Edge-case coverage is named, not incidental | next   | —              |
 
 ## Phase 5 — API: employees
 
@@ -199,7 +199,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | ID     | Story                                                      | Status       | Blocked by |
 | ------ | ---------------------------------------------------------- | ------------ | ---------- |
 | PB-D01 | Database-level determinism assertion (decision 24 is WEAK) | blocked      | PB-042     |
-| PB-D02 | The Legal level-mix fix has no test                        | blocked      | PB-034     |
+| PB-D02 | The Legal level-mix fix has no test                        | todo         | —          |
 | PB-D03 | Local commits are not pushed                               | todo         | —          |
 | PB-D04 | Six clarifying questions still unanswered                  | todo         | —          |
 | PB-D05 | The `packages/core` collapse test (decision 4)             | blocked      | PB-064     |
