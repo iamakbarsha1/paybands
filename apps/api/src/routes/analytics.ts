@@ -4,9 +4,9 @@ import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import {
   bandOccupancy,
-  DISTRIBUTION_GROUPS,
   fxRates,
   salaryDistribution,
+  SLICE_GROUPS,
   type DistributionSlice,
 } from '../repositories/analytics';
 
@@ -33,10 +33,10 @@ const bandsResponse = z.strictObject({
 /** The four points the distribution report answers in, fixed rather than asked for. */
 const POINTS = [25, 50, 75, 90] as const;
 
-const distributionQuery = z.strictObject({ groupBy: z.enum(DISTRIBUTION_GROUPS) });
+const distributionQuery = z.strictObject({ groupBy: z.enum(SLICE_GROUPS) });
 
 const distributionResponse = z.strictObject({
-  groupBy: z.enum(DISTRIBUTION_GROUPS),
+  groupBy: z.enum(SLICE_GROUPS),
   currency: z.literal('USD'),
   groups: z.array(
     z.strictObject({

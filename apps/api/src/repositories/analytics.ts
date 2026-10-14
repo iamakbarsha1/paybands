@@ -61,8 +61,21 @@ export async function bandOccupancy(
   }));
 }
 
-export const DISTRIBUTION_GROUPS = ['country', 'department', 'level'] as const;
-export type DistributionGroup = (typeof DISTRIBUTION_GROUPS)[number];
+/** The groupings every sliced report offers. One closed set, so two reports cannot disagree. */
+export const SLICE_GROUPS = ['country', 'department', 'level'] as const;
+export type SliceGroup = (typeof SLICE_GROUPS)[number];
+
+interface Sliceable {
+  readonly countryCode: string;
+  readonly departmentId: number;
+  readonly jobLevelId: number;
+}
+
+function sliceKey(employee: Sliceable, groupBy: SliceGroup): string {
+  if (groupBy === 'country') return employee.countryCode;
+  if (groupBy === 'department') return String(employee.departmentId);
+  return String(employee.jobLevelId);
+}
 
 export interface DistributionSlice {
   readonly key: string;
@@ -83,7 +96,7 @@ export interface DistributionSlice {
  */
 export async function salaryDistribution(
   prisma: PrismaClient,
-  groupBy: DistributionGroup,
+  groupBy: SliceGroup,
 ): Promise<DistributionSlice[]> {
   const [groups, employees] = await Promise.all([
     groupRows(prisma, groupBy),
@@ -105,13 +118,7 @@ export async function salaryDistribution(
   const salaries = new Map<string, MoneyRow[]>();
 
   for (const employee of employees) {
-    const key =
-      groupBy === 'country'
-        ? employee.countryCode
-        : groupBy === 'department'
-          ? String(employee.departmentId)
-          : String(employee.jobLevelId);
-
+    const key = sliceKey(employee, groupBy);
     headcounts.set(key, (headcounts.get(key) ?? 0) + 1);
 
     const open = employee.salaryRecords[0];
@@ -132,7 +139,7 @@ export async function salaryDistribution(
 /** Every group the reference data knows about, so an empty one is reported rather than missing. */
 async function groupRows(
   prisma: PrismaClient,
-  groupBy: DistributionGroup,
+  groupBy: SliceGroup,
 ): Promise<{ key: string; name: string }[]> {
   if (groupBy === 'country') {
     const rows = await prisma.country.findMany({ orderBy: { code: 'asc' } });
