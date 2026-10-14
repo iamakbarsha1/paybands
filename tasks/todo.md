@@ -72,7 +72,7 @@ Four adversarial reviewers found five cross-field defects that twenty-one passin
 
 This is where the real logic is and where the tests earn their keep. Tests are committed before the implementation, each as its own commit.
 
-- [ ] `Money` — minor units, currency, add/compare, no float arithmetic anywhere
+- [x] `Money` — minor units, currency, add/compare, no float arithmetic anywhere
 - [ ] `toUsd(money, rateTable, onDate)` — effective-dated FX lookup
 - [ ] `compRatio(salary, band)` — salary ÷ midpoint
 - [ ] `rangePenetration(salary, band)` — position in band, 0–1
