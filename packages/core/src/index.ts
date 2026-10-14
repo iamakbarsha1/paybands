@@ -17,3 +17,5 @@ export { percentiles } from './stats';
 export type { Percentile } from './stats';
 export { outliers, DEFAULT_COMP_RATIO_THRESHOLD } from './outliers';
 export type { BandedSalary, CompRatioThreshold, Outlier, Outliers } from './outliers';
+export { payGap } from './gap';
+export type { GenderedSalary, PayGap, PayGapOptions } from './gap';
