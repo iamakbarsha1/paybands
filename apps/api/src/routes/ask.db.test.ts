@@ -73,6 +73,36 @@ describe.skipIf(!hasTestDatabase())('POST /ask with a model that answers', () =>
   });
 
   /**
+   * "The model never produces displayed text" (`docs/design-notes.md` §7). Prose around the
+   * object is a 422 and `routes/ask.test.ts` holds that half, because `translate` parses the
+   * whole answer. What is left is the 200, where the only text of the model's that could
+   * reach a reader is the answer's own formatting.
+   */
+  it('answers with the query and the report alone, and none of the text they were read from', async () => {
+    // Valid JSON, and spaced the way `JSON.stringify` never spaces it, so the body carrying
+    // the parsed object rather than the text it was read from is visible rather than assumed.
+    const raw = '{\n  "report" : "outliers"\n}\n';
+    const query: AskQuery = { report: 'outliers' };
+
+    const app = testApp(prisma, { complete: answering(raw) });
+    let response;
+    try {
+      response = await app.inject({
+        method: 'POST',
+        url: '/ask',
+        payload: { question: 'who is paid outside their band?' },
+      });
+    } finally {
+      await app.close();
+    }
+
+    expect(response.statusCode).toBe(200);
+    // Equality on the whole body rather than on its two fields in turn: a third key carrying
+    // the model's words passes a check of `query` and then `result`, and fails this.
+    expect(response.json()).toEqual({ query, result: await run(prisma, query) });
+  });
+
+  /**
    * Decision 55 names this as the place its guarantee could stop being true: the lint rule
    * guards `translate.ts`, which holds no client, and this handler holds one because `run`
    * needs it. So the prompt is read back out of the route rather than out of `translate`,

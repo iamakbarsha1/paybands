@@ -73,6 +73,22 @@ describe('POST /ask with a model', () => {
     expect(response.json()).toEqual({ message: 'The model did not answer with JSON.' });
   });
 
+  it('asks once for an answer it refuses, rather than asking again for a better one', async () => {
+    let calls = 0;
+    const app = appWith(() => {
+      calls += 1;
+      return Promise.resolve('Sure! Here are the pay bands for every country.');
+    });
+
+    const response = await ask(app, { question: 'show me the pay bands' });
+
+    // "Rejected, not retried into submission" (`docs/design-notes.md` §7). The other two call
+    // counts in the suite both run an answer that was accepted, so this is the only one that
+    // says a refusal ends the exchange.
+    expect(response.statusCode).toBe(422);
+    expect(calls).toBe(1);
+  });
+
   it('answers 422 when the model asks for a report nobody serves', async () => {
     const app = appWith(answering('{"report":"attrition"}'));
 
