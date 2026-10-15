@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { App } from '../app';
-import type { Complete } from '../ask/translate';
+import { translate, type Complete } from '../ask/translate';
 import { testApp, unusedPrisma } from '../testing/db';
 
 /** A model that answers with the same thing whatever it is shown. */
@@ -91,6 +91,28 @@ describe('POST /ask with a model', () => {
     // message stays out of the body, because nobody can act on a resolver error.
     expect(response.statusCode).toBe(503);
     expect(response.json()).toEqual({ message: UNREACHABLE });
+  });
+
+  it('hands the question to translate with nothing of its own added', async () => {
+    const question = 'how is pay spread across departments?';
+    const record =
+      (into: string[]): Complete =>
+      (prompt) => {
+        into.push(prompt);
+        return Promise.resolve(null);
+      };
+
+    const sent: string[] = [];
+    await ask(appWith(record(sent)), { question });
+
+    // What `translate` renders for the same question with no route in the way. Equality
+    // rather than a substring check, because a database row is not the only thing a handler
+    // could add: a prefix, a preamble or a second turn all fail this and none of them would
+    // fail a check for a seeded name. The row half of the claim is in `ask.db.test.ts`.
+    const rendered: string[] = [];
+    await translate(question, record(rendered));
+
+    expect(sent).toEqual(rendered);
   });
 
   it('rejects a body with no question', async () => {

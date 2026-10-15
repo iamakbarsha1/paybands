@@ -11,6 +11,12 @@ const answering =
   () =>
     Promise.resolve(raw);
 
+/** Only the two fields the leak test reads, off the four lists the outliers report returns. */
+type OutliersResult = Record<
+  'belowBand' | 'aboveBand' | 'compRatioOutOfRange' | 'noBand',
+  readonly { lastName: string; salary: { amountMinor: string } }[]
+>;
+
 describe.skipIf(!hasTestDatabase())('POST /ask with a model that answers', () => {
   let prisma: PrismaClient;
 
@@ -64,5 +70,52 @@ describe.skipIf(!hasTestDatabase())('POST /ask with a model that answers', () =>
     // Filtered, not the whole table: a dropped parameter would make the two sides agree on
     // a report that answers a different question.
     expect(await run(prisma, query)).not.toEqual(await run(prisma, { report: 'bands' }));
+  });
+
+  /**
+   * Decision 55 names this as the place its guarantee could stop being true: the lint rule
+   * guards `translate.ts`, which holds no client, and this handler holds one because `run`
+   * needs it. So the prompt is read back out of the route rather than out of `translate`,
+   * and checked against the rows the very same request went on to return.
+   */
+  it('sends the question as typed and no row the report then returned', async () => {
+    const question = 'who is paid outside their band?';
+    const prompts: string[] = [];
+    const app = testApp(prisma, {
+      complete: (prompt) => {
+        prompts.push(prompt);
+        return Promise.resolve('{"report":"outliers"}');
+      },
+    });
+
+    let body: { result: OutliersResult };
+    try {
+      const response = await app.inject({ method: 'POST', url: '/ask', payload: { question } });
+      expect(response.statusCode).toBe(200);
+      body = response.json();
+    } finally {
+      await app.close();
+    }
+
+    // One call, and the question inside it word for word. A prefix, a suffix or a second
+    // turn carrying context all fail one of these two.
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toContain(question);
+
+    const rows = [
+      ...body.result.belowBand,
+      ...body.result.aboveBand,
+      ...body.result.compRatioOutOfRange,
+      ...body.result.noBand,
+    ];
+    // Without this the loop below asserts nothing, which is the shape of a test that cannot fail.
+    expect(rows.length).toBeGreaterThan(0);
+
+    // Separators stripped first, so "£70,123.45" is not a way past the figure check.
+    const digits = (prompts[0] ?? '').replace(/\D/gu, '');
+    for (const row of rows) {
+      expect(prompts[0]).not.toContain(row.lastName);
+      expect(digits).not.toContain(row.salary.amountMinor);
+    }
   });
 });
