@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 60 of 90 done (phases 0–7 complete, phase 8 in flight).
+**Progress** — 61 of 90 done (phases 0–7 complete, phase 8 in flight).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -21,13 +21,13 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 5 API employees         | 7       | 7    |
 | 6 API analytics         | 6       | 6    |
 | 7 Auth                  | 5       | 5    |
-| 8 Web employees         | 6       | 4    |
+| 8 Web employees         | 6       | 5    |
 | 9 Web reports           | 5       | 0    |
 | 10 Ask bar (optional)   | 5       | 0    |
 | 11 Performance          | 3       | 0    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 1    |
-| Debt and missed         | 7       | 2    |
+| Debt and missed         | 8       | 3    |
 
 ---
 
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-058 | Edit employee and record a salary change | next  | —          |
+| PB-059 | Loading, empty and error states          | next  | —          |
 
 ---
 
@@ -140,8 +140,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-055 | Login page                               | done   | —                      |
 | PB-056 | Employee list                            | done   | —                      |
 | PB-057 | Employee detail                          | done   | —                      |
-| PB-058 | Edit employee and record a salary change | next   | —                      |
-| PB-059 | Loading, empty and error states          | todo   | PB-056                 |
+| PB-058 | Edit employee and record a salary change | done   | —                      |
+| PB-059 | Loading, empty and error states          | next   | PB-056                 |
 
 ## Phase 9 — Web: reports
 
@@ -204,3 +204,4 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D05 | The `packages/core` collapse test (decision 4)             | blocked      | PB-064     |
 | PB-D06 | Audit log of salary edits                                  | out of scope | —          |
 | PB-D07 | Web response types are aligned with the API's zod by hand  | todo         | —          |
+| PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |

@@ -120,7 +120,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [x] Login page, with a session gate in front of the app and sign out in the nav
 - [x] Employee list — server-side pagination, filters, sort, all of it in the query string. Never ship 10,000 rows to the browser.
 - [x] Employee detail — salary timeline with the open record marked, band position, comp ratio
-- [ ] Add / edit employee, add salary change
+- [x] Add / edit employee, add salary change — the forms parse with the API's own schemas (decision 52)
 - [ ] Loading and empty states that are not an afterthought
 - [ ] Commit per screen
 

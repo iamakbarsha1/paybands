@@ -984,3 +984,22 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Nothing cheaper that still counts. Refusing the second attempt within a second would be smaller and would stop nothing: a guesser waits a second.
 **Falsifier:** A second API instance, or a proxy in front of one. The first makes the counter wrong by a factor of however many instances there are; the second makes it wrong in the other direction, and dangerous.
+
+---
+
+### 52. The browser validates with the API's own schemas
+
+**SOUND** · reversal: cheap, the schemas keep working where they are and the forms can stop importing them · 2026-10-15 · phase 8, `PB-058`
+
+**Decision:** The three write schemas — `employeeInput`, `employeePatch`, `salaryChangeInput` — moved out of `apps/api/src/routes/employees.ts` into `packages/core/src/contracts.ts`, and both the route and the two React forms parse with them. `zod` became a dependency of `packages/core`, which had none before. The refusal messages were rewritten for the person filling the form in, because the same words now appear under a field in the browser and in a 400 from the API.
+
+**Evidence:** `apps/web` had no validation library and no copy of the rules. The alternatives were a second set of rules in the browser, or no client-side validation at all. A second set drifts silently: the API's `strictObject` refuses an unknown key, its `employeePatch` refuses an edit that names no field, and nothing in the browser would have known either. `employee-form.tsx` sends only the fields that differ from the record it was opened with, which is what gives the "name at least one field" refusal something to refuse.
+
+- **D** — Needed now: `PB-058` is the first screen that writes, and it writes three different shapes.
+- **O** — Cheap both ways. The schemas are the same objects in a different file; the API imports them instead of declaring them.
+- **U** — No claim about round trips saved. The claim is only that the browser refuses what the server refuses, and the shared module is what makes that true by construction rather than by diligence.
+- **B** — `packages/core` gains a runtime dependency, which every consumer now carries. `apps/api` keeps its Fastify schemas for responses; only the request bodies moved.
+- **T** — Gives up the freedom to word a browser message differently from an API message. One string serves both readers, so it has to be plain enough for a person and precise enough for a client.
+
+**Cheaper:** Validating only on the server and showing the 400. Rejected because the empty form then takes a round trip to learn it is empty, and the refusals come back one field at a time rather than all at once.
+**Falsifier:** A second client with different rules — a bulk importer that accepts a looser shape, say. Then the shared schema becomes the strictest common denominator and the two should separate again.

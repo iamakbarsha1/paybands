@@ -115,3 +115,9 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-15.** The `onRequest` guard for PB-051 took seventy-one passing tests to 401 in one commit. The choice was a cookie on forty `inject` calls across nine files, or one in the harness that builds the test app.
 
 **Rule:** when a cross-cutting requirement lands late, give the test harness the credential and an opt-out, rather than editing every call site. Tests whose subject is the new requirement pass `{ signedIn: false }`; tests of the band report go on reading bands.
+
+## An injected request cannot fail on a preflight
+
+**2026-10-15.** `PATCH /employees/:id` had passing integration tests and still could not be called from the browser: `@fastify/cors` defaults `Access-Control-Allow-Methods` to the browser's safelist — `GET,HEAD,POST` — and the edit form's preflight was refused before the request was made. Every test in the suite calls `app.inject`, which never sends a preflight, so none of them could have caught it.
+
+**Rule:** an in-process request proves the handler, not the transport. Whatever the browser negotiates first — the preflight, the cookie attributes, a redirect — needs either a test that reads the negotiated headers or one pass through a real browser. `cors.test.ts` now reads Fastify's own route table and fails if a method it serves is missing from the preflight.
