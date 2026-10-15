@@ -149,6 +149,8 @@ Argued against in [decision 7](decisions/decision-log.md), where it is logged WE
 
 > Ceiling: single-turn translation. No conversation memory, no tool loop.
 
+> The SDK client retries the transport up to twice by default, so one translation can be three HTTP requests. That is the connection being retried, not a second ask: the prompt is unchanged and no previous answer travels with it. A refused answer is refused once, which `apps/api/src/routes/ask.test.ts` counts.
+
 ---
 
 ## 8. Quality gates
