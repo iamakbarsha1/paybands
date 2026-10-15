@@ -126,7 +126,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 9 — Web: reports
 
-- [ ] Pay bands — band table, occupancy, where people sit
+- [x] Pay bands — band table, occupancy, where people sit. Spread (`bandSpread`) is the column that compares across currencies
 - [ ] Distribution — by country / department / level, with a chart
 - [ ] Comp ratio — histogram + per-slice table
 - [ ] Outliers — actionable list, links through to the employee
