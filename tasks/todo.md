@@ -127,7 +127,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 ## Phase 9 — Web: reports
 
 - [x] Pay bands — band table, occupancy, where people sit. Spread (`bandSpread`) is the column that compares across currencies
-- [ ] Distribution — by country / department / level, with a chart
+- [x] Distribution — by country / department / level, with a chart drawn from the same response the table prints
 - [ ] Comp ratio — histogram + per-slice table
 - [ ] Outliers — actionable list, links through to the employee
 - [ ] Gender pay gap — mean and median, suppression shown explicitly as "not reported, group too small"
