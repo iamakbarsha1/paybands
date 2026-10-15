@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 59 of 90 done (phases 0–7 complete, phase 8 in flight).
+**Progress** — 60 of 90 done (phases 0–7 complete, phase 8 in flight).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -21,7 +21,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 5 API employees         | 7       | 7    |
 | 6 API analytics         | 6       | 6    |
 | 7 Auth                  | 5       | 5    |
-| 8 Web employees         | 6       | 3    |
+| 8 Web employees         | 6       | 4    |
 | 9 Web reports           | 5       | 0    |
 | 10 Ask bar (optional)   | 5       | 0    |
 | 11 Performance          | 3       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-057 | Employee detail                         | next   | —          |
+| PB-058 | Edit employee and record a salary change | next  | —          |
 
 ---
 
@@ -139,8 +139,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-054 | App shell                                | done   | —                      |
 | PB-055 | Login page                               | done   | —                      |
 | PB-056 | Employee list                            | done   | —                      |
-| PB-057 | Employee detail                          | next   | —                      |
-| PB-058 | Edit employee and record a salary change | todo   | PB-039, PB-040, PB-057 |
+| PB-057 | Employee detail                          | done   | —                      |
+| PB-058 | Edit employee and record a salary change | next   | —                      |
 | PB-059 | Loading, empty and error states          | todo   | PB-056                 |
 
 ## Phase 9 — Web: reports
