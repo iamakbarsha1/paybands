@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 71 of 90 done (phases 0–9 complete, phase 10 in flight).
+**Progress** — 72 of 90 done (phases 0–10 complete, phase 11 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -23,19 +23,19 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 7 Auth                  | 5       | 5    |
 | 8 Web employees         | 6       | 6    |
 | 9 Web reports           | 5       | 5    |
-| 10 Ask bar (optional)   | 5       | 4    |
+| 10 Ask bar (optional)   | 5       | 5    |
 | 11 Performance          | 3       | 0    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 1    |
-| Debt and missed         | 10      | 3    |
+| Debt and missed         | 10      | 4    |
 
 ---
 
 ## In flight
 
-| ID     | Story                                         | Status | Blocked by |
-| ------ | --------------------------------------------- | ------ | ---------- |
-| PB-069 | The translator is tested at a mocked boundary | next   | PB-065     |
+| ID     | Story                                                  | Status | Blocked by |
+| ------ | ------------------------------------------------------ | ------ | ---------- |
+| PB-070 | Measure every analytics endpoint against the full seed | next   | PB-048     |
 
 ---
 
@@ -161,13 +161,13 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-066 | The query object runs the deterministic paths | done   | PB-065     |
 | PB-067 | The model sees no salary and no name          | done   | PB-065     |
 | PB-068 | Off without an API key                        | done   | PB-065     |
-| PB-069 | The translator is tested at a mocked boundary | next   | PB-065     |
+| PB-069 | The translator is tested at a mocked boundary | done   | PB-065     |
 
 ## Phase 11 — Performance
 
 | ID     | Story                                                  | Status | Blocked by |
 | ------ | ------------------------------------------------------ | ------ | ---------- |
-| PB-070 | Measure every analytics endpoint against the full seed | todo   | PB-048     |
+| PB-070 | Measure every analytics endpoint against the full seed | next   | PB-048     |
 | PB-071 | Fix the slow ones and prove the fix                    | todo   | PB-070     |
 | PB-072 | Performance notes                                      | todo   | PB-071     |
 
@@ -206,4 +206,4 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D07 | Web response types are aligned with the API's zod by hand  | todo         | —          |
 | PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |
 | PB-D09 | Phase 10 has no ticket for the web ask bar itself          | todo         | PB-068     |
-| PB-D10 | The model adapter has no test of its own                   | todo         | —          |
+| PB-D10 | The model adapter has no test of its own                   | done         | —          |

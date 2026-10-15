@@ -1085,3 +1085,5 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** A boolean, `ASK_ENABLED`, with the adapter reading the key itself. Rejected because the two can disagree: a server with the flag on and no key answers 500 on the first question instead of 503 before it.
 **Falsifier:** A second caller wanting a different model or a different effort for the same translation — a batch importer, or a cheaper model behind a setting. The key stops being the whole configuration then, and one branch at the edge stops being enough.
+
+**Since:** The cap is 4096, not the 1024 above. `max_tokens` covers the model's reasoning as well as what it writes, so at 1024 a translation could reach the ceiling mid-object and `translate` refused the fragment with "did not answer with JSON" — this file's ceiling, reported as the model's fault. `PB-069` pins the model id, the cap and the effort in `apps/api/src/ask/anthropic.test.ts`, so moving any of the three is now a deliberate edit in two places.

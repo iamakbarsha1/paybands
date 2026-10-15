@@ -141,8 +141,8 @@ Strictly bounded. See [`docs/design-notes.md`](../docs/design-notes.md) §7.
 - [x] The query object runs the same deterministic analytics code paths as the UI
 - [x] The model never computes a number, never sees a salary row, never sees a name
 - [x] Off without an API key — deployed demo works regardless
-- [ ] Tests mock the model boundary; the translator is tested against fixed inputs
-- [ ] Commit: `feat(web): natural language ask bar over existing reports`
+- [x] Tests mock the model boundary; the translator is tested against fixed inputs
+- [ ] Commit: `feat(web): natural language ask bar over existing reports` — the API half shipped as `PB-065` to `PB-069`; the screen itself was never given a ticket, which [`PB-D09`](board.md) records
 
 > Kill switch: this phase deletes cleanly. Nothing in phases 1–9 imports it.
 
