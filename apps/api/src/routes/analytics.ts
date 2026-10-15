@@ -26,6 +26,7 @@ import {
   type DistributionSlice,
   type GenderedSlice,
   type OutlierCandidate,
+  type SliceGroup,
 } from '../repositories/analytics';
 
 const bandsQuery = z.strictObject({
@@ -148,137 +149,157 @@ export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
   app.get(
     '/analytics/bands',
     { schema: { querystring: bandsQuery, response: { 200: bandsResponse } } },
-    async (request) => {
-      const bands = await bandOccupancy(prisma, {
-        country: request.query.country,
-        jobLevelId: request.query.level,
-      });
-
-      return {
-        bands: bands.map((band) => ({
-          ...band,
-          minMinor: band.minMinor.toString(),
-          midMinor: band.midMinor.toString(),
-          maxMinor: band.maxMinor.toString(),
-        })),
-      };
-    },
+    async (request) => bandsReport(prisma, request.query),
   );
 
   app.get(
     '/analytics/distribution',
     { schema: { querystring: sliceQuery, response: { 200: distributionResponse } } },
-    async (request) => {
-      const [slices, rates] = await Promise.all([
-        salaryDistribution(prisma, request.query.groupBy),
-        fxRates(prisma),
-      ]);
-      // One date for the whole report, so two slices are never converted at different rates.
-      const onDate = new Date();
-
-      return {
-        groupBy: request.query.groupBy,
-        currency: 'USD' as const,
-        groups: slices.map((slice) => ({
-          key: slice.key,
-          name: slice.name,
-          headcount: slice.headcount,
-          percentiles: pointsFor(slice, rates, onDate),
-        })),
-      };
-    },
+    async (request) => distributionReport(prisma, request.query.groupBy),
   );
 
   app.get(
     '/analytics/comp-ratio',
     { schema: { querystring: sliceQuery, response: { 200: compRatioResponse } } },
-    async (request) => {
-      const slices = await compRatioSlices(prisma, request.query.groupBy);
-
-      return {
-        groupBy: request.query.groupBy,
-        buckets: BUCKETS.map((bucket) => ({ from: bucket.from, to: bucket.to })),
-        // The org is every slice put together, counted once rather than summed from the
-        // groups, so the overall figure cannot drift from the detail that makes it up.
-        overall: summarise({
-          headcount: slices.reduce((sum, slice) => sum + slice.headcount, 0),
-          people: slices.flatMap((slice) => [...slice.people]),
-        }),
-        groups: slices.map((slice) => ({
-          key: slice.key,
-          name: slice.name,
-          ...summarise(slice),
-        })),
-      };
-    },
+    async (request) => compRatioReport(prisma, request.query.groupBy),
   );
 
   app.get(
     '/analytics/outliers',
     { schema: { querystring: noQuery, response: { 200: outliersResponse } } },
-    async () => {
-      const candidates = await bandedSalaries(prisma);
-      const found = outliers(
-        candidates.map((row) => ({
-          employeeId: row.employeeId,
-          salary: money(row.salary.amountMinor, row.salary.currencyCode),
-          band: row.band === null ? undefined : asPayBand(row.band),
-        })),
-        DEFAULT_COMP_RATIO_THRESHOLD,
-      );
-
-      const byId = new Map(candidates.map((row) => [row.employeeId, row]));
-
-      return {
-        // Policy, not a fact about the band, so the report carries the line it judged against.
-        threshold: DEFAULT_COMP_RATIO_THRESHOLD,
-        belowBand: listed(found.belowBand, byId),
-        aboveBand: listed(found.aboveBand, byId),
-        compRatioOutOfRange: listed(found.compRatioOutOfRange, byId),
-        noBand: listed(found.noBand, byId),
-      };
-    },
+    async () => outliersReport(prisma),
   );
 
   app.get(
     '/analytics/pay-gap',
     { schema: { querystring: sliceQuery, response: { 200: payGapResponse } } },
-    async (request) => {
-      const [slices, rates] = await Promise.all([
-        genderedSalaries(prisma, request.query.groupBy),
-        fxRates(prisma),
-      ]);
-      const onDate = new Date();
-
-      // A slice can span countries, and `payGap` refuses a mixed-currency one, so the
-      // conversion is the caller's to make. The gap is a ratio, so USD is a common scale
-      // rather than a claim about anyone's pay.
-      const gapOf = (people: GenderedSlice['people']) =>
-        payGap(
-          people.map((person) => ({
-            gender: person.gender,
-            salary: toUsd(
-              money(person.salary.amountMinor, person.salary.currencyCode),
-              rates,
-              onDate,
-            ),
-          })),
-          { minGroupSize: MIN_GROUP_SIZE },
-        );
-
-      return {
-        groupBy: request.query.groupBy,
-        currency: 'USD' as const,
-        minGroupSize: MIN_GROUP_SIZE,
-        overall: gapOf(slices.flatMap((slice) => [...slice.people])),
-        groups: slices.map((slice) => ({
-          key: slice.key,
-          name: slice.name,
-          ...gapOf(slice.people),
-        })),
-      };
-    },
+    async (request) => payGapReport(prisma, request.query.groupBy),
   );
+}
+
+/**
+ * The five reports, as functions rather than as handlers. The route above is the HTTP way in
+ * and `apps/api/src/ask/run.ts` is the other; neither is a second implementation of the
+ * arithmetic. Each takes the parameters already coerced out of the querystring, which is why
+ * `level` is a number here and `z.coerce.number()` up there.
+ */
+export async function bandsReport(
+  prisma: PrismaClient,
+  params: { readonly country?: string | undefined; readonly level?: number | undefined },
+): Promise<z.infer<typeof bandsResponse>> {
+  const bands = await bandOccupancy(prisma, {
+    country: params.country,
+    jobLevelId: params.level,
+  });
+
+  return {
+    bands: bands.map((band) => ({
+      ...band,
+      minMinor: band.minMinor.toString(),
+      midMinor: band.midMinor.toString(),
+      maxMinor: band.maxMinor.toString(),
+    })),
+  };
+}
+
+export async function distributionReport(
+  prisma: PrismaClient,
+  groupBy: SliceGroup,
+): Promise<z.infer<typeof distributionResponse>> {
+  const [slices, rates] = await Promise.all([salaryDistribution(prisma, groupBy), fxRates(prisma)]);
+  // One date for the whole report, so two slices are never converted at different rates.
+  const onDate = new Date();
+
+  return {
+    groupBy,
+    currency: 'USD' as const,
+    groups: slices.map((slice) => ({
+      key: slice.key,
+      name: slice.name,
+      headcount: slice.headcount,
+      percentiles: pointsFor(slice, rates, onDate),
+    })),
+  };
+}
+
+export async function compRatioReport(
+  prisma: PrismaClient,
+  groupBy: SliceGroup,
+): Promise<z.infer<typeof compRatioResponse>> {
+  const slices = await compRatioSlices(prisma, groupBy);
+
+  return {
+    groupBy,
+    buckets: BUCKETS.map((bucket) => ({ from: bucket.from, to: bucket.to })),
+    // The org is every slice put together, counted once rather than summed from the
+    // groups, so the overall figure cannot drift from the detail that makes it up.
+    overall: summarise({
+      headcount: slices.reduce((sum, slice) => sum + slice.headcount, 0),
+      people: slices.flatMap((slice) => [...slice.people]),
+    }),
+    groups: slices.map((slice) => ({
+      key: slice.key,
+      name: slice.name,
+      ...summarise(slice),
+    })),
+  };
+}
+
+export async function outliersReport(
+  prisma: PrismaClient,
+): Promise<z.infer<typeof outliersResponse>> {
+  const candidates = await bandedSalaries(prisma);
+  const found = outliers(
+    candidates.map((row) => ({
+      employeeId: row.employeeId,
+      salary: money(row.salary.amountMinor, row.salary.currencyCode),
+      band: row.band === null ? undefined : asPayBand(row.band),
+    })),
+    DEFAULT_COMP_RATIO_THRESHOLD,
+  );
+
+  const byId = new Map(candidates.map((row) => [row.employeeId, row]));
+
+  return {
+    // Policy, not a fact about the band, so the report carries the line it judged against.
+    threshold: DEFAULT_COMP_RATIO_THRESHOLD,
+    belowBand: listed(found.belowBand, byId),
+    aboveBand: listed(found.aboveBand, byId),
+    compRatioOutOfRange: listed(found.compRatioOutOfRange, byId),
+    noBand: listed(found.noBand, byId),
+  };
+}
+
+export async function payGapReport(
+  prisma: PrismaClient,
+  groupBy: SliceGroup,
+): Promise<z.infer<typeof payGapResponse>> {
+  const [slices, rates] = await Promise.all([genderedSalaries(prisma, groupBy), fxRates(prisma)]);
+  const onDate = new Date();
+
+  // A slice can span countries, and `payGap` refuses a mixed-currency one, so the
+  // conversion is the caller's to make. The gap is a ratio, so USD is a common scale
+  // rather than a claim about anyone's pay.
+  const gapOf = (people: GenderedSlice['people']) =>
+    payGap(
+      people.map((person) => ({
+        gender: person.gender,
+        salary: toUsd(money(person.salary.amountMinor, person.salary.currencyCode), rates, onDate),
+      })),
+      { minGroupSize: MIN_GROUP_SIZE },
+    );
+
+  return {
+    groupBy,
+    currency: 'USD' as const,
+    minGroupSize: MIN_GROUP_SIZE,
+    overall: gapOf(slices.flatMap((slice) => [...slice.people])),
+    groups: slices.map((slice) => ({
+      key: slice.key,
+      name: slice.name,
+      ...gapOf(slice.people),
+    })),
+  };
 }
 
 function asPayBand(band: BandRow): PayBand {
