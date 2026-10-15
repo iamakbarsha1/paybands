@@ -1003,3 +1003,22 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Validating only on the server and showing the 400. Rejected because the empty form then takes a round trip to learn it is empty, and the refusals come back one field at a time rather than all at once.
 **Falsifier:** A second client with different rules — a bulk importer that accepts a looser shape, say. Then the shared schema becomes the strictest common denominator and the two should separate again.
+
+---
+
+### 53. The ask schema stays in the API, where its one enforcer is
+
+**SOUND** · reversal: cheap, a directory move and an import path, as long as `SLICE_GROUPS` goes with it · 2026-10-16 · phase 10, `PB-065`
+
+**Decision:** `askQuery` and `translate` live in `apps/api/src/ask/`, not in `packages/core`. The union imports `SLICE_GROUPS` from `apps/api/src/repositories/analytics.ts`, the same closed set the five endpoints already enum their `groupBy` against.
+
+**Evidence:** Decision 52 moved the write schemas to core because two layers enforce the same rule: `apps/api/src/routes/employees.ts` and the React forms both parse `employeeInput`. Nothing in the browser validates a query object — the ask bar sends a sentence and renders a result, so the model's output is parsed once, in the process that received it. A schema with one enforcer belongs beside the enforcer.
+
+- **D** — Needed now: `PB-065` is the first code that names the five reports and their parameters as data rather than as routes.
+- **O** — Cheap. The module has no API imports beyond `SLICE_GROUPS`, so moving it to core later means moving that constant too, and `packages/core` already carries `zod` since decision 52.
+- **U** — No claim that a second consumer will never want it. The claim is only that none exists today, and `packages/core` is the place for the second one.
+- **B** — `apps/api/src/ask/` and nothing else. Phases 1 to 9 do not import it, which is the kill switch `docs/design-notes.md` §7 asks for.
+- **T** — Gives up a browser that could refuse a malformed query before sending it. There is no such query in the browser to refuse: the thing travelling over the wire is a sentence.
+
+**Cheaper:** No schema at all — have the model answer with a report path and a querystring, and let the endpoint's own `strictObject` reject it. Rejected because the refusal then arrives from a report that was asked to run, and the prompt has no shape to render.
+**Falsifier:** A second builder of query objects — a browser that composes one without the model, or a CLI. Then it moves to core with `SLICE_GROUPS`, on the argument decision 52 already made.

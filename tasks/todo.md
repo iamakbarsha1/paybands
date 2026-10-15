@@ -137,7 +137,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 Strictly bounded. See [`docs/design-notes.md`](../docs/design-notes.md) §8.
 
-- [ ] Natural language → **validated query object**, zod-parsed, rejected if it does not fit the schema
+- [x] Natural language → **validated query object**, zod-parsed, rejected if it does not fit the schema
 - [ ] The query object runs the same deterministic analytics code paths as the UI
 - [ ] The model never computes a number, never sees a salary row, never sees a name
 - [ ] Off without an API key — deployed demo works regardless
