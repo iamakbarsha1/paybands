@@ -145,6 +145,8 @@ Worth the phase because it makes the stronger engineering statement — that a l
 
 Argued against in [decision 7](decisions/decision-log.md), where it is logged WEAK.
 
+**Since `PB-068`, "nothing in phases 1–9 imports it" is no longer literally true.** `apps/api/src/app.ts` imports `registerAskRoutes` and the `Complete` type, because the server has to register the route and answer whether the feature is on. Deleting the phase now means that import, the three lines in `app.ts`, the `ask` field on the health response, the composition line in `index.ts`, and the dependency. It is still an afternoon and it still touches no report, no screen and no query. [Decision 56](decisions/decision-log.md) lists it, and records why the alternative that keeps this sentence true — registering from `index.ts` and decorating the flag onto the app — was not taken.
+
 > Ceiling: single-turn translation. No conversation memory, no tool loop.
 
 ---

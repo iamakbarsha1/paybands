@@ -121,3 +121,15 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-15.** `PATCH /employees/:id` had passing integration tests and still could not be called from the browser: `@fastify/cors` defaults `Access-Control-Allow-Methods` to the browser's safelist — `GET,HEAD,POST` — and the edit form's preflight was refused before the request was made. Every test in the suite calls `app.inject`, which never sends a preflight, so none of them could have caught it.
 
 **Rule:** an in-process request proves the handler, not the transport. Whatever the browser negotiates first — the preflight, the cookie attributes, a redirect — needs either a test that reads the negotiated headers or one pass through a real browser. `cors.test.ts` now reads Fastify's own route table and fails if a method it serves is missing from the preflight.
+
+## A red run stays red when the test file does not compile
+
+**2026-10-16.** The red phase for `PB-068` read `13 failed | 307 passed` and looked exactly right: thirteen is the number of new assertions plus the one existing `/health` test. The test file did not compile. A helper typed its payload `unknown`, which selected the wrong `app.inject` overload, and `pnpm typecheck` was failing the whole time. Vitest erases types without reading them, so every assertion still ran and still failed, for the right reason, with the right count. Nothing in the failing count could have shown it.
+
+**Rule:** a red phase reads two things, the failing count and `pnpm typecheck`. A type defect in a test is invisible to the runner and surfaces one commit later, where it reads as though the implementation broke something.
+
+## A lint boundary cannot guard a file that is allowed to hold the data
+
+**2026-10-16.** Decision 55 guards `translate.ts` with `no-restricted-imports`, and the obvious next step was the same rule on `routes/ask.ts`, which holds a client and is one line from putting a row in a prompt. Mutating the handler to paste the outliers report into the question leaked real surnames to the model boundary using only `run` from `ask/run.ts` — the module the handler exists to call, which no rule could ever ban. A repository ban there would have stayed silent through the exact leak it was written for.
+
+**Rule:** an import rule constrains what a file can reach, not what it does with what it is already allowed to reach. Before writing one, mutate the file to commit the offence and check the rule fires. A rule that reads like a guarantee and is not is worse than no rule, because it stops anyone writing the test.
