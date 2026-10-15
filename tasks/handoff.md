@@ -23,7 +23,7 @@ human has to run it. **PB-D03 is closed on the board and the push has still not 
 
 ## Next ticket: PB-065, natural language to a validated query object
 
-Phase 10 is the ask bar, and `docs/design-notes.md` §8 bounds it: the model's only job is to
+Phase 10 is the ask bar, and `docs/design-notes.md` §7 bounds it: the model's only job is to
 turn a sentence into a query object that zod either accepts or rejects, and the query object
 runs the same deterministic code the screens run. It is feature-flagged off without an API
 key (PB-068), and the model never sees a salary or a name (PB-067).

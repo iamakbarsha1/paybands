@@ -135,7 +135,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 
 ## Phase 10 — Ask bar (LLM) — optional, feature-flagged
 
-Strictly bounded. See [`docs/design-notes.md`](../docs/design-notes.md) §8.
+Strictly bounded. See [`docs/design-notes.md`](../docs/design-notes.md) §7.
 
 - [x] Natural language → **validated query object**, zod-parsed, rejected if it does not fit the schema
 - [ ] The query object runs the same deterministic analytics code paths as the UI
