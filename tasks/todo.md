@@ -129,7 +129,7 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [x] Pay bands — band table, occupancy, where people sit. Spread (`bandSpread`) is the column that compares across currencies
 - [x] Distribution — by country / department / level, with a chart drawn from the same response the table prints
 - [x] Comp ratio — histogram + per-slice table, sortable on any column including one bucket
-- [ ] Outliers — actionable list, links through to the employee
+- [x] Outliers — actionable list, links through to the employee; the unbanded kept as their own list
 - [ ] Gender pay gap — mean and median, suppression shown explicitly as "not reported, group too small"
 - [ ] Commit per report
 
