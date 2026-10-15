@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 68 of 90 done (phases 0–9 complete, phase 10 in flight).
+**Progress** — 69 of 90 done (phases 0–9 complete, phase 10 in flight).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -23,7 +23,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 7 Auth                  | 5       | 5    |
 | 8 Web employees         | 6       | 6    |
 | 9 Web reports           | 5       | 5    |
-| 10 Ask bar (optional)   | 5       | 1    |
+| 10 Ask bar (optional)   | 5       | 2    |
 | 11 Performance          | 3       | 0    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 1    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-066 | The query object runs the deterministic paths | next | —       |
+| PB-067 | The model sees no salary and no name     | next   | —          |
 
 ---
 
@@ -158,8 +158,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | ID     | Story                                         | Status | Blocked by |
 | ------ | --------------------------------------------- | ------ | ---------- |
 | PB-065 | Natural language to a validated query object  | done   | PB-047     |
-| PB-066 | The query object runs the deterministic paths | next   | PB-065     |
-| PB-067 | The model sees no salary and no name          | todo   | PB-065     |
+| PB-066 | The query object runs the deterministic paths | done   | PB-065     |
+| PB-067 | The model sees no salary and no name          | next   | PB-065     |
 | PB-068 | Off without an API key                        | todo   | PB-065     |
 | PB-069 | The translator is tested at a mocked boundary | todo   | PB-065     |
 

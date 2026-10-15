@@ -1022,3 +1022,22 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** No schema at all — have the model answer with a report path and a querystring, and let the endpoint's own `strictObject` reject it. Rejected because the refusal then arrives from a report that was asked to run, and the prompt has no shape to render.
 **Falsifier:** A second builder of query objects — a browser that composes one without the model, or a CLI. Then it moves to core with `SLICE_GROUPS`, on the argument decision 52 already made.
+
+---
+
+### 54. The query calls the report functions, not the routes
+
+**SOUND** · reversal: cheap one way, inlining five functions back into five handlers is mechanical · 2026-10-16 · phase 10, `PB-066`
+
+**Decision:** The five handler bodies in `apps/api/src/routes/analytics.ts` moved out into exported `(prisma, params)` functions, and each `app.get` became a one-line call. `apps/api/src/ask/run.ts` switches on `query.report` and calls the same five functions.
+
+**Evidence:** The cheap version was to build a URL from the query and hand it to `app.inject`. It reaches the same code and is about fifteen lines against a hundred. Three things are wrong with it. It serialises to JSON and parses it back inside one process. It makes the executor depend on how a querystring is spelled rather than on a function signature, so a renamed parameter becomes a 400 at runtime instead of a compile error. And a reader asking where the ask bar gets its numbers lands in an HTTP round trip rather than in `payGapReport`.
+
+- **D** — Needed now: `PB-066` is the ticket that runs a query, and `PB-065` left a validated object with nothing to run it against.
+- **O** — The extraction holds its value if phase 10 is deleted. Five named functions read better than five handler bodies, and the routes are now one line each.
+- **U** — No claim the switch scales past a handful of reports. Five members, five arms, and the compiler names the sixth.
+- **B** — `routes/analytics.ts` and `ask/run.ts`. Decision 53 said `ask/` imports nothing from the API but `SLICE_GROUPS`; it now imports five functions from the routes file. The arrow still points one way, so the kill switch design-notes §7 asks for still works: nothing in phases 1 to 9 imports `ask/`.
+- **T** — Gives up the small diff, and `routes/analytics.ts` grows a second public face. The file is now a module other code calls as well as a place routes are registered.
+
+**Cheaper:** `app.inject` on a URL built from the query. Rejected for the three reasons above, the compile-time one being the deciding reason.
+**Falsifier:** A report that needs something only a request carries — a header, a cookie, the signed-in user. Then the function cannot take the whole input and the inject version is the honest one.
