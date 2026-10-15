@@ -121,8 +121,8 @@ This is where the real logic is and where the tests earn their keep. Tests are c
 - [x] Employee list — server-side pagination, filters, sort, all of it in the query string. Never ship 10,000 rows to the browser.
 - [x] Employee detail — salary timeline with the open record marked, band position, comp ratio
 - [x] Add / edit employee, add salary change — the forms parse with the API's own schemas (decision 52)
-- [ ] Loading and empty states that are not an afterthought
-- [ ] Commit per screen
+- [x] Loading and empty states that are not an afterthought — skeletons shaped like the screen, measured for shift
+- [x] Commit per screen
 
 ## Phase 9 — Web: reports
 
