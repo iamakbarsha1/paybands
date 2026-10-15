@@ -2,11 +2,14 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Button, button } from '../../../components/ui/button';
+import { Empty, Failure, Loading, Skeleton } from '../../../components/ui/state';
 import type { EmployeePage, ReferenceData } from '../../../lib/api-types';
 import { useApi } from '../../../lib/use-api';
 
+/** What the API pages at (PB-037), which is how tall an unknown page is assumed to be. */
+const PAGE_SIZE = 25;
 const STATUSES = ['active', 'left', 'all'] as const;
 const SORTS = [
   { value: 'name', label: 'Surname' },
@@ -16,7 +19,14 @@ const SORTS = [
 
 export default function EmployeesPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+    <Suspense
+      fallback={
+        <Loading label="Employees" className="space-y-6">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-96 w-full" />
+        </Loading>
+      }
+    >
       <EmployeeList />
     </Suspense>
   );
@@ -31,6 +41,15 @@ function EmployeeList() {
   const query = new URLSearchParams(params.toString());
   const page = useApi<EmployeePage>(`/employees?${query.toString()}`);
   const reference = useApi<ReferenceData>('/reference');
+
+  // How many placeholder rows to draw while the next page loads: as many as the last page
+  // held, so paging through a filter that returns four rows does not flash twenty-five.
+  const [rows, setRows] = useState(PAGE_SIZE);
+  useEffect(() => {
+    if (page.state === 'ready' && page.data.employees.length > 0) {
+      setRows(page.data.employees.length);
+    }
+  }, [page]);
 
   function set(key: string, value: string): void {
     const next = new URLSearchParams(params.toString());
@@ -129,23 +148,15 @@ function EmployeeList() {
         </Button>
       </div>
 
-      {page.state === 'loading' && (
-        <p className="text-sm text-muted-foreground">Loading employees…</p>
-      )}
-
-      {page.state === 'error' && (
-        <p role="alert" className="text-sm text-destructive">
-          {page.message}
-        </p>
-      )}
+      {page.state === 'error' && <Failure>{page.message}</Failure>}
 
       {page.state === 'ready' && page.data.employees.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No employee matches these filters. Widen one of them.
-        </p>
+        <Empty>No employee matches these filters. Widen one of them.</Empty>
       )}
 
-      {page.state === 'ready' && page.data.employees.length > 0 && (
+      {/* The table is drawn while the answer is coming and once it has rows, and not for a
+          filter that matched nothing: a header over an empty body reads as a broken page. */}
+      {(page.state === 'loading' || (page.state === 'ready' && page.data.employees.length > 0)) && (
         <>
           <table className="w-full text-left text-sm">
             <thead className="border-b border-border text-muted-foreground">
@@ -159,46 +170,66 @@ function EmployeeList() {
                 <th className="py-2 font-medium">Status</th>
               </tr>
             </thead>
-            <tbody>
-              {page.data.employees.map((employee) => (
-                <tr key={employee.id} className="border-b border-border/60">
-                  <td className="py-2">{employee.employeeCode}</td>
-                  <td className="py-2">
-                    <Link href={`/employees/${String(employee.id)}`} className="underline">
-                      {employee.firstName} {employee.lastName}
-                    </Link>
-                  </td>
-                  <td className="py-2">{employee.countryCode}</td>
-                  <td className="py-2">
-                    {names.department.get(employee.departmentId) ?? employee.departmentId}
-                  </td>
-                  <td className="py-2">
-                    {names.level.get(employee.jobLevelId) ?? employee.jobLevelId}
-                  </td>
-                  <td className="py-2">{employee.hireDate}</td>
-                  <td className="py-2 text-muted-foreground">{employee.status}</td>
-                </tr>
-              ))}
+            <tbody role="status" aria-busy={page.state === 'loading'} aria-label="Employees">
+              {page.state === 'loading' &&
+                Array.from({ length: rows }, (_, index) => (
+                  <tr key={index} className="border-b border-border/60">
+                    {Array.from({ length: 7 }, (_, cell) => (
+                      <td key={cell} className="py-2">
+                        {/* `h-5` is `text-sm`'s line box: a shorter bar makes the row — and
+                            every row under it — move when the text arrives. */}
+                        <Skeleton className="h-5 w-full max-w-28" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              {page.state === 'ready' &&
+                page.data.employees.map((employee) => (
+                  <tr key={employee.id} className="border-b border-border/60">
+                    <td className="py-2">{employee.employeeCode}</td>
+                    <td className="py-2">
+                      <Link href={`/employees/${String(employee.id)}`} className="underline">
+                        {employee.firstName} {employee.lastName}
+                      </Link>
+                    </td>
+                    <td className="py-2">{employee.countryCode}</td>
+                    <td className="py-2">
+                      {names.department.get(employee.departmentId) ?? employee.departmentId}
+                    </td>
+                    <td className="py-2">
+                      {names.level.get(employee.jobLevelId) ?? employee.jobLevelId}
+                    </td>
+                    <td className="py-2">{employee.hireDate}</td>
+                    <td className="py-2 text-muted-foreground">{employee.status}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => router.back()}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page.state === 'loading'}
+              onClick={() => router.back()}
+            >
               Back
             </Button>
             <Button
               variant="outline"
               size="sm"
-              disabled={page.data.nextCursor === null}
+              disabled={page.state === 'loading' || page.data.nextCursor === null}
               onClick={() => {
-                if (page.data.nextCursor !== null) toPage(page.data.nextCursor);
+                if (page.state === 'ready' && page.data.nextCursor !== null)
+                  toPage(page.data.nextCursor);
               }}
             >
               Next
             </Button>
             <span className="text-sm text-muted-foreground">
-              {page.data.employees.length} shown
-              {page.data.nextCursor === null ? ', last page' : ''}
+              {page.state === 'loading'
+                ? 'Counting…'
+                : `${String(page.data.employees.length)} shown${page.data.nextCursor === null ? ', last page' : ''}`}
             </span>
           </div>
         </>

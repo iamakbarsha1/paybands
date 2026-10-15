@@ -5,6 +5,7 @@ import { use, useState } from 'react';
 import { EmployeeForm, type EmployeeFormValues } from '../../../../components/employee-form';
 import { SalaryChangeForm } from '../../../../components/salary-change-form';
 import { Button } from '../../../../components/ui/button';
+import { Empty, Failure, Loading, Skeleton } from '../../../../components/ui/state';
 import { api } from '../../../../lib/api';
 import type { EmployeeDetail, ReferenceData } from '../../../../lib/api-types';
 import { formatMoney, formatRatio } from '../../../../lib/money';
@@ -25,15 +26,29 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   }
 
   if (detail.state === 'loading') {
-    return <p className="text-sm text-muted-foreground">Loading…</p>;
+    // Shaped like the page it is standing in for: name, the three figures, the band and the
+    // timeline, in their places, so nothing moves when the answer lands.
+    return (
+      <Loading label="Employee" className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+          <Skeleton className="h-20" />
+        </div>
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </Loading>
+    );
   }
 
   if (detail.state === 'error') {
     return (
       <div className="space-y-4">
-        <p role="alert" className="text-sm text-destructive">
-          {detail.message}
-        </p>
+        <Failure>{detail.message}</Failure>
         <Link href="/employees" className="text-sm underline">
           Back to the list
         </Link>
@@ -81,9 +96,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
           Record a salary change
         </Button>
         {reference.state === 'error' && (
-          <span role="alert" className="text-sm text-destructive">
-            {reference.message} The forms need the department and level lists.
-          </span>
+          <Failure>{reference.message} The forms need the department and level lists.</Failure>
         )}
       </div>
 
@@ -129,11 +142,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Band</h2>
         {band === null ? (
-          <p className="text-sm text-muted-foreground">
+          <Empty>
             No band covers {employee.jobLevelName} in {employee.countryCode}. There is nothing to
             measure this salary against, which is a gap in the band table rather than a problem with
             the person.
-          </p>
+          </Empty>
         ) : (
           <>
             <dl className="flex gap-8 text-sm">
@@ -150,28 +163,34 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Salary history</h2>
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-border text-muted-foreground">
-            <tr>
-              <th className="py-2 font-medium">From</th>
-              <th className="py-2 font-medium">To</th>
-              <th className="py-2 font-medium">Amount</th>
-              <th className="py-2 font-medium">Reason</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salaryHistory.map((record) => (
-              <tr key={record.id} className="border-b border-border/60">
-                <td className="py-2">{record.effectiveFrom}</td>
-                <td className="py-2">
-                  {record.effectiveTo ?? <span className="font-medium">in force</span>}
-                </td>
-                <td className="py-2">{formatMoney(record)}</td>
-                <td className="py-2 text-muted-foreground">{record.reason}</td>
+        {/* A column header with nothing under it reads as a broken page, so a joiner with no
+            salary yet gets the sentence instead of the empty table. */}
+        {salaryHistory.length === 0 ? (
+          <Empty>No salary on record yet. Record a change to open the first one.</Empty>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border text-muted-foreground">
+              <tr>
+                <th className="py-2 font-medium">From</th>
+                <th className="py-2 font-medium">To</th>
+                <th className="py-2 font-medium">Amount</th>
+                <th className="py-2 font-medium">Reason</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {salaryHistory.map((record) => (
+                <tr key={record.id} className="border-b border-border/60">
+                  <td className="py-2">{record.effectiveFrom}</td>
+                  <td className="py-2">
+                    {record.effectiveTo ?? <span className="font-medium">in force</span>}
+                  </td>
+                  <td className="py-2">{formatMoney(record)}</td>
+                  <td className="py-2 text-muted-foreground">{record.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </section>
   );

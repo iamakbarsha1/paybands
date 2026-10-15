@@ -5,6 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { ApiError } from '../lib/api';
 import type { ReferenceData } from '../lib/api-types';
 import { Button } from './ui/button';
+import { Failure } from './ui/state';
 import { Field, Input } from './ui/field';
 
 /**
@@ -206,11 +207,7 @@ export function EmployeeForm({
         />
       </div>
 
-      {refusal !== null && (
-        <p role="alert" className="text-sm text-destructive">
-          {refusal}
-        </p>
-      )}
+      {refusal !== null && <Failure>{refusal}</Failure>}
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}>

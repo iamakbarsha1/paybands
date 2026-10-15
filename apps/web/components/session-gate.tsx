@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { api, ApiError } from '../lib/api';
+import { Loading, Skeleton } from './ui/state';
 import type { SessionUser } from '../lib/api-types';
 
 /**
@@ -34,7 +35,12 @@ export function SessionGate({ children }: { children: ReactNode }) {
   }, [router]);
 
   if (state === 'checking') {
-    return <p className="px-6 py-8 text-sm text-muted-foreground">Checking your session…</p>;
+    return (
+      <Loading label="Checking your session" className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-96 w-full" />
+      </Loading>
+    );
   }
 
   return <>{children}</>;

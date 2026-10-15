@@ -6,6 +6,7 @@ import { api, ApiError } from '../lib/api';
 import type { ReferenceData } from '../lib/api-types';
 import { formatMoney } from '../lib/money';
 import { Button } from './ui/button';
+import { Failure } from './ui/state';
 import { Field, Input } from './ui/field';
 
 /**
@@ -150,11 +151,7 @@ export function SalaryChangeForm({
         </Field>
       </div>
 
-      {refusal !== null && (
-        <p role="alert" className="text-sm text-destructive">
-          {refusal}
-        </p>
-      )}
+      {refusal !== null && <Failure>{refusal}</Failure>}
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={saving}>

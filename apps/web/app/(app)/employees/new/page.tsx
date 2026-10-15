@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { EmployeeForm } from '../../../../components/employee-form';
+import { Failure, Loading, Skeleton } from '../../../../components/ui/state';
 import { api } from '../../../../lib/api';
 import type { EmployeeListItem, ReferenceData } from '../../../../lib/api-types';
 import { useApi } from '../../../../lib/use-api';
@@ -24,14 +25,15 @@ export default function NewEmployeePage() {
       </div>
 
       {reference.state === 'loading' && (
-        <p className="text-sm text-muted-foreground">Loading the departments and levels…</p>
+        // The form's own grid, so the fields do not jump into place under the heading.
+        <Loading label="The form" className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 11 }, (_, index) => (
+            <Skeleton key={index} className="h-16" />
+          ))}
+        </Loading>
       )}
 
-      {reference.state === 'error' && (
-        <p role="alert" className="text-sm text-destructive">
-          {reference.message}
-        </p>
-      )}
+      {reference.state === 'error' && <Failure>{reference.message}</Failure>}
 
       {reference.state === 'ready' && (
         <EmployeeForm
