@@ -10,6 +10,8 @@ Compensation terms defined once, so the schema, the API, the tests and the UI la
 
 **Band width** — `max − min`, in minor units. Denominator for range penetration. A zero-width band is a data error, not a divide-by-zero to swallow.
 
+**Band spread** — `width ÷ min`, unitless. How wide a band is relative to where it starts: `0.50` means the maximum is half again the minimum. Width is in a currency and spread is not, which is what lets a GBP band and a JPY band be compared in one table. A band with no width, or a minimum of zero, has no spread and raises rather than reporting one.
+
 ## Band position
 
 **Comp ratio** — `salary ÷ midpoint`. How pay compares to target for the role. Unitless.

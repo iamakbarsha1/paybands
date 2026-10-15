@@ -57,6 +57,26 @@ export interface EmployeeDetail {
   readonly rangePenetration: number | null;
 }
 
+/**
+ * One row of `/analytics/bands`: a band and how many active people sit in it. The three
+ * figures arrive as bare minor-unit strings rather than `MoneyWire`, because the band row
+ * carries one currency for all three.
+ */
+export interface BandRow {
+  readonly jobLevelId: number;
+  readonly jobLevelName: string;
+  readonly countryCode: string;
+  readonly currencyCode: CurrencyCode;
+  readonly minMinor: string;
+  readonly midMinor: string;
+  readonly maxMinor: string;
+  readonly headcount: number;
+}
+
+export interface BandsReport {
+  readonly bands: readonly BandRow[];
+}
+
 export interface ReferenceData {
   readonly currencies: readonly CurrencyCode[];
   readonly genders: readonly Gender[];
