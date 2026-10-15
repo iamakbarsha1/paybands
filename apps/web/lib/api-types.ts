@@ -141,6 +141,28 @@ export interface OutliersReport {
   readonly noBand: readonly OutlierRow[];
 }
 
+/**
+ * A gap, or a stated refusal to publish one. `suppressed` carries `reason` and leaves both
+ * figures null — never a zero, which would read as "no gap" (`docs/glossary.md`).
+ */
+export interface PayGap {
+  readonly headcount: number;
+  readonly compared: { readonly male: number; readonly female: number };
+  readonly excluded: number;
+  readonly suppressed: boolean;
+  readonly reason: string | null;
+  readonly meanGap: number | null;
+  readonly medianGap: number | null;
+}
+
+export interface PayGapReport {
+  readonly groupBy: 'country' | 'department' | 'level';
+  readonly currency: 'USD';
+  readonly minGroupSize: number;
+  readonly overall: PayGap;
+  readonly groups: readonly (PayGap & { readonly key: string; readonly name: string })[];
+}
+
 export interface ReferenceData {
   readonly currencies: readonly CurrencyCode[];
   readonly genders: readonly Gender[];
