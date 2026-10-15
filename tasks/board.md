@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 66 of 90 done (phases 0–8 complete, phase 9 in flight).
+**Progress** — 67 of 90 done (phases 0–9 complete, phase 10 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -22,7 +22,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 6 API analytics         | 6       | 6    |
 | 7 Auth                  | 5       | 5    |
 | 8 Web employees         | 6       | 6    |
-| 9 Web reports           | 5       | 4    |
+| 9 Web reports           | 5       | 5    |
 | 10 Ask bar (optional)   | 5       | 0    |
 | 11 Performance          | 3       | 0    |
 | 12 Audits               | 4       | 0    |
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                   | Status | Blocked by |
 | ------ | --------------------------------------- | ------ | ---------- |
-| PB-064 | Gender pay gap screen                   | next  | —          |
+| PB-065 | Natural language to a validated query object | next | —       |
 
 ---
 
@@ -151,7 +151,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-061 | Distribution screen   | done   | PB-044, PB-054 |
 | PB-062 | Comp ratio screen     | done   | PB-045, PB-054 |
 | PB-063 | Outliers screen       | done   | PB-046, PB-057 |
-| PB-064 | Gender pay gap screen | next   | PB-047, PB-054 |
+| PB-064 | Gender pay gap screen | done   | PB-047, PB-054 |
 
 ## Phase 10 — Ask bar (optional, feature-flagged)
 
