@@ -20,7 +20,9 @@ describe('GET /health', () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: 'ok' });
+    // `ask` says whether this server was given a way to a model, so the browser knows
+    // whether to render an ask bar. This app was built without one.
+    expect(response.json()).toEqual({ status: 'ok', ask: false });
   });
 });
 
