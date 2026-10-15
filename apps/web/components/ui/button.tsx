@@ -2,7 +2,8 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
-const button = cva(
+/** Exported so a link can look like a button without pretending to be one. */
+export const button = cva(
   'inline-flex items-center justify-center gap-2 rounded-[var(--radius)] text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
   {
     variants: {

@@ -14,8 +14,11 @@ export type Loaded<T> =
  *
  * `path` is the dependency: a screen that changes its filters changes its path, and the
  * stale answer from the previous one is dropped rather than raced.
+ *
+ * `reloadKey` is for the case the path cannot express: a write on this screen changes what
+ * the same path answers. The screen bumps the number and gets the new answer.
  */
-export function useApi<T>(path: string): Loaded<T> {
+export function useApi<T>(path: string, reloadKey = 0): Loaded<T> {
   const [result, setResult] = useState<Loaded<T>>({ state: 'loading' });
 
   useEffect(() => {
@@ -38,7 +41,7 @@ export function useApi<T>(path: string): Loaded<T> {
     return () => {
       live = false;
     };
-  }, [path]);
+  }, [path, reloadKey]);
 
   return result;
 }

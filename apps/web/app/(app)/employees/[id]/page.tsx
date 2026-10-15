@@ -1,14 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { use } from 'react';
-import type { EmployeeDetail } from '../../../../lib/api-types';
+import { use, useState } from 'react';
+import { EmployeeForm, type EmployeeFormValues } from '../../../../components/employee-form';
+import { SalaryChangeForm } from '../../../../components/salary-change-form';
+import { Button } from '../../../../components/ui/button';
+import { api } from '../../../../lib/api';
+import type { EmployeeDetail, ReferenceData } from '../../../../lib/api-types';
 import { formatMoney, formatRatio } from '../../../../lib/money';
 import { useApi } from '../../../../lib/use-api';
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const detail = useApi<EmployeeDetail>(`/employees/${id}`);
+  // A write on this screen changes what this screen shows: a new open record and a closed
+  // one. Bumping the key is what asks the API again.
+  const [saved, setSaved] = useState(0);
+  const [form, setForm] = useState<'none' | 'edit' | 'salary'>('none');
+  const detail = useApi<EmployeeDetail>(`/employees/${id}`, saved);
+  const reference = useApi<ReferenceData>('/reference');
+
+  function afterWrite(): void {
+    setForm('none');
+    setSaved((count) => count + 1);
+  }
 
   if (detail.state === 'loading') {
     return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -44,6 +58,65 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
           {employee.terminationDate !== null && ` · left ${employee.terminationDate}`}
         </p>
       </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant={form === 'edit' ? 'primary' : 'outline'}
+          size="sm"
+          disabled={reference.state !== 'ready'}
+          onClick={() => {
+            setForm(form === 'edit' ? 'none' : 'edit');
+          }}
+        >
+          Edit details
+        </Button>
+        <Button
+          variant={form === 'salary' ? 'primary' : 'outline'}
+          size="sm"
+          disabled={reference.state !== 'ready'}
+          onClick={() => {
+            setForm(form === 'salary' ? 'none' : 'salary');
+          }}
+        >
+          Record a salary change
+        </Button>
+        {reference.state === 'error' && (
+          <span role="alert" className="text-sm text-destructive">
+            {reference.message} The forms need the department and level lists.
+          </span>
+        )}
+      </div>
+
+      {reference.state === 'ready' && form === 'edit' && (
+        <div className="rounded-[var(--radius)] border border-border p-4">
+          <EmployeeForm
+            reference={reference.data}
+            initial={valuesOf(employee)}
+            submitLabel="Save the changes"
+            onCancel={() => {
+              setForm('none');
+            }}
+            onSubmit={async (body) => {
+              await api(`/employees/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+              afterWrite();
+            }}
+          />
+        </div>
+      )}
+
+      {reference.state === 'ready' && form === 'salary' && (
+        <div className="rounded-[var(--radius)] border border-border p-4">
+          <SalaryChangeForm
+            employeeId={employee.id}
+            reference={reference.data}
+            currentCurrency={currentSalary?.currencyCode ?? null}
+            onSaved={afterWrite}
+            onCancel={() => {
+              setForm('none');
+            }}
+          />
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Figure label="Current salary">
@@ -102,6 +175,23 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
       </div>
     </section>
   );
+}
+
+/** The record as the form holds it: strings, with a null date read as an empty field. */
+function valuesOf(employee: EmployeeDetail['employee']): EmployeeFormValues {
+  return {
+    employeeCode: employee.employeeCode,
+    firstName: employee.firstName,
+    lastName: employee.lastName,
+    email: employee.email,
+    gender: employee.gender,
+    countryCode: employee.countryCode,
+    departmentId: String(employee.departmentId),
+    jobLevelId: String(employee.jobLevelId),
+    hireDate: employee.hireDate,
+    terminationDate: employee.terminationDate ?? '',
+    managerId: employee.managerId === null ? '' : String(employee.managerId),
+  };
 }
 
 function Figure({ label, children }: { label: string; children: React.ReactNode }) {

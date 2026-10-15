@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { Button } from '../../../components/ui/button';
+import { Button, button } from '../../../components/ui/button';
 import type { EmployeePage, ReferenceData } from '../../../lib/api-types';
 import { useApi } from '../../../lib/use-api';
 
@@ -60,11 +60,16 @@ function EmployeeList() {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Employees</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Twenty-five at a time, filtered and sorted by the server.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Employees</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Twenty-five at a time, filtered and sorted by the server.
+          </p>
+        </div>
+        <Link href="/employees/new" className={button({ size: 'sm' })}>
+          Add an employee
+        </Link>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
