@@ -27,7 +27,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 11 Performance          | 3       | 0    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 1    |
-| Debt and missed         | 10      | 4    |
+| Debt and missed         | 11      | 4    |
 
 ---
 
@@ -207,3 +207,4 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |
 | PB-D09 | Phase 10 has no ticket for the web ask bar itself          | todo         | PB-068     |
 | PB-D10 | The model adapter has no test of its own                   | done         | —          |
+| PB-D11 | The Review table in `todo.md` stops at phase 4              | todo         | —          |
