@@ -4,7 +4,7 @@
  * silently round the way a `number` does past 2^53.
  */
 
-import { isCurrencyCode, type CurrencyCode } from './domain';
+import { isCurrencyCode, minorUnitsFor, type CurrencyCode } from './domain';
 
 export type Money = {
   readonly amount: bigint;
@@ -17,6 +17,33 @@ export function money(amount: bigint, currency: string): Money {
     throw new RangeError(`Unknown currency code: ${currency}`);
   }
   return { amount, currency };
+}
+
+/** Digits, optionally a point and more digits. No sign, no separators, nothing else. */
+const PLAIN_AMOUNT = /^(\d+)(?:\.(\d+))?$/u;
+
+/**
+ * The amount a person types, in major units, read into the minor units everything else
+ * holds. The digits are moved by string, never by multiplication: `96000.57 * 100` is
+ * 9600056.999999999 in a double, and this is the one place a typed salary could pick up
+ * that error.
+ *
+ * Returns `null` for anything that is not a plain amount in this currency — a sign, a
+ * thousands separator, text, or more decimal places than the currency has. Zero parses;
+ * whether a zero salary is allowed belongs to whoever asked for the number.
+ */
+export function moneyFromMajorUnits(input: string, currency: string): Money | null {
+  if (!isCurrencyCode(currency)) return null;
+
+  const match = PLAIN_AMOUNT.exec(input.trim());
+  if (match === null) return null;
+
+  const [, whole = '', fraction = ''] = match;
+  const places = minorUnitsFor(currency);
+  // A currency with no minor unit has no decimal part to take, and JPY is why.
+  if (fraction.length > places) return null;
+
+  return { amount: BigInt(whole + fraction.padEnd(places, '0')), currency };
 }
 
 function assertSameCurrency(a: Money, b: Money): void {

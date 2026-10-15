@@ -133,6 +133,8 @@ describe('moneyFromMajorUnits', () => {
   });
 
   it('is exact past Number.MAX_SAFE_INTEGER, which is the reason it parses rather than multiplies', () => {
-    expect(moneyFromMajorUnits('90071992547409.91', 'USD')?.amount).toBe(9007199254740991n);
+    // Over 2^53 minor units a double counts in twos, so an odd number of cents cannot be
+    // reached by multiplying one — and rounding afterwards does not get it back.
+    expect(moneyFromMajorUnits('123456789012345.67', 'USD')?.amount).toBe(12345678901234567n);
   });
 });

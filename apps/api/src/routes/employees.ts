@@ -1,9 +1,11 @@
 import {
   compRatio,
+  employeeInput,
+  employeePatch,
   GENDERS,
-  isCurrencyCode,
   money,
   rangePenetration,
+  salaryChangeInput,
   SALARY_REASONS,
   type Money,
 } from '@paybands/core';
@@ -114,28 +116,6 @@ const notFound = z.strictObject({ message: z.string() });
  */
 const badRequest = z.looseObject({ message: z.string() });
 
-/** A calendar day, not a timestamp: the columns behind these are `date`. */
-const day = z.iso.date();
-
-const createBody = z.strictObject({
-  employeeCode: z.string().min(1).max(32),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.email(),
-  gender: z.enum(GENDERS),
-  hireDate: day,
-  terminationDate: day.nullable().optional(),
-  countryCode: z.string().length(2),
-  departmentId: z.number().int().positive(),
-  jobLevelId: z.number().int().positive(),
-  managerId: z.number().int().positive().nullable().optional(),
-});
-
-// An edit that names no field is a mistake worth a 400, not a no-op that answers 200.
-const patchBody = createBody
-  .partial()
-  .refine((patch) => Object.keys(patch).length > 0, { message: 'name at least one field' });
-
 /** Each state a write can fail in, with the status the client should read. */
 const WRITE_FAILURE_STATUS = {
   duplicate: 409,
@@ -144,14 +124,6 @@ const WRITE_FAILURE_STATUS = {
   'out-of-order': 400,
   'currency-mismatch': 400,
 } as const;
-
-const salaryBody = z.strictObject({
-  // A string, for the same reason the response sends one: this is money in minor units.
-  amountMinor: z.string().regex(/^[1-9]\d*$/, 'minor units, a positive whole number'),
-  currencyCode: z.string().refine(isCurrencyCode, 'unknown currency'),
-  effectiveFrom: day,
-  reason: z.enum(SALARY_REASONS),
-});
 
 const salaryRecordResponse = moneySchema.extend({
   id: z.number(),
@@ -234,7 +206,7 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
     '/employees',
     {
       schema: {
-        body: createBody,
+        body: employeeInput,
         response: { 201: employeeSchema, 400: badRequest, 404: notFound, 409: notFound },
       },
     },
@@ -251,7 +223,7 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
     {
       schema: {
         params: idParam,
-        body: patchBody,
+        body: employeePatch,
         response: { 200: employeeSchema, 400: badRequest, 404: notFound, 409: notFound },
       },
     },
@@ -268,7 +240,7 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
     {
       schema: {
         params: idParam,
-        body: salaryBody,
+        body: salaryChangeInput,
         response: {
           201: salaryRecordResponse,
           400: badRequest,
