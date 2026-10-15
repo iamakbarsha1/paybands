@@ -14,8 +14,10 @@ export function anthropicComplete(apiKey: string): Complete {
     try {
       response = await client.messages.create({
         model: 'claude-opus-5',
-        // The answer is one small JSON object, with nothing to say around it.
-        max_tokens: 1024,
+        // The answer is one small JSON object, but this cap covers the model's reasoning as
+        // well as what it writes, and reasoning is on by default here. A cap is a ceiling
+        // and not a spend, so it is set well clear of both rather than tight to the answer.
+        max_tokens: 4096,
         // Turning a question into a query is the simplest thing this model is ever asked to
         // do. Low effort is the lever that costs less; disabling thinking is not, because on
         // this model it can put a tool call into visible text and leak tags into the answer.
@@ -29,6 +31,11 @@ export function anthropicComplete(apiKey: string): Complete {
     // Read before the content, because a model that declines has no content worth reading.
     // `translate` already has a refusal for an answer that is not there.
     if (response.stop_reason === 'refusal') return null;
+
+    // A truncated answer is partial JSON, which `translate` would refuse with "did not answer
+    // with JSON" — blaming the model for a ceiling this file set. "No answer to read" is the
+    // one of the two that is true.
+    if (response.stop_reason === 'max_tokens') return null;
 
     // `content` is a discriminated union and text is the only kind this call asks for.
     const text = response.content
