@@ -9,20 +9,33 @@ import { z } from 'zod';
 import { GENDERS, isCurrencyCode, SALARY_REASONS } from './domain';
 
 /** A calendar day, not a timestamp: the columns behind these are `date`. */
-const day = z.iso.date();
+const day = z.iso.date('a date like 2026-11-02');
 
+/**
+ * The messages are written for the person filling the form in, because that is who reads
+ * them now: the browser shows them under the field, and the API sends the same words back
+ * to anyone posting by hand.
+ */
 export const employeeInput = z.strictObject({
-  employeeCode: z.string().min(1).max(32),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.email(),
+  employeeCode: z
+    .string()
+    .min(1, 'an employee number is required')
+    .max(32, 'at most 32 characters'),
+  firstName: z.string().min(1, 'a first name is required'),
+  lastName: z.string().min(1, 'a last name is required'),
+  email: z.email('that is not an email address'),
   gender: z.enum(GENDERS),
   hireDate: day,
   terminationDate: day.nullable().optional(),
-  countryCode: z.string().length(2),
-  departmentId: z.number().int().positive(),
-  jobLevelId: z.number().int().positive(),
-  managerId: z.number().int().positive().nullable().optional(),
+  countryCode: z.string().length(2, 'choose a country'),
+  departmentId: z.number().int().positive('choose a department'),
+  jobLevelId: z.number().int().positive('choose a job level'),
+  managerId: z
+    .number()
+    .int()
+    .positive('a manager is an employee id, or leave it empty')
+    .nullable()
+    .optional(),
 });
 
 // An edit that names no field is a mistake worth a 400, not a no-op that answers 200.
