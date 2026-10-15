@@ -11,9 +11,11 @@ import Fastify, {
 import { z, type ZodError, type ZodType } from 'zod';
 import { CURRENCY_CODES, GENDERS, SALARY_REASONS } from '@paybands/core';
 import type { PrismaClient } from '../generated/prisma/client';
+import type { Complete } from './ask/translate';
 import { registerGuard } from './auth/guard';
 import { referenceLists } from './repositories/reference';
 import { registerAnalyticsRoutes } from './routes/analytics';
+import { registerAskRoutes } from './routes/ask';
 import { registerAuthRoutes } from './routes/auth';
 import { registerEmployeeRoutes } from './routes/employees';
 
@@ -52,12 +54,23 @@ export interface BuildAppOptions {
    * list to keep accurate; there is one web app (PB-080).
    */
   webOrigin?: string;
+  /**
+   * The ask bar's way to a model, or `null` for a server that has none. Optional, because an
+   * app without one is a whole app with one feature off, and the caller decides which it is
+   * (decision 56) — this file never reads a key.
+   */
+  complete?: Complete | null;
 }
 
 /** Strict, so `?departmant=2` is a 400 rather than a filter that quietly did nothing. */
 const noQuery = z.strictObject({});
 
-const healthResponse = z.strictObject({ status: z.literal('ok') });
+/**
+ * `ask` is on the health response rather than on an endpoint of its own: the browser needs
+ * to know whether to render an ask bar, and this is already the route that answers what this
+ * server is.
+ */
+const healthResponse = z.strictObject({ status: z.literal('ok'), ask: z.boolean() });
 
 const referenceResponse = z.strictObject({
   currencies: z.array(z.string()).readonly(),
@@ -71,6 +84,8 @@ const referenceResponse = z.strictObject({
 /** Builds the instance without starting it, so tests drive it through `inject()` and never bind a port. */
 export function buildApp(options: BuildAppOptions): App {
   const app = Fastify({ logger: options.logger ?? false }).withTypeProvider<ZodTypeProvider>();
+  // Read once, so the flag on /health and the route's own behaviour cannot disagree.
+  const complete = options.complete ?? null;
 
   app.setValidatorCompiler(({ schema }) => (data) => {
     const result = (schema as ZodType).safeParse(data);
@@ -88,6 +103,7 @@ export function buildApp(options: BuildAppOptions): App {
   // health check can append whatever it likes without earning a 400.
   app.get('/health', { schema: { response: { 200: healthResponse } } }, () => ({
     status: 'ok' as const,
+    ask: complete !== null,
   }));
 
   // Served from core so the API and the UI cannot drift on what a valid gender or reason is.
@@ -127,6 +143,7 @@ export function buildApp(options: BuildAppOptions): App {
   registerAuthRoutes(app, options.prisma);
   registerEmployeeRoutes(app, options.prisma);
   registerAnalyticsRoutes(app, options.prisma);
+  registerAskRoutes(app, options.prisma, complete);
 
   return app;
 }

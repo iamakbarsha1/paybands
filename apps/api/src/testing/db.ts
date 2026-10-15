@@ -4,6 +4,7 @@ import { PrismaClient } from '../../generated/prisma/client';
 import { sign } from '@fastify/cookie';
 import type { InjectOptions } from 'fastify';
 import { buildApp, type App } from '../app';
+import type { Complete } from '../ask/translate';
 import { ARGON2ID } from '../auth/password';
 import { SESSION_COOKIE, SESSION_TTL_MS } from '../auth/session';
 import { FIXTURE, FIXTURE_PASSWORD } from './fixture';
@@ -78,9 +79,19 @@ export function sessionCookie(): string {
  * test secret and attached to every `inject` that does not set one of its own, so a test can
  * still send a cookie of its own and have it win. Pass `{ signedIn: false }` for the tests
  * whose subject is the guard.
+ *
+ * `complete` defaults to null, which is a server with no key and the ask bar off. A test
+ * that wants the feature on passes a fake, and no test ever reaches a real model.
  */
-export function testApp(prisma: PrismaClient, options: { signedIn?: boolean } = {}): App {
-  const app = buildApp({ prisma, sessionSecret: TEST_SESSION_SECRET });
+export function testApp(
+  prisma: PrismaClient,
+  options: { signedIn?: boolean; complete?: Complete | null } = {},
+): App {
+  const app = buildApp({
+    prisma,
+    sessionSecret: TEST_SESSION_SECRET,
+    complete: options.complete ?? null,
+  });
   if (options.signedIn === false) return app;
 
   const cookie = sessionCookie();

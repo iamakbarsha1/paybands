@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { buildApp } from './app';
+import { anthropicComplete } from './ask/anthropic';
 import { createPrismaClient } from './db';
 
 // Before anything reads an environment variable. `createPrismaClient` loads the file too,
@@ -17,12 +18,17 @@ if (sessionSecret === undefined || sessionSecret.length < 32) {
   );
 }
 
+// The only place this variable is read. An unfilled line in a `.env` is the same as no line
+// at all, so a blank key leaves the ask bar off rather than half on.
+const anthropicKey = process.env['ANTHROPIC_API_KEY'] ?? '';
+
 const prisma = createPrismaClient();
 const app = buildApp({
   logger: true,
   prisma,
   sessionSecret,
   webOrigin: process.env['WEB_ORIGIN'] ?? 'http://localhost:3000',
+  complete: anthropicKey === '' ? null : anthropicComplete(anthropicKey),
 });
 
 try {
