@@ -1065,7 +1065,7 @@ The guarantee is about data the system holds, not about the words the user typed
 **Cheaper:** Trust the signature. `translate(question, complete)` takes no client, so today it cannot read a row. Rejected because that is one parameter away from being untrue and nothing would say so.
 **Falsifier:** A caller that enriches the question with data before calling `translate` — the ask bar route attaching the signed-in user's own salary, say. That sends a row while every test here stays green and the lint rule stays quiet, because the leak is outside the file the rule guards. `PB-068` is where to watch for it.
 
-**Since:** `PB-068` built that route and the falsifier did not fire. `apps/api/src/routes/ask.ts` passes `request.body.question` to `translate` and nothing else; the only thing it reads out of the database is the report, after the model has answered.
+**Since:** `PB-068` built that route and the falsifier did not fire. The handler passes `request.body.question` to `translate` and nothing else, and two tests hold it there: `routes/ask.test.ts` compares the prompt the route produced against the one `translate` renders with no route in the way, and `routes/ask.db.test.ts` checks that prompt against every row the same request went on to return. A rule like this one cannot do that job here. The handler reaches data through `ask/run.ts`, which it exists to call, so enriching a question needs no banned import at all — mutating the handler to paste the outliers report into the prompt leaks real surnames while importing nothing a boundary rule could name.
 
 ---
 
