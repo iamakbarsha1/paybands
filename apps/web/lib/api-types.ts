@@ -77,6 +77,27 @@ export interface BandsReport {
   readonly bands: readonly BandRow[];
 }
 
+/** The four points `docs/glossary.md` names, in USD minor units. Null means no salaries. */
+export interface Percentiles {
+  readonly p25: string;
+  readonly p50: string;
+  readonly p75: string;
+  readonly p90: string;
+}
+
+export interface DistributionGroup {
+  readonly key: string;
+  readonly name: string;
+  readonly headcount: number;
+  readonly percentiles: Percentiles | null;
+}
+
+export interface Distribution {
+  readonly groupBy: 'country' | 'department' | 'level';
+  readonly currency: 'USD';
+  readonly groups: readonly DistributionGroup[];
+}
+
 export interface ReferenceData {
   readonly currencies: readonly CurrencyCode[];
   readonly genders: readonly Gender[];

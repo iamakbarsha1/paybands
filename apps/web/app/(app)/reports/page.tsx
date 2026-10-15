@@ -3,7 +3,7 @@ import Link from 'next/link';
 /** `href` is null until the screen exists, so the list never links to a page that is not there. */
 const REPORTS = [
   { label: 'Pay bands and their occupancy', href: '/reports/bands' },
-  { label: 'Salary distribution by country, department or level', href: null },
+  { label: 'Salary distribution by country, department or level', href: '/reports/distribution' },
   { label: 'Comp ratio across the org', href: null },
   { label: 'People outside their band', href: null },
   { label: 'Gender pay gap, with suppression stated', href: null },
