@@ -104,6 +104,32 @@ export default tseslint.config(
     },
   },
 
+  // The one function that talks to a model, and it has no route to data at all: not the
+  // client, not a repository, not even the types (decision 55). Scoped to this file, because
+  // ask/run.ts reaches the repositories through routes/analytics and is meant to.
+  {
+    files: ['apps/api/src/ask/translate.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/repositories/**',
+                '**/generated/prisma/**',
+                '@prisma/client',
+                '@prisma/adapter-pg',
+              ],
+              message:
+                'The model sees a question and a schema, never a row. See docs/decisions/decision-log.md, decision 55.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   {
     files: ['**/*.js'],
     extends: [tseslint.configs.disableTypeChecked],
