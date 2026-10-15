@@ -98,6 +98,18 @@ Corrections made during the build, kept so the same mistake is not repeated.
 
 **Rule:** pin a policy constant to its literal in the test. The assertion exists so that changing the number is a deliberate edit in two places, and reading the number back from the thing being checked removes exactly that.
 
+## Restoring a mutated file with git deletes work git has never seen
+
+**2026-10-15.** The mutate-run-restore loop that proves a test bites used `git checkout -- <file>` as its restore. Two of the three files were not committed: `contracts.ts` was untracked, so the restore errored and the mutation stayed in; `money.ts` was tracked but held the new parser, so the restore took it back to a version without the function, and fourteen tests went red for nothing to do with the mutation.
+
+**Rule:** mutate only committed state, or copy the file to `/tmp` first and restore from the copy. `git checkout --` is a restore only when the content being restored is already in git.
+
+## A surviving mutant can mean the number in the test is too small
+
+**2026-10-15.** `moneyFromMajorUnits` was mutated to `Math.round(Number(input) * 100)` and every test stayed green, including the one whose name is about exactness past `Number.MAX_SAFE_INTEGER`. The test was not blind: 90071992547409.91 is simply a value the double still lands on after scaling. At 123456789012345.67 the scaled result is above 2^53, where doubles count in twos and the true answer is odd, and the same mutation turns it red.
+
+**Rule:** before reading a surviving mutant as a blind test or a void experiment, check that the input sits in the range where the two implementations differ. For a precision claim, compute the crossover and test past it.
+
 ## A guard turns every existing test into an auth test
 
 **2026-10-15.** The `onRequest` guard for PB-051 took seventy-one passing tests to 401 in one commit. The choice was a cookie on forty `inject` calls across nine files, or one in the harness that builds the test app.
