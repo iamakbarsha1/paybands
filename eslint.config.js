@@ -104,11 +104,12 @@ export default tseslint.config(
     },
   },
 
-  // The one function that talks to a model, and it has no route to data at all: not the
-  // client, not a repository, not even the types (decision 55). Scoped to this file, because
-  // ask/run.ts reaches the repositories through routes/analytics and is meant to.
+  // The two files on the model's side of the boundary, neither with a route to data: not the
+  // client, not a repository, not even the types (decision 55). Scoped to these two, because
+  // ask/run.ts reaches the repositories through routes/analytics and is meant to, and
+  // routes/ask.ts holds a client because `run` needs one — there the test is the only guard.
   {
-    files: ['apps/api/src/ask/translate.ts'],
+    files: ['apps/api/src/ask/translate.ts', 'apps/api/src/ask/anthropic.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
