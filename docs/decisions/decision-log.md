@@ -1041,3 +1041,24 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** `app.inject` on a URL built from the query. Rejected for the three reasons above, the compile-time one being the deciding reason.
 **Falsifier:** A report that needs something only a request carries — a header, a cookie, the signed-in user. Then the function cannot take the whole input and the inject version is the honest one.
+
+---
+
+### 55. The model is sent the question and the schema, and never a row
+
+**SOUND** · reversal: cheap, one config block and one test file · 2026-10-16 · phase 10, `PB-067`
+
+**Decision:** A `no-restricted-imports` block scoped to `apps/api/src/ask/translate.ts` bans `**/repositories/**`, the generated client and the Prisma packages, type imports included. `apps/api/src/ask/boundary.db.test.ts` reads a real name and a real salary out of the seeded database, drives a question through `translate` and then `run`, and asserts that neither reaches a prompt and that `complete` is called once.
+
+The guarantee is about data the system holds, not about the words the user typed. A question naming a person sends that name to the model, because the name is in the question. A test asserts exactly that, so the entry claims no more than the code does. Scrubbing the question is a different feature and is not built.
+
+**Evidence:** `docs/design-notes.md` §7 lists "read a salary row, see a name" among the things the model never does, and §7's ceiling is single-turn translation with no conversation memory and no tool loop. The structural half is decision 4's method applied again: `packages/core` stayed free of I/O through four phases because a rule said so rather than a convention. The measured half is what a rule cannot give — the prompt is checked against the row the report then returns, so the assertion is about data demonstrably on the path.
+
+- **D** — Needed now. `PB-068` adds the route and the first real model call, so the boundary wants stating before anything is wired to a key.
+- **O** — Cheap. A config block and a test file; no runtime code changed.
+- **U** — The measured half checks one question per assertion, not every question. The structural half is what makes it general: a file that cannot import the data layer cannot read a row whatever it is asked.
+- **B** — `translate.ts` alone. `run.ts` is outside the rule on purpose: it reaches the repositories through `routes/analytics`, which is the half of `ask/` that is meant to touch data.
+- **T** — Gives up putting a real row in the prompt as a worked example. Few-shot accuracy has to come from the schema instead, which decision 53 already renders from `askQuery`.
+
+**Cheaper:** Trust the signature. `translate(question, complete)` takes no client, so today it cannot read a row. Rejected because that is one parameter away from being untrue and nothing would say so.
+**Falsifier:** A caller that enriches the question with data before calling `translate` — the ask bar route attaching the signed-in user's own salary, say. That sends a row while every test here stays green and the lint rule stays quiet, because the leak is outside the file the rule guards. `PB-068` is where to watch for it.
