@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { Button } from '../../../components/ui/button';
@@ -158,7 +159,9 @@ function EmployeeList() {
                 <tr key={employee.id} className="border-b border-border/60">
                   <td className="py-2">{employee.employeeCode}</td>
                   <td className="py-2">
-                    {employee.firstName} {employee.lastName}
+                    <Link href={`/employees/${String(employee.id)}`} className="underline">
+                      {employee.firstName} {employee.lastName}
+                    </Link>
                   </td>
                   <td className="py-2">{employee.countryCode}</td>
                   <td className="py-2">
