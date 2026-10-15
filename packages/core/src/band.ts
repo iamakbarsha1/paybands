@@ -40,6 +40,23 @@ export function compRatio(salary: Money, band: PayBand | undefined): number | nu
 }
 
 /**
+ * The width of a band as a fraction of its minimum: 0.5 means the maximum is half again the
+ * minimum. Unitless, so a GBP band and a JPY band are read across one table
+ * (`docs/glossary.md`). A band with no width is a data error, not a spread of nothing.
+ */
+export function bandSpread(band: PayBand): number {
+  const { min, max } = band;
+  if (min.amount <= 0n) {
+    throw new RangeError(`Band minimum must be positive, got ${min.amount}`);
+  }
+  const width = max.amount - min.amount;
+  if (width <= 0n) {
+    throw new RangeError(`Band width must be positive, got ${width}`);
+  }
+  return Number(width) / Number(min.amount);
+}
+
+/**
  * Position in the band, 0 at the minimum and 1 at the maximum. Values outside
  * that range are real and are not clamped: below 0 is under the band floor and
  * above 1 is over its ceiling, both outlier conditions (`docs/glossary.md`).

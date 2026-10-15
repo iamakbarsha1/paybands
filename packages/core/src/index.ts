@@ -13,7 +13,7 @@ export { employeeInput, employeePatch, salaryChangeInput } from './contracts';
 export type { EmployeeInput, EmployeePatch, SalaryChangeInput } from './contracts';
 export { toUsd } from './fx';
 export type { FxRate } from './fx';
-export { compRatio, rangePenetration } from './band';
+export { bandSpread, compRatio, rangePenetration } from './band';
 export type { PayBand } from './band';
 export { percentiles } from './stats';
 export type { Percentile } from './stats';
