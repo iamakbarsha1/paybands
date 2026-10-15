@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compRatio, money, rangePenetration, type PayBand } from './index';
+import { bandSpread, compRatio, money, rangePenetration, type PayBand } from './index';
 
 /** The shape the seed writes: min and max at 80% and 120% of a stored midpoint. */
 function bandAround(midMinor: bigint, currency: string): PayBand {
@@ -120,5 +120,53 @@ describe('rangePenetration refusals', () => {
       max: money(4_800_000n, 'GBP'),
     };
     expect(() => rangePenetration(money(6_000_000n, 'GBP'), inverted)).toThrow(RangeError);
+  });
+});
+
+describe('bandSpread', () => {
+  it('is 0.5 for a band whose maximum is half again its minimum', () => {
+    const band: PayBand = {
+      min: money(4_000_000n, 'GBP'),
+      mid: money(5_000_000n, 'GBP'),
+      max: money(6_000_000n, 'GBP'),
+    };
+
+    expect(bandSpread(band)).toBe(0.5);
+  });
+
+  it('is 0.5 for the 80/120 band the seed writes, whatever the midpoint', () => {
+    expect(bandSpread(bandAround(6_000_000n, 'GBP'))).toBeCloseTo(0.5, 10);
+    expect(bandSpread(bandAround(90_000_000n, 'JPY'))).toBeCloseTo(0.5, 10);
+  });
+
+  it('measures against the minimum, not the midpoint', () => {
+    // A band 4,000,000 wide: half of the 8,000,000 minimum, two fifths of the midpoint.
+    const band: PayBand = {
+      min: money(8_000_000n, 'GBP'),
+      mid: money(10_000_000n, 'GBP'),
+      max: money(12_000_000n, 'GBP'),
+    };
+
+    expect(bandSpread(band)).toBe(0.5);
+  });
+
+  it('refuses a band with no width rather than reporting a spread of nothing', () => {
+    const flat: PayBand = {
+      min: money(5_000_000n, 'GBP'),
+      mid: money(5_000_000n, 'GBP'),
+      max: money(5_000_000n, 'GBP'),
+    };
+
+    expect(() => bandSpread(flat)).toThrow(RangeError);
+  });
+
+  it('refuses a band whose minimum is not positive, which would divide by zero', () => {
+    const zero: PayBand = {
+      min: money(0n, 'GBP'),
+      mid: money(2_500_000n, 'GBP'),
+      max: money(5_000_000n, 'GBP'),
+    };
+
+    expect(() => bandSpread(zero)).toThrow(RangeError);
   });
 });
