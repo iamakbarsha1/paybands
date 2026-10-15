@@ -205,3 +205,4 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D06 | Audit log of salary edits                                  | out of scope | —          |
 | PB-D07 | Web response types are aligned with the API's zod by hand  | todo         | —          |
 | PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |
+| PB-D09 | Phase 10 has no ticket for the web ask bar itself          | todo         | PB-068     |

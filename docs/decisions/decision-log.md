@@ -1023,6 +1023,8 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 **Cheaper:** No schema at all — have the model answer with a report path and a querystring, and let the endpoint's own `strictObject` reject it. Rejected because the refusal then arrives from a report that was asked to run, and the prompt has no shape to render.
 **Falsifier:** A second builder of query objects — a browser that composes one without the model, or a CLI. Then it moves to core with `SLICE_GROUPS`, on the argument decision 52 already made.
 
+**Since:** `PB-066` widened what the **O** line describes. `ask/run.ts` imports five report functions from `routes/analytics.ts`, not only `SLICE_GROUPS`, so moving this module to core now costs more than moving one constant. Decision 54 records why. The arrow still points one way and the §7 kill switch holds.
+
 ---
 
 ### 54. The query calls the report functions, not the routes
