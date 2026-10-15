@@ -5,7 +5,11 @@ import { anthropicComplete, completeWith } from './anthropic';
 /** Recognisable enough that a substring check for it means something. */
 const KEY = 'sk-ant-notarealkey-0123456789';
 
-const text = (value: string): Anthropic.TextBlock => ({ type: 'text', text: value, citations: null });
+const text = (value: string): Anthropic.TextBlock => ({
+  type: 'text',
+  text: value,
+  citations: null,
+});
 
 /** Reasoning is on at this effort, so a block that is not text is the ordinary case. */
 const thinking: Anthropic.ThinkingBlock = {
@@ -18,7 +22,10 @@ const thinking: Anthropic.ThinkingBlock = {
  * A response as the SDK hands one over. The adapter reads `stop_reason` and `content`; the
  * rest of `Message` is the SDK's required shape and nothing here depends on it.
  */
-function reply(stopReason: Anthropic.StopReason, content: Anthropic.ContentBlock[]): Anthropic.Message {
+function reply(
+  stopReason: Anthropic.StopReason,
+  content: Anthropic.ContentBlock[],
+): Anthropic.Message {
   return { stop_reason: stopReason, content } as Anthropic.Message;
 }
 
@@ -36,8 +43,8 @@ async function rejectionFrom(complete: ReturnType<typeof completeWith>): Promise
   throw new Error(`the adapter returned ${JSON.stringify(answer)} instead of throwing`);
 }
 
-/** The same, for a model that fails by throwing the given value. */
-const rejectionFor = (thrown: unknown): Promise<Error> =>
+/** The same, for a model that fails by throwing the given error. */
+const rejectionFor = (thrown: Error): Promise<Error> =>
   rejectionFrom(completeWith(() => Promise.reject(thrown)));
 
 afterEach(() => {

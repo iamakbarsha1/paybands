@@ -1,6 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Complete } from './translate';
 
+/** The one call this adapter makes of a client, so a test can hand in that call alone. */
+type CreateMessage = (
+  params: Anthropic.MessageCreateParamsNonStreaming,
+) => Promise<Anthropic.Message>;
+
 /**
  * The `Complete` a server runs with when it was given a key. Built where the app is composed
  * and handed in, so nothing from here down reads the environment and every test drives the
@@ -9,10 +14,19 @@ import type { Complete } from './translate';
 export function anthropicComplete(apiKey: string): Complete {
   const client = new Anthropic({ apiKey });
 
+  return completeWith((params) => client.messages.create(params));
+}
+
+/**
+ * The same adapter with the call passed in rather than built. Split from the composition
+ * above so the request, both guards and all three reasons are reachable from a test holding
+ * a stub — no key, no network, and no mock of a module.
+ */
+export function completeWith(create: CreateMessage): Complete {
   return async (prompt) => {
     let response: Anthropic.Message;
     try {
-      response = await client.messages.create({
+      response = await create({
         model: 'claude-opus-5',
         // The answer is one small JSON object, but this cap covers the model's reasoning as
         // well as what it writes, and reasoning is on by default here. A cap is a ceiling
@@ -50,7 +64,8 @@ export function anthropicComplete(apiKey: string): Complete {
  * The SDK's own classes, most specific first, never a match on a message. A rejected key, a
  * throttled one and everything else are three different things for whoever reads the log,
  * and the sentence is this module's so the line stays the same as the SDK's wording moves.
- * The cause keeps the SDK's detail; neither carries the key, which it does not echo.
+ * That is also what keeps the key out of it whatever the API answered back; the SDK's own
+ * error travels on `cause`, which the route logs and no response body renders.
  */
 function reasonFor(error: unknown): string {
   if (error instanceof Anthropic.AuthenticationError) {
