@@ -1064,3 +1064,24 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** Trust the signature. `translate(question, complete)` takes no client, so today it cannot read a row. Rejected because that is one parameter away from being untrue and nothing would say so.
 **Falsifier:** A caller that enriches the question with data before calling `translate` — the ask bar route attaching the signed-in user's own salary, say. That sends a row while every test here stays green and the lint rule stays quiet, because the leak is outside the file the rule guards. `PB-068` is where to watch for it.
+
+**Since:** `PB-068` built that route and the falsifier did not fire. `apps/api/src/routes/ask.ts` passes `request.body.question` to `translate` and nothing else; the only thing it reads out of the database is the report, after the model has answered.
+
+---
+
+### 56. The key is read at the edge and the model is handed in
+
+**SOUND** · reversal: cheap, one file for the adapter and one field on the options · 2026-10-16 · phase 10, `PB-068`
+
+**Decision:** `buildApp` takes a `Complete` or `null`, and `apps/api/src/index.ts` is the only file that reads `ANTHROPIC_API_KEY`. `null` is a server with the ask bar off: `POST /ask` answers 503 with a reason and `/health` carries `ask: false`, which is how the browser knows not to draw the bar. The adapter calls `claude-opus-5` at `output_config: { effort: 'low' }` with `max_tokens: 1024`. An empty value counts as no value.
+
+**Evidence:** The cheap version reads `process.env` where the key is used, in the adapter and in the route. Every test of the off path then has to mutate the environment and put it back — shared state in a process vitest runs many files in — and the registration a test drives stops being the registration production runs. Passing the boundary in makes "off" a value, so one `registerAskRoutes` serves both and no test can reach a real model. Low effort rather than thinking disabled because on this model disabling it can put a tool call into visible text; the request is one small JSON object either way.
+
+- **D** — Needed now: `PB-068` is the deployed demo working without a key, and the first ticket that calls a model.
+- **O** — Cheap. The adapter is one file, the option is one field, and the key is one line at the edge.
+- **U** — No claim the effort level is tuned. It is the floor, picked because turning a sentence into one of five report names is the simplest thing this model is asked to do. Nothing here measures the accuracy that buys.
+- **B** — `app.ts` now imports from `ask/`, which reverses the arrow decisions 53 and 54 kept pointing one way. The §7 kill switch still holds, but it is no longer "delete the directory": it is the directory, `routes/ask.ts`, one import, one options field, and the `ask` flag on `/health`.
+- **T** — Gives up reading the key where it is used, so setting the variable on a running process does nothing until a restart. The same is already true of `SESSION_SECRET`.
+
+**Cheaper:** A boolean, `ASK_ENABLED`, with the adapter reading the key itself. Rejected because the two can disagree: a server with the flag on and no key answers 500 on the first question instead of 503 before it.
+**Falsifier:** A second caller wanting a different model or a different effort for the same translation — a batch importer, or a cheaper model behind a setting. The key stops being the whole configuration then, and one branch at the edge stops being enough.
