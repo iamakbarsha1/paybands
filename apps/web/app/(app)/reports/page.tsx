@@ -5,7 +5,7 @@ const REPORTS = [
   { label: 'Pay bands and their occupancy', href: '/reports/bands' },
   { label: 'Salary distribution by country, department or level', href: '/reports/distribution' },
   { label: 'Comp ratio across the org', href: '/reports/comp-ratio' },
-  { label: 'People outside their band', href: null },
+  { label: 'People outside their band', href: '/reports/outliers' },
   { label: 'Gender pay gap, with suppression stated', href: null },
 ] as const;
 

@@ -120,6 +120,27 @@ export interface CompRatioReport {
   readonly groups: readonly (CompRatioSummary & { readonly key: string; readonly name: string })[];
 }
 
+export interface OutlierRow {
+  readonly employeeId: number;
+  readonly employeeCode: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly countryCode: string;
+  readonly departmentName: string;
+  readonly jobLevelName: string;
+  readonly salary: MoneyWire;
+  readonly compRatio: number | null;
+}
+
+/** Four lists, not one with a label: the fourth is a gap in the band table, not a person's pay. */
+export interface OutliersReport {
+  readonly threshold: { readonly min: number; readonly max: number };
+  readonly belowBand: readonly OutlierRow[];
+  readonly aboveBand: readonly OutlierRow[];
+  readonly compRatioOutOfRange: readonly OutlierRow[];
+  readonly noBand: readonly OutlierRow[];
+}
+
 export interface ReferenceData {
   readonly currencies: readonly CurrencyCode[];
   readonly genders: readonly Gender[];
