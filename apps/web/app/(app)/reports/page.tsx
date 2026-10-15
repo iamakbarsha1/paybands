@@ -4,7 +4,7 @@ import Link from 'next/link';
 const REPORTS = [
   { label: 'Pay bands and their occupancy', href: '/reports/bands' },
   { label: 'Salary distribution by country, department or level', href: '/reports/distribution' },
-  { label: 'Comp ratio across the org', href: null },
+  { label: 'Comp ratio across the org', href: '/reports/comp-ratio' },
   { label: 'People outside their band', href: null },
   { label: 'Gender pay gap, with suppression stated', href: null },
 ] as const;

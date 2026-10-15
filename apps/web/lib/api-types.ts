@@ -98,6 +98,28 @@ export interface Distribution {
   readonly groups: readonly DistributionGroup[];
 }
 
+/** A half-open comp-ratio bucket. A null end is the open one: below the first, above the last. */
+export interface CompRatioBucket {
+  readonly from: number | null;
+  readonly to: number | null;
+}
+
+export interface CompRatioSummary {
+  readonly headcount: number;
+  /** The people with a band — the only ones a comp ratio exists for. */
+  readonly measured: number;
+  readonly unbanded: number;
+  /** One count per bucket, in the order the response lists them. */
+  readonly counts: readonly number[];
+}
+
+export interface CompRatioReport {
+  readonly groupBy: 'country' | 'department' | 'level';
+  readonly buckets: readonly CompRatioBucket[];
+  readonly overall: CompRatioSummary;
+  readonly groups: readonly (CompRatioSummary & { readonly key: string; readonly name: string })[];
+}
+
 export interface ReferenceData {
   readonly currencies: readonly CurrencyCode[];
   readonly genders: readonly Gender[];
