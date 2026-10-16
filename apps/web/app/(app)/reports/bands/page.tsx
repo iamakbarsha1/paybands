@@ -2,7 +2,9 @@
 
 import { bandSpread, money } from '@paybands/core';
 import Link from 'next/link';
-import { Empty, Failure, Skeleton } from '../../../../components/ui/state';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { Empty, Failure, Loading, Skeleton } from '../../../../components/ui/state';
 import type { BandRow, BandsReport } from '../../../../lib/api-types';
 import { formatMoney, formatRatio } from '../../../../lib/money';
 import { useApi } from '../../../../lib/use-api';
@@ -11,7 +13,39 @@ import { useApi } from '../../../../lib/use-api';
 const BANDS = 48;
 
 export default function BandsReportPage() {
-  const report = useApi<BandsReport>('/analytics/bands');
+  return (
+    <Suspense
+      fallback={
+        <Loading label="Pay bands" className="space-y-6">
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-96 w-full" />
+        </Loading>
+      }
+    >
+      <Bands />
+    </Suspense>
+  );
+}
+
+function Bands() {
+  const params = useSearchParams();
+  // `/analytics/bands` takes both, and the ask bar sends them when a question named a
+  // country or a level. A value the route would refuse is dropped here instead of turned
+  // into a 400 the reader has to decode (PB-D09).
+  const filters = [
+    { name: 'country', value: params.get('country'), shape: /^[A-Za-z]{2}$/ },
+    { name: 'level', value: params.get('level'), shape: /^[1-9][0-9]*$/ },
+  ].flatMap((filter) =>
+    filter.value !== null && filter.shape.test(filter.value)
+      ? [{ name: filter.name, value: filter.value }]
+      : [],
+  );
+
+  const report = useApi<BandsReport>(
+    filters.length === 0
+      ? '/analytics/bands'
+      : `/analytics/bands?${filters.map((filter) => `${filter.name}=${filter.value}`).join('&')}`,
+  );
 
   return (
     <section className="space-y-6">
@@ -25,6 +59,15 @@ export default function BandsReportPage() {
           the minimum, which is the one figure that compares across currencies.
         </p>
       </div>
+
+      {filters.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          Filtered to {filters.map((filter) => `${filter.name} ${filter.value}`).join(' and ')}.{' '}
+          <Link href="/reports/bands" className="underline">
+            Show every band
+          </Link>
+        </p>
+      )}
 
       {report.state === 'error' && <Failure>{report.message}</Failure>}
 

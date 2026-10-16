@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AskBar } from '../../../components/ask-bar';
 
 /** All five exist now, so the list is five links and the "not built yet" branch is gone. */
 const REPORTS = [
@@ -26,6 +27,9 @@ export default function ReportsPage() {
           </li>
         ))}
       </ul>
+
+      {/* Nothing on a server started without a key: the bar renders itself away (PB-D09). */}
+      <AskBar />
     </section>
   );
 }

@@ -175,3 +175,30 @@ export interface ReferenceData {
 export interface SessionUser {
   readonly user: { readonly id: number; readonly email: string; readonly displayName: string };
 }
+
+/** `/health`. `ask` is false on a server started without a key, and the ask bar reads it. */
+export interface Health {
+  readonly status: 'ok';
+  readonly ask: boolean;
+}
+
+/**
+ * What a question was understood to mean: one of the five reports, with the parameters that
+ * report already takes. The same shape the API validates in `apps/api/src/ask/query.ts`, so
+ * every member here names a screen under `/reports` and the query string it reads.
+ */
+export type AskQuery =
+  | { readonly report: 'bands'; readonly country?: string; readonly level?: number }
+  | { readonly report: 'distribution'; readonly groupBy: 'country' | 'department' | 'level' }
+  | { readonly report: 'comp-ratio'; readonly groupBy: 'country' | 'department' | 'level' }
+  | { readonly report: 'pay-gap'; readonly groupBy: 'country' | 'department' | 'level' }
+  | { readonly report: 'outliers' };
+
+/**
+ * `POST /ask`. `result` is whatever report `query` named, and it is typed as `unknown`
+ * because the ask bar never renders it — the report screen does, from its own endpoint.
+ */
+export interface AskAnswer {
+  readonly query: AskQuery;
+  readonly result: unknown;
+}
