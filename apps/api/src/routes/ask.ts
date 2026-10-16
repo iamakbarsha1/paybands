@@ -63,6 +63,10 @@ export function registerAskRoutes(app: App, prisma: PrismaClient, complete: Comp
       // A question these reports cannot answer is a stated outcome, not a server fault.
       if (!translation.accepted) return reply.code(422).send({ message: translation.reason });
 
+      // The query, never the question: an answer somebody disputes can be re-run from this
+      // line, and the part that could name a person stays out of the log (PB-074).
+      request.log.info({ query: translation.query }, 'a question became a query');
+
       return reply.send({
         query: translation.query,
         result: await run(prisma, translation.query),

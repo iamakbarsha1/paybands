@@ -42,6 +42,8 @@ The seed is deterministic. Running it twice produces the same database, and `app
 | Email | `hr@paybands.example` |
 | Password | `paybands-demo-2026` |
 
+Every row in it is synthetic — names recombined from per-country pools, emails at the reserved `.example` domain, salaries computed by the generator ([`docs/security.md`](docs/security.md)).
+
 It contains planted outliers, because a report that finds nothing demonstrates nothing: 40 employees paid below their band minimum, 25 above the maximum, one department with a real gender pay gap, and one department too small for a gap to be reportable.
 
 ### Tests that need a database
@@ -108,6 +110,7 @@ Node 24 · TypeScript 6 · Fastify 5 · PostgreSQL via Prisma · Next.js 16 · R
 | [`docs/decisions/decision-log.md`](docs/decisions/decision-log.md) | Every real decision, argued against when it was made |
 | [`docs/clarifications.md`](docs/clarifications.md) | Questions asked before building, and the defaults assumed while waiting |
 | [`docs/performance.md`](docs/performance.md) | Every analytics endpoint timed against the 10,000-row seed, before and after the one change made |
+| [`docs/security.md`](docs/security.md) | The two audits before deploy: what holds a credential, what the model is allowed to see, what personal data is held and what this build does not implement |
 | [`tasks/todo.md`](tasks/todo.md) | Phase-by-phase build order |
 
 ## CI

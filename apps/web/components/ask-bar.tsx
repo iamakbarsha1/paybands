@@ -85,9 +85,13 @@ export function AskBar() {
         </div>
       </Field>
 
+      {/* The disclosure is here rather than in a policy page nobody opens: this is the one
+          box in the app whose contents leave for a third party (PB-074). */}
       <p className="text-xs text-muted-foreground">
-        The question picks one of the five reports and its filters. The numbers are the
-        reports&rsquo; own — the model chooses the question, never the arithmetic.
+        Your question is sent to Anthropic&rsquo;s Claude, which picks one of the five reports and
+        its filters. No salary, name or row is sent with it, and the numbers are the reports&rsquo;
+        own — the model chooses the question, never the arithmetic. Type nothing here you would not
+        send to a third party.
       </p>
 
       {asked.state === 'declined' && <Failure>{asked.message}</Failure>}
@@ -103,7 +107,7 @@ function Understood({ query }: { query: AskQuery }) {
 
   return (
     <p role="status" className="text-sm">
-      Understood as <span className="font-medium">{report.sentence}</span>.{' '}
+      Claude understood this as <span className="font-medium">{report.sentence}</span>.{' '}
       <Link href={report.href} className="underline">
         Open the report
       </Link>

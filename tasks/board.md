@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 76 of 90 done (phases 0–11 complete, phase 12 next).
+**Progress** — 79 of 90 done (phases 0–11 complete, phase 12 all but the decision sweep).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -25,7 +25,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 9 Web reports           | 5       | 5    |
 | 10 Ask bar (optional)   | 5       | 5    |
 | 11 Performance          | 3       | 3    |
-| 12 Audits               | 4       | 0    |
+| 12 Audits               | 4       | 3    |
 | 13 Ship                 | 8       | 1    |
 | Debt and missed         | 11      | 5    |
 
@@ -33,9 +33,9 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 ## In flight
 
-| ID     | Story                | Status | Blocked by |
-| ------ | -------------------- | ------ | ---------- |
-| PB-073 | Attack surface audit | next   | PB-051     |
+| ID     | Story                                    | Status | Blocked by |
+| ------ | ---------------------------------------- | ------ | ---------- |
+| PB-075 | Decision sweep ranked by cost to reverse | next   | PB-D01     |
 
 ---
 
@@ -175,10 +175,10 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                      | Status | Blocked by     |
 | ------ | ------------------------------------------ | ------ | -------------- |
-| PB-073 | Attack surface audit                       | todo   | PB-051         |
-| PB-074 | Legal exposure audit                       | todo   | PB-073         |
+| PB-073 | Attack surface audit                       | done   | PB-051         |
+| PB-074 | Legal exposure audit                       | done   | PB-073         |
 | PB-075 | Decision sweep ranked by cost to reverse   | todo   | PB-D01         |
-| PB-076 | Security document written from the reports | todo   | PB-073, PB-074 |
+| PB-076 | Security document written from the reports | done   | PB-073, PB-074 |
 
 ## Phase 13 — Ship
 

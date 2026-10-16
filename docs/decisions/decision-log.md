@@ -1126,3 +1126,41 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** Navigate on the answer instead of linking, so a question goes straight to the report. Rejected because the interpretation is the one thing a question-answering box owes its reader — a screen that opens on its own does not say what it understood, and a wrong translation then looks like a misclick.
 **Falsifier:** A question whose answer is a number rather than a report — *what is the median in Berlin* — which the reports cannot express as a filter and a link lands on a table the reader still has to scan. A second one: a `result` that costs real time to compute, which would make fetching it twice the wrong trade and inline rendering the lazier one.
+
+---
+
+### 59. A 5xx answers one sentence and the reason goes to the log
+
+**SOUND** · reversal: cheap, one handler · 2026-10-16 · phase 12, `PB-073`
+
+**Decision:** `apps/api/src/app.ts` registers an error handler. Anything with a status of 500 or more answers `{ "message": "Something went wrong." }` and logs the error at `error` with its cause; anything below 500 keeps the message it already had.
+
+**Evidence:** Fastify 5.12.7's default handler sends `error.message` whatever the status — read in `node_modules/fastify/lib/error-handler.js`, which builds the body from `error.message` for every status it did not get a schema for. The reachable 500s here are a driver fault and the `RangeError` `asGender` raises on an enum value the schema does not know (`repositories/analytics.ts`), and both read as prose about a column in a browser. The 4xx messages are the API's own: zod's field-named validation errors and the sentences the ask route and the login route write, all of which a screen renders.
+
+- **D** — Needed now: `PB-073` is the audit, and this is the one finding in it about what the API says rather than what it allows.
+- **O** — Cheap. One handler, and deleting it restores the default.
+- **U** — No claim that anything secret was leaking. Nothing in those messages is a credential; they name columns, drivers and enum values.
+- **B** — Every route at once, which is the point of putting it at the boundary rather than in each handler.
+- **T** — Gives up reading the cause from the browser during development, which is where it was convenient. It is in the log, and `logger: true` is on in `index.ts`.
+
+**Cheaper:** Leave it and trust that a 500 is rare. Rejected because the first time one is not rare is a deployed demo, in front of the reviewer, explaining the schema.
+**Falsifier:** A 500 whose message is the only actionable thing a caller has — a deploy-time misconfiguration, say, where the fixed sentence sends somebody to a log they cannot reach. A status-coded 4xx is the way to say that, and if one turns up that cannot be, this handler is hiding it.
+
+---
+
+### 60. The ask bar is rationed by session, because what it spends is a key
+
+**SOUND** · reversal: cheap, one hook and two constants · 2026-10-16 · phase 12, `PB-073`
+
+**Decision:** `POST /ask` takes twenty questions per fifteen minutes per session. The login limiter's fixed window became `createLimiter(limit, windowMs)` and `limitHook(take, keyOf, refusal)`, so one counter serves both: login counts by address because there is no session yet, the ask route counts by `readSession(request)` because the guard has already proved there is one. A refused question answers 429 with a `retry-after` and never reaches the model.
+
+**Evidence:** The audit found `/ask` as the only unlimited route, and `auth/rate-limit.ts` said so in a comment: "Nothing else is limited". The demo ships one shared HR login, so one leaked password is an uncapped spend against `ANTHROPIC_API_KEY` at 4096 `max_tokens` a question — the one place in this app where a request costs money rather than milliseconds. Keying by session rather than address is what makes that true of the account rather than of the office NAT everyone shares.
+
+- **D** — Needed now. Rate limiting the login and not the paid route is the wrong half to have done.
+- **O** — Cheap. The generalisation is two parameters on a function that already existed; reverting is passing the login numbers back in.
+- **U** — Twenty is a judgement, not a measurement. Nobody has watched a person use this bar; it is set where reading the answers is the slower half.
+- **B** — Both limited routes, since they now share a counter and a hook. The login route's behaviour is unchanged and its five tests still hold it.
+- **T** — Gives up a per-key global cap. Twenty sessions mean twenty windows, so the ceiling is the number of people who can sign in, which here is one account.
+
+**Cheaper:** Count by address for both. Rejected because an address is not who spends the key: one office signs in as one account from one address, and a stolen cookie used from anywhere else gets its own fresh twenty.
+**Falsifier:** A second instance of the API. Two processes mean two in-memory windows and twice the questions, which decision 51 already names for the login limiter and which now applies to money rather than to guesses. A shared store is the upgrade, and the first horizontal scale is when it stops being premature.
