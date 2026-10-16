@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { App } from '../app';
 import { translate, type Complete } from '../ask/translate';
+import { ASK_QUESTIONS, ASK_WINDOW_MS } from '../auth/rate-limit';
 import { testApp, unusedPrisma } from '../testing/db';
 
 /** A model that answers with the same thing whatever it is shown. */
@@ -150,5 +151,41 @@ describe('POST /ask with a model', () => {
     });
 
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe('the limit on POST /ask', () => {
+  it('stops counting questions at the limit and says when to come back', async () => {
+    let calls = 0;
+    const app = appWith(() => {
+      calls += 1;
+      return Promise.resolve('Sure! Here are the pay bands for every country.');
+    });
+
+    const statuses: number[] = [];
+    for (let index = 0; index < ASK_QUESTIONS + 1; index += 1) {
+      statuses.push((await ask(app, { question: 'show me the pay bands' })).statusCode);
+    }
+
+    // The refused one never reaches the model, which is the whole point: the thing being
+    // rationed is a paid call, not a row (PB-073).
+    expect(statuses.slice(0, ASK_QUESTIONS)).toEqual(Array(ASK_QUESTIONS).fill(422));
+    expect(statuses.at(-1)).toBe(429);
+    expect(calls).toBe(ASK_QUESTIONS);
+  });
+
+  it('carries a retry-after inside the window it counts in', async () => {
+    // A refusal rather than an accepted query: this app has no database to run one against.
+    const app = appWith(answering('Sure! Here are the pay bands for every country.'));
+    for (let index = 0; index < ASK_QUESTIONS; index += 1) {
+      await ask(app, { question: 'who is outside their band' });
+    }
+
+    const refused = await ask(app, { question: 'who is outside their band' });
+    const retryAfter = Number(refused.headers['retry-after']);
+
+    expect(refused.statusCode).toBe(429);
+    expect(retryAfter).toBeGreaterThan(0);
+    expect(retryAfter).toBeLessThanOrEqual(ASK_WINDOW_MS / 1000);
   });
 });

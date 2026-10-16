@@ -56,6 +56,25 @@ describe('the zod boundary', () => {
     expect(response.statusCode).toBe(200);
   });
 
+  it('answers a 500 with a sentence of its own, not with the error it caught', async () => {
+    // `unusedPrisma` throws on the first property read, so this is a handler failing the
+    // way a driver fault would: nobody wrote a reply for it.
+    const response = await app.inject({ method: 'GET', url: '/analytics/bands' });
+    const body = JSON.stringify(response.json());
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({ message: 'Something went wrong.' });
+    // The thrown message names `prisma`, and a browser is the wrong place to read it.
+    expect(body).not.toMatch(/prisma/i);
+  });
+
+  it('keeps a 4xx message, which the screens render and the server wrote', async () => {
+    const response = await app.inject({ method: 'GET', url: '/reference?departmant=2' });
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.stringify(response.json())).toMatch(/departmant/);
+  });
+
   it('answers 500 rather than a malformed body when a handler breaks its response schema', async () => {
     const broken = testApp(unusedPrisma());
     // The cast is the point: without it the type provider refuses to compile this

@@ -2,6 +2,7 @@ import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import Fastify, {
   type FastifyBaseLogger,
+  type FastifyError,
   type FastifyInstance,
   type FastifyTypeProvider,
   type RawReplyDefaultExpression,
@@ -90,6 +91,18 @@ export function buildApp(options: BuildAppOptions): App {
   app.setValidatorCompiler(({ schema }) => (data) => {
     const result = (schema as ZodType).safeParse(data);
     return result.success ? { value: result.data } : { error: readable(result.error) };
+  });
+
+  // Fastify's own handler sends `error.message` whatever the status, so an exception nobody
+  // wrote a reply for — a driver fault, the `RangeError` an unknown gender raises — reaches
+  // the browser as prose about a column. A 4xx message is this API's own and every screen
+  // renders it; a 5xx message is for the log (PB-073).
+  app.setErrorHandler((error: FastifyError, request, reply) => {
+    const status = error.statusCode ?? 500;
+    if (status < 500) return reply.code(status).send({ message: error.message });
+
+    request.log.error({ err: error }, 'the request failed');
+    return reply.code(500).send({ message: 'Something went wrong.' });
   });
 
   // Parsing on the way out means a handler cannot return a shape the schema denies.

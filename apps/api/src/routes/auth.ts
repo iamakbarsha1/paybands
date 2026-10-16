@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import { hashPassword, verifyPassword } from '../auth/password';
-import { createLoginLimiter, loginLimitHook } from '../auth/rate-limit';
+import { createLimiter, limitHook, LOGIN_ATTEMPTS, LOGIN_WINDOW_MS } from '../auth/rate-limit';
 import { clearSession, issueSession, readSession } from '../auth/session';
 import { findUserByEmail, findUserById, type AppUserRow } from '../repositories/users';
 
@@ -29,12 +29,16 @@ function onWire(user: AppUserRow): z.infer<typeof userResponse> {
 }
 
 export function registerAuthRoutes(app: App, prisma: PrismaClient): void {
-  const take = createLoginLimiter();
+  const take = createLimiter(LOGIN_ATTEMPTS, LOGIN_WINDOW_MS);
 
   app.post(
     '/auth/login',
     {
-      onRequest: loginLimitHook(take),
+      onRequest: limitHook(
+        take,
+        (request) => request.ip,
+        (seconds) => `Too many sign-in attempts. Try again in ${String(seconds)} seconds.`,
+      ),
       schema: { body: credentials, response: { 200: userResponse, 401: unauthorized } },
     },
     async (request, reply) => {

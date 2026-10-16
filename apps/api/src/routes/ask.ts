@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
+import { ASK_QUESTIONS, ASK_WINDOW_MS, createLimiter, limitHook } from '../auth/rate-limit';
+import { readSession } from '../auth/session';
 import { askQuery } from '../ask/query';
 import { run } from '../ask/run';
 import { translate, type Complete, type Translation } from '../ask/translate';
@@ -29,9 +31,22 @@ const UNREACHABLE = 'The model could not be reached.';
  * a routing mistake.
  */
 export function registerAskRoutes(app: App, prisma: PrismaClient, complete: Complete | null): void {
+  const take = createLimiter(ASK_QUESTIONS, ASK_WINDOW_MS);
+
   app.post(
     '/ask',
-    { schema: { body: askBody, response: { 200: askResponse, 422: declined, 503: declined } } },
+    {
+      // Counted per session rather than per address, because the guard has already proved
+      // there is one and because the thing being spent here is a key, not a password. The
+      // address is the fallback for a request that reached this hook without one, which the
+      // guard does not allow and this file does not rely on.
+      onRequest: limitHook(
+        take,
+        (request) => String(readSession(request) ?? request.ip),
+        (seconds) => `Too many questions. Try again in ${String(seconds)} seconds.`,
+      ),
+      schema: { body: askBody, response: { 200: askResponse, 422: declined, 503: declined } },
+    },
     async (request, reply) => {
       if (complete === null) return reply.code(503).send({ message: OFF });
 
