@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 82 of 90 done (phases 0–12 complete, phase 13 next).
+**Progress** — 84 of 90 done (phases 0–12 complete, phase 13 is the deploy).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -26,8 +26,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 10 Ask bar (optional)   | 5       | 5    |
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 4    |
-| 13 Ship                 | 8       | 1    |
-| Debt and missed         | 11      | 7    |
+| 13 Ship                 | 8       | 2    |
+| Debt and missed         | 11      | 8    |
 
 ---
 
@@ -189,7 +189,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-079 | Web deployed                  | todo   | PB-078         |
 | PB-080 | CORS locked to the web origin | done   | —              |
 | PB-081 | README points at the live app | todo   | PB-079         |
-| PB-082 | AI usage documented           | todo   | —              |
+| PB-082 | AI usage documented           | done   | —              |
 | PB-083 | Demo video                    | todo   | PB-079         |
 | PB-084 | Submit                        | todo   | PB-081, PB-083 |
 
@@ -207,4 +207,4 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |
 | PB-D09 | Phase 10 has no ticket for the web ask bar itself          | done         | PB-068     |
 | PB-D10 | The model adapter has no test of its own                   | done         | —          |
-| PB-D11 | The Review table in `todo.md` stops at phase 4              | todo         | —          |
+| PB-D11 | The Review table in `todo.md` stops at phase 4              | done         | —          |

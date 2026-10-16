@@ -175,7 +175,7 @@ Run the skills, fix what they find, commit the reports as artifacts.
 - [ ] Web deployed on Vercel, pointed at the API
 - [x] CORS locked to the web origin, not `*` — pulled forward in phase 8, since the browser cannot reach the API without it
 - [ ] README: live URL, demo credentials, two-minute local setup
-- [ ] `docs/ai-usage.md` — the prompts, the skills, and where AI output was rejected and why
+- [x] `docs/ai-usage.md` — the prompts, the skills, and where AI output was rejected and why
 - [ ] Demo video, 3–5 minutes, scripted in `docs/demo.md`
 - [ ] Reply to the email with the repo link
 
@@ -191,3 +191,11 @@ An index, not a second copy. Each phase's outcome is recorded in its own section
 | 2 | 15–21 | The partial unique index is hand-written into the migration, and verified by making the database reject a second open salary record |
 | 3 | 22–32 | Adversarial review found five cross-field defects that twenty-one passing assertions missed |
 | 4 | 33–41 | Decision 37 reversed before any code was written: scaling a ratio through integers is *less* precise than dividing two doubles. Three signatures depart from the sketch, each with its reason logged |
+| 5 | 42–47 | zod reaches Fastify through its own two compiler hooks rather than a library, so a handler cannot return a shape the schema denies. The test database is a local container that the suite skips itself without, and CI refuses to let it skip |
+| 6 | 48 | One decision for six endpoints: SQL groups and filters, `packages/core` does the money arithmetic. Phase 11 changed what runs underneath it without a response shape moving, which is the containment the decision claimed |
+| 7 | 49–51 | The guard turned every existing test into an auth test — seventy-one went to 401 in one commit, and the credential went into the harness rather than onto forty `inject` calls. Argon2id's parameters are held by a test rather than a flag |
+| 8 | 52 | The browser validates with the API's own zod schemas, so a form and a route cannot disagree about a valid gender. The response types beside them are still hand-aligned, which `PB-D07` records |
+| 9 | — | Five screens, no new decisions: every shape was settled in phase 6 and the screens render the API's own words, including the refusals. Three states per fetch rather than two (`PB-059`) |
+| 10 | 53–56, 58 | The model is handed a question and a schema and never a row, and a lint rule proved unable to guarantee that — the handler reaches data through the module it exists to call. The bar answers with what it understood and a link, not with the rows |
+| 11 | 57 | `EXPLAIN (ANALYZE, BUFFERS)` said the queries were fine and they were. The 95 ms was the ORM's nested read binding 9,226 keys into a second statement; one join took it to 45 |
+| 12 | 59–60 | Two audits, three security findings fixed and one accepted in writing. All 60 decisions ranked by cost to reverse, and two WEAK entries flipped by their own falsifiers rather than by argument |

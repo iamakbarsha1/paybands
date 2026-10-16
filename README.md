@@ -110,6 +110,7 @@ Node 24 · TypeScript 6 · Fastify 5 · PostgreSQL via Prisma · Next.js 16 · R
 | [`docs/decisions/decision-log.md`](docs/decisions/decision-log.md) | Every real decision, argued against when it was made |
 | [`docs/decisions/sweep.md`](docs/decisions/sweep.md) | All 60 decisions ranked by what reversing one costs, with the one-way doors named |
 | [`docs/clarifications.md`](docs/clarifications.md) | Questions asked before building, and the defaults assumed while waiting |
+| [`docs/ai-usage.md`](docs/ai-usage.md) | How this build used an AI assistant, and the places its output was rejected |
 | [`docs/performance.md`](docs/performance.md) | Every analytics endpoint timed against the 10,000-row seed, before and after the one change made |
 | [`docs/security.md`](docs/security.md) | The two audits before deploy: what holds a credential, what the model is allowed to see, what personal data is held and what this build does not implement |
 | [`tasks/todo.md`](tasks/todo.md) | Phase-by-phase build order |
