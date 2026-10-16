@@ -6,11 +6,13 @@ export {
   isCurrencyCode,
   minorUnitsFor,
 } from './domain';
-export type { Gender, SalaryReason, CurrencyCode } from './domain';
+export { SLICE_GROUPS } from './domain';
+export type { Gender, SalaryReason, CurrencyCode, SliceGroup } from './domain';
 export { money, addMoney, compareMoney, moneyFromMajorUnits } from './money';
 export type { Money } from './money';
 export { employeeInput, employeePatch, salaryChangeInput } from './contracts';
 export type { EmployeeInput, EmployeePatch, SalaryChangeInput } from './contracts';
+export * from './wire';
 export { toUsd } from './fx';
 export type { FxRate } from './fx';
 export { bandSpread, compRatio, rangePenetration } from './band';

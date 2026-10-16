@@ -1,14 +1,21 @@
 import {
+  bandsReport as bandsResponse,
   compRatio,
+  compRatioReport as compRatioResponse,
   DEFAULT_COMP_RATIO_THRESHOLD,
+  distributionReport as distributionResponse,
   money,
   outliers,
+  outliersReport as outliersResponse,
   payGap,
+  payGapReport as payGapResponse,
   percentiles,
+  SLICE_GROUPS,
   toUsd,
   type FxRate,
   type Outlier,
   type PayBand,
+  type SliceGroup,
 } from '@paybands/core';
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -20,13 +27,11 @@ import {
   fxRates,
   genderedSalaries,
   salaryDistribution,
-  SLICE_GROUPS,
   type BandRow,
   type CompRatioSlice,
   type DistributionSlice,
   type GenderedSlice,
   type OutlierCandidate,
-  type SliceGroup,
 } from '../repositories/analytics';
 
 const bandsQuery = z.strictObject({
@@ -34,40 +39,10 @@ const bandsQuery = z.strictObject({
   level: z.coerce.number().int().positive().optional(),
 });
 
-const bandsResponse = z.strictObject({
-  bands: z.array(
-    z.strictObject({
-      jobLevelId: z.number(),
-      jobLevelName: z.string(),
-      countryCode: z.string(),
-      currencyCode: z.string(),
-      minMinor: z.string(),
-      midMinor: z.string(),
-      maxMinor: z.string(),
-      headcount: z.number(),
-    }),
-  ),
-});
-
 /** The four points the distribution report answers in, fixed rather than asked for. */
 const POINTS = [25, 50, 75, 90] as const;
 
 const sliceQuery = z.strictObject({ groupBy: z.enum(SLICE_GROUPS) });
-
-const distributionResponse = z.strictObject({
-  groupBy: z.enum(SLICE_GROUPS),
-  currency: z.literal('USD'),
-  groups: z.array(
-    z.strictObject({
-      key: z.string(),
-      name: z.string(),
-      headcount: z.number(),
-      percentiles: z
-        .strictObject({ p25: z.string(), p50: z.string(), p75: z.string(), p90: z.string() })
-        .nullable(),
-    }),
-  ),
-});
 
 /**
  * Twenty per cent either side of the midpoint, which is where a band's own min and max
@@ -83,40 +58,6 @@ const BUCKETS = [
   { from: 1.2, to: null },
 ] as const;
 
-const summarySchema = z.strictObject({
-  headcount: z.number(),
-  measured: z.number(),
-  unbanded: z.number(),
-  counts: z.array(z.number()),
-});
-
-const compRatioResponse = z.strictObject({
-  groupBy: z.enum(SLICE_GROUPS),
-  buckets: z.array(z.strictObject({ from: z.number().nullable(), to: z.number().nullable() })),
-  overall: summarySchema,
-  groups: z.array(summarySchema.extend({ key: z.string(), name: z.string() })),
-});
-
-const outlierRow = z.strictObject({
-  employeeId: z.number(),
-  employeeCode: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
-  countryCode: z.string(),
-  departmentName: z.string(),
-  jobLevelName: z.string(),
-  salary: z.strictObject({ amountMinor: z.string(), currencyCode: z.string() }),
-  compRatio: z.number().nullable(),
-});
-
-const outliersResponse = z.strictObject({
-  threshold: z.strictObject({ min: z.number(), max: z.number() }),
-  belowBand: z.array(outlierRow),
-  aboveBand: z.array(outlierRow),
-  compRatioOutOfRange: z.array(outlierRow),
-  noBand: z.array(outlierRow),
-});
-
 /** Strict and empty: the report takes no parameters, so a parameter is a mistake worth a 400. */
 const noQuery = z.strictObject({});
 
@@ -126,24 +67,6 @@ const noQuery = z.strictObject({});
  * published small. It travels in the response because a refusal has to be readable.
  */
 const MIN_GROUP_SIZE = 5;
-
-const gapSchema = z.strictObject({
-  headcount: z.number(),
-  compared: z.strictObject({ male: z.number(), female: z.number() }),
-  excluded: z.number(),
-  suppressed: z.boolean(),
-  reason: z.string().nullable(),
-  meanGap: z.number().nullable(),
-  medianGap: z.number().nullable(),
-});
-
-const payGapResponse = z.strictObject({
-  groupBy: z.enum(SLICE_GROUPS),
-  currency: z.literal('USD'),
-  minGroupSize: z.number(),
-  overall: gapSchema,
-  groups: z.array(gapSchema.extend({ key: z.string(), name: z.string() })),
-});
 
 export function registerAnalyticsRoutes(app: App, prisma: PrismaClient): void {
   app.get(
@@ -314,17 +237,7 @@ function asPayBand(band: BandRow): PayBand {
 function listed(
   found: readonly Outlier[],
   byId: ReadonlyMap<number, OutlierCandidate>,
-): {
-  employeeId: number;
-  employeeCode: string;
-  firstName: string;
-  lastName: string;
-  countryCode: string;
-  departmentName: string;
-  jobLevelName: string;
-  salary: { amountMinor: string; currencyCode: string };
-  compRatio: number | null;
-}[] {
+): z.infer<typeof outliersResponse>['belowBand'] {
   return found.flatMap((outlier) => {
     const row = byId.get(outlier.employeeId);
     if (row === undefined) return [];

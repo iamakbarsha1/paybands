@@ -1,3 +1,4 @@
+import { sessionUser as userResponse } from '@paybands/core';
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
@@ -9,14 +10,6 @@ import { findUserByEmail, findUserById, type AppUserRow } from '../repositories/
 const credentials = z.strictObject({
   email: z.string().min(1).max(320),
   password: z.string().min(1).max(1024),
-});
-
-const userResponse = z.strictObject({
-  user: z.strictObject({
-    id: z.number(),
-    email: z.string(),
-    displayName: z.string(),
-  }),
 });
 
 const unauthorized = z.strictObject({ message: z.string() });

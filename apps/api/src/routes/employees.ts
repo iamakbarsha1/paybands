@@ -1,13 +1,16 @@
 import {
   compRatio,
+  employeeDetail as detailResponse,
   employeeInput,
+  employeeListItem as employeeSchema,
+  employeePage as listResponse,
   employeePatch,
-  GENDERS,
   money,
   rangePenetration,
   salaryChangeInput,
-  SALARY_REASONS,
+  salaryRecordWire as salaryRecordResponse,
   type Money,
+  type MoneyWire,
 } from '@paybands/core';
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -63,51 +66,9 @@ const querySchema = z.strictObject({
   cursor: cursorSchema.optional(),
 });
 
-const employeeSchema = z.strictObject({
-  id: z.number(),
-  employeeCode: z.string(),
-  firstName: z.string(),
-  lastName: z.string(),
-  email: z.string(),
-  gender: z.enum(GENDERS),
-  countryCode: z.string(),
-  departmentId: z.number(),
-  jobLevelId: z.number(),
-  hireDate: z.string(),
-  terminationDate: z.string().nullable(),
-  status: z.enum(['active', 'left']),
-});
-
-const listResponse = z.strictObject({
-  employees: z.array(employeeSchema),
-  nextCursor: z.string().nullable(),
-});
-
 const idParam = z.strictObject({ id: z.coerce.number().int().positive() });
 
 /** Minor units as a string: JSON has no integer wide enough to be trusted with money. */
-const moneySchema = z.strictObject({ amountMinor: z.string(), currencyCode: z.string() });
-
-const detailResponse = z.strictObject({
-  employee: employeeSchema.extend({
-    managerId: z.number().nullable(),
-    departmentName: z.string(),
-    jobLevelName: z.string(),
-  }),
-  salaryHistory: z.array(
-    moneySchema.extend({
-      id: z.number(),
-      effectiveFrom: z.string(),
-      effectiveTo: z.string().nullable(),
-      reason: z.enum(SALARY_REASONS),
-    }),
-  ),
-  currentSalary: moneySchema.nullable(),
-  band: z.strictObject({ min: moneySchema, mid: moneySchema, max: moneySchema }).nullable(),
-  compRatio: z.number().nullable(),
-  rangePenetration: z.number().nullable(),
-});
-
 const notFound = z.strictObject({ message: z.string() });
 
 /**
@@ -125,14 +86,7 @@ const WRITE_FAILURE_STATUS = {
   'currency-mismatch': 400,
 } as const;
 
-const salaryRecordResponse = moneySchema.extend({
-  id: z.number(),
-  effectiveFrom: z.string(),
-  effectiveTo: z.string().nullable(),
-  reason: z.enum(SALARY_REASONS),
-});
-
-function onWire(row: MoneyRow): { amountMinor: string; currencyCode: string } {
+function onWire(row: MoneyRow): MoneyWire {
   return { amountMinor: row.amountMinor.toString(), currencyCode: row.currencyCode };
 }
 

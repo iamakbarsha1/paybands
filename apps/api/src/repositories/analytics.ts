@@ -1,6 +1,12 @@
-import { GENDERS, isCurrencyCode, type FxRate, type Gender } from '@paybands/core';
+import {
+  GENDERS,
+  isCurrencyCode,
+  type CurrencyCode,
+  type FxRate,
+  type Gender,
+} from '@paybands/core';
 import type { PrismaClient } from '../../generated/prisma/client';
-import type { MoneyRow } from './employees';
+import { asCurrency, type MoneyRow } from './employees';
 
 export interface BandOccupancyQuery {
   readonly country?: string | undefined;
@@ -11,7 +17,7 @@ export interface BandOccupancyRow {
   readonly jobLevelId: number;
   readonly jobLevelName: string;
   readonly countryCode: string;
-  readonly currencyCode: string;
+  readonly currencyCode: CurrencyCode;
   readonly minMinor: bigint;
   readonly midMinor: bigint;
   readonly maxMinor: bigint;
@@ -53,7 +59,7 @@ export async function bandOccupancy(
     jobLevelId: band.jobLevelId,
     jobLevelName: band.jobLevel.name,
     countryCode: band.countryCode,
-    currencyCode: band.currencyCode,
+    currencyCode: asCurrency(band.currencyCode),
     minMinor: band.minMinor,
     midMinor: band.midMinor,
     maxMinor: band.maxMinor,
@@ -124,7 +130,7 @@ async function activeWithOpenSalary(prisma: PrismaClient): Promise<ActivePerson[
     salary:
       row.amountMinor === null || row.currencyCode === null
         ? null
-        : { amountMinor: row.amountMinor, currencyCode: row.currencyCode },
+        : { amountMinor: row.amountMinor, currencyCode: asCurrency(row.currencyCode) },
   }));
 }
 
@@ -257,9 +263,9 @@ export async function compRatioSlices(
     bands.map((band) => [
       `${band.jobLevelId}:${band.countryCode}`,
       {
-        min: { amountMinor: band.minMinor, currencyCode: band.currencyCode },
-        mid: { amountMinor: band.midMinor, currencyCode: band.currencyCode },
-        max: { amountMinor: band.maxMinor, currencyCode: band.currencyCode },
+        min: { amountMinor: band.minMinor, currencyCode: asCurrency(band.currencyCode) },
+        mid: { amountMinor: band.midMinor, currencyCode: asCurrency(band.currencyCode) },
+        max: { amountMinor: band.maxMinor, currencyCode: asCurrency(band.currencyCode) },
       },
     ]),
   );
@@ -388,9 +394,9 @@ export async function bandedSalaries(prisma: PrismaClient): Promise<OutlierCandi
     bands.map((band) => [
       `${band.jobLevelId}:${band.countryCode}`,
       {
-        min: { amountMinor: band.minMinor, currencyCode: band.currencyCode },
-        mid: { amountMinor: band.midMinor, currencyCode: band.currencyCode },
-        max: { amountMinor: band.maxMinor, currencyCode: band.currencyCode },
+        min: { amountMinor: band.minMinor, currencyCode: asCurrency(band.currencyCode) },
+        mid: { amountMinor: band.midMinor, currencyCode: asCurrency(band.currencyCode) },
+        max: { amountMinor: band.maxMinor, currencyCode: asCurrency(band.currencyCode) },
       },
     ]),
   );
@@ -403,7 +409,7 @@ export async function bandedSalaries(prisma: PrismaClient): Promise<OutlierCandi
     countryCode: employee.countryCode,
     departmentName: employee.departmentName,
     jobLevelName: employee.jobLevelName,
-    salary: { amountMinor: employee.amountMinor, currencyCode: employee.currencyCode },
+    salary: { amountMinor: employee.amountMinor, currencyCode: asCurrency(employee.currencyCode) },
     band: bandFor.get(`${employee.jobLevelId}:${employee.countryCode}`) ?? null,
   }));
 }

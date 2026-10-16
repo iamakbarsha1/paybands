@@ -1,4 +1,4 @@
-import type { Gender, SalaryReason } from '@paybands/core';
+import { isCurrencyCode, type CurrencyCode, type Gender, type SalaryReason } from '@paybands/core';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
 /** Sorting is a closed set, because every column named here has to stay keyset-safe. */
@@ -159,7 +159,18 @@ function day(value: Date): string {
 
 export interface MoneyRow {
   readonly amountMinor: bigint;
-  readonly currencyCode: string;
+  readonly currencyCode: CurrencyCode;
+}
+
+/**
+ * `currency_code` is a foreign key to the six rows the seed writes, so a seventh is a
+ * migration nobody told the arithmetic about — and `minorUnitsFor` has no scale for it.
+ * Converted where the row is read, so everything above holds a `CurrencyCode` rather than a
+ * string that happens to be one (`PB-D07`).
+ */
+export function asCurrency(value: string): CurrencyCode {
+  if (!isCurrencyCode(value)) throw new RangeError(`a money column holds currency ${value}`);
+  return value;
 }
 
 export interface SalaryRecordDetail extends MoneyRow {
@@ -207,7 +218,7 @@ export async function findEmployeeDetail(
   const salaryHistory = row.salaryRecords.map((record) => ({
     id: record.id,
     amountMinor: record.amountMinor,
-    currencyCode: record.currencyCode,
+    currencyCode: asCurrency(record.currencyCode),
     effectiveFrom: day(record.effectiveFrom),
     effectiveTo: record.effectiveTo === null ? null : day(record.effectiveTo),
     reason: record.reason,
@@ -225,14 +236,14 @@ export async function findEmployeeDetail(
     currentSalary:
       open === undefined
         ? null
-        : { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
+        : { amountMinor: open.amountMinor, currencyCode: asCurrency(open.currencyCode) },
     band:
       band === null
         ? null
         : {
-            min: { amountMinor: band.minMinor, currencyCode: band.currencyCode },
-            mid: { amountMinor: band.midMinor, currencyCode: band.currencyCode },
-            max: { amountMinor: band.maxMinor, currencyCode: band.currencyCode },
+            min: { amountMinor: band.minMinor, currencyCode: asCurrency(band.currencyCode) },
+            mid: { amountMinor: band.midMinor, currencyCode: asCurrency(band.currencyCode) },
+            max: { amountMinor: band.maxMinor, currencyCode: asCurrency(band.currencyCode) },
           },
   };
 }
@@ -356,7 +367,7 @@ function fieldsIn(error: unknown): string {
 
 export interface SalaryChangeInput {
   readonly amountMinor: bigint;
-  readonly currencyCode: string;
+  readonly currencyCode: CurrencyCode;
   readonly effectiveFrom: string;
   readonly reason: SalaryReason;
 }
@@ -434,7 +445,7 @@ export async function recordSalaryChange(
       record: {
         id: created.id,
         amountMinor: created.amountMinor,
-        currencyCode: created.currencyCode,
+        currencyCode: asCurrency(created.currencyCode),
         effectiveFrom: day(created.effectiveFrom),
         effectiveTo: created.effectiveTo === null ? null : day(created.effectiveTo),
         reason: created.reason,

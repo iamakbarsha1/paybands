@@ -1176,3 +1176,23 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** Count by address for both. Rejected because an address is not who spends the key: one office signs in as one account from one address, and a stolen cookie used from anywhere else gets its own fresh twenty.
 **Falsifier:** A second instance of the API. Two processes mean two in-memory windows and twice the questions, which decision 51 already names for the login limiter and which now applies to money rather than to guesses. A shared store is the upgrade, and the first horizontal scale is when it stops being premature.
+
+---
+
+### 61. The response shapes move to `packages/core`, and the browser's types are inferred from them
+
+**SOUND** · reversal: moderate, the schemas move back and the web types are typed out again · 2026-10-16 · phase 12, `PB-D07`
+
+**Decision:** `packages/core/src/wire.ts` holds the zod schema for every response the API serialises: employees, the five analytics reports, reference data, the session user and `/health`. The routes import them, so the serializer still parses on the way out and a handler still cannot return a shape the schema denies. `apps/web/lib/api-types.ts` is now a re-export of types inferred from those schemas rather than nineteen interfaces typed out beside them. `SLICE_GROUPS` moved to `core/domain.ts` with the rest of the shared vocabulary, which is the move decision 53 said the ask schema would need if it ever followed.
+
+**Evidence:** `PB-D07` recorded the debt: the web's interfaces were aligned with the API's zod by hand, and the drift would show as `undefined` on a screen rather than as a failing build. The alignment was also already wrong in a direction nobody had noticed — the web declared `currencyCode: CurrencyCode` while the response schema promised only `z.string()`, so the browser was formatting money against a guarantee the API never made. Removing `headcount` from `bandRow` now fails `apps/web` typecheck in two places; before this change it compiled and the column rendered blank.
+
+- **D** — Needed. Two layers already shared the write contracts for exactly this reason (decision 52); the read shapes were the half left hand-copied.
+- **O** — Moderate, and lower than it looks: the schemas are the same declarations in a different file, and the API imports them under their old local names.
+- **U** — No claim that this catches every drift. It catches a field the API stops sending, because the inferred type loses it. A field whose *meaning* changes while its type does not is invisible here, as it was before.
+- **B** — Four route files, two repositories, the web's type module, and the currency type: `MoneyRow.currencyCode` is now `CurrencyCode`, converted at the row boundary by `asCurrency`, in the same shape as the `asGender` that was already there.
+- **T** — Gives up the API's freedom to describe a response loosely. `z.enum(CURRENCY_CODES)` means a seventh currency in the database is a 500 at the serializer rather than a string on a screen. That is the trade taken deliberately: `minorUnitsFor` has no scale for a currency it does not know, so a row carrying one is already unformattable.
+- **T** — Also gives up strict locality. `packages/core` now knows what a response body looks like, which is a wire concern in a package that otherwise holds arithmetic. The boundary that matters — no framework, no I/O — is unchanged, and the ESLint rule still enforces it.
+
+**Cheaper:** Leave the interfaces hand-written and add a test that compares `z.toJSONSchema` of each response against a committed snapshot, failing with "update `api-types.ts`". That is a tripwire rather than a guarantee: it tells you the shape moved, and still leaves two descriptions to reconcile by hand.
+**Falsifier:** A second consumer with a different idea of a response — a mobile client that wants dates as timestamps, or an export job that wants money as a number. Then one shared schema becomes a negotiation between consumers, and a generated client per consumer is the lazier answer.

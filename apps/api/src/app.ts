@@ -10,7 +10,13 @@ import Fastify, {
   type RawServerDefault,
 } from 'fastify';
 import { z, type ZodError, type ZodType } from 'zod';
-import { CURRENCY_CODES, GENDERS, SALARY_REASONS } from '@paybands/core';
+import {
+  CURRENCY_CODES,
+  GENDERS,
+  health as healthResponse,
+  referenceData as referenceResponse,
+  SALARY_REASONS,
+} from '@paybands/core';
 import type { PrismaClient } from '../generated/prisma/client';
 import type { Complete } from './ask/translate';
 import { registerGuard } from './auth/guard';
@@ -67,20 +73,11 @@ export interface BuildAppOptions {
 const noQuery = z.strictObject({});
 
 /**
- * `ask` is on the health response rather than on an endpoint of its own: the browser needs
- * to know whether to render an ask bar, and this is already the route that answers what this
- * server is.
+ * Both shapes come from `@paybands/core`, where the browser's types are inferred from the
+ * same declarations (`PB-D07`). `ask` is on the health response rather than on an endpoint
+ * of its own: the browser needs to know whether to render an ask bar, and this is already
+ * the route that answers what this server is.
  */
-const healthResponse = z.strictObject({ status: z.literal('ok'), ask: z.boolean() });
-
-const referenceResponse = z.strictObject({
-  currencies: z.array(z.string()).readonly(),
-  genders: z.array(z.string()).readonly(),
-  salaryReasons: z.array(z.string()).readonly(),
-  countries: z.array(z.strictObject({ code: z.string(), name: z.string() })),
-  departments: z.array(z.strictObject({ id: z.number(), name: z.string() })),
-  jobLevels: z.array(z.strictObject({ id: z.number(), name: z.string() })),
-});
 
 /** Builds the instance without starting it, so tests drive it through `inject()` and never bind a port. */
 export function buildApp(options: BuildAppOptions): App {

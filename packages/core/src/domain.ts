@@ -11,6 +11,10 @@ export type Gender = (typeof GENDERS)[number];
 export const SALARY_REASONS = ['hire', 'merit', 'promotion', 'market'] as const;
 export type SalaryReason = (typeof SALARY_REASONS)[number];
 
+/** The groupings every sliced report offers. One closed set, so two reports cannot disagree. */
+export const SLICE_GROUPS = ['country', 'department', 'level'] as const;
+export type SliceGroup = (typeof SLICE_GROUPS)[number];
+
 /** Decimal places per ISO 4217. The reason JPY must never be assumed to have two. */
 export const CURRENCY_MINOR_UNITS = {
   USD: 2,
