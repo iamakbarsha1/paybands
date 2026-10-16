@@ -1106,3 +1106,23 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** Ask Prisma to do the join — `relationLoadStrategy: 'join'`. Not available: the client generated from 7.10 carries no such option. Cheaper still would have been an index, and there was none to add.
 **Falsifier:** A report that needs a column this join does not carry, often enough that the SQL becomes a list of every column any report might want. Then the join is a view with no name and the per-report `select` was the honest shape. Also: a later Prisma that compiles `include` to a join and materialises it flat, which would make this hand-written SQL a 20-line way to say `include`.
+
+---
+
+### 58. The ask bar answers with a link to the report, not with the report
+
+**SOUND** · reversal: cheap, one component and the query string the bands screen now reads · 2026-10-16 · phase 10, `PB-D09`
+
+**Decision:** `apps/web/components/ask-bar.tsx` posts the question, reads `query` off the answer and renders one sentence and one link: *Understood as the gender pay gap by department* → `/reports/pay-gap?groupBy=department`. The `result` that travels beside the query is typed `unknown` and never rendered. The bar reads `ask` on `/health` and returns `null` when the flag is false. `/reports/bands` now reads `country` and `level` from the query string, which `/analytics/bands` has taken since `PB-043`.
+
+**Evidence:** Every member of `askQuery` is a report name plus the parameters that report's route already takes, and every one of the five screens already reads those parameters from its own query string — three take `groupBy`, outliers takes `show`, bands took neither until now. So a translated query is a URL. Rendering the rows instead would mean a second implementation of the distribution chart, the comp-ratio histogram, the suppression notice and the outlier lists, inside a box under the question, with no test holding the two copies together.
+
+- **D** — Needed: the API has answered `POST /ask` since `PB-065` and nothing in the browser called it, which is what `PB-D09` records. The brief names the ask bar.
+- **O** — Cheap. One component, one mount, and a screen reading two more parameters.
+- **U** — No claim about how often the translation is right. The stub used to drive the browser returns a fixed query; what the real model does with a real question is measured nowhere, and `PB-069` only pins the request.
+- **B** — The reports index and the bands screen. The other four were already reachable by URL and are untouched.
+- **T** — Gives up showing the numbers under the question: an answer is two steps, a question and a click. It also spends a report's worth of server work on a `result` nobody draws — the screen fetches the same rows again on arrival.
+- **T** — Gives up a browser-side test of the mapping. The web app has no test runner (phases 7 to 10 shipped verified in a browser), so `reportFor` is held by the compiler's exhaustiveness check over `AskQuery` and by the four questions driven through the real screen.
+
+**Cheaper:** Navigate on the answer instead of linking, so a question goes straight to the report. Rejected because the interpretation is the one thing a question-answering box owes its reader — a screen that opens on its own does not say what it understood, and a wrong translation then looks like a misclick.
+**Falsifier:** A question whose answer is a number rather than a report — *what is the median in Berlin* — which the reports cannot express as a filter and a link lands on a table the reader still has to scan. A second one: a `result` that costs real time to compute, which would make fetching it twice the wrong trade and inline rendering the lazier one.

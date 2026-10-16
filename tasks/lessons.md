@@ -145,3 +145,9 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-16.** The expensive statement in every sliced report was not expensive to execute. Prisma compiles `include`/nested `select` into a second query that binds every id of the first result — `WHERE employee_id IN ($1…$9226)` — and parsing it took 8.4 ms, binding it 9.4 ms, against 14 ms of execution. Over half the server time went on the parameter list before a row was read, and it shows up in the plan as planning time, which no index reduces. One join returning flat rows took the endpoint from 95 ms to 45.
 
 **Rule:** when an ORM query is slow, read the SQL it actually sent before touching the schema. Count the bind parameters. A parameter list that scales with the result set is a shape problem, and the repair is a join, not an index.
+
+## A feature behind a paid API is still verifiable: redirect the client, do not mock it
+
+**2026-10-16.** `PB-D09` put a screen on top of `POST /ask`, and this machine has no `ANTHROPIC_API_KEY`. The two obvious options were both thin: ship it typechecked and claim the browser path "should" work, or set a fake key and only ever see the 503. The SDK reads its base URL from the environment, so twenty lines of `node:http` answering `/v1/messages` with one canned message body put the real client, the real route, the real seeded database and the real browser on one path with a deterministic answer. Changing the canned query between runs drove the accepted, the filtered and the refused branch in turn, including the bands screen's new filters, at a cost of nothing.
+
+**Rule:** when a paid or missing external service blocks verification, check whether its client takes a base URL from the environment and point it at a local stub. A stub at the network boundary leaves every layer below it real, which is the opposite of a module mock: nothing in the application changes to accommodate the test.

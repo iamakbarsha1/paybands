@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 75 of 90 done (phases 0–11 complete, phase 12 next).
+**Progress** — 76 of 90 done (phases 0–11 complete, phase 12 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -27,7 +27,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 1    |
-| Debt and missed         | 11      | 4    |
+| Debt and missed         | 11      | 5    |
 
 ---
 
@@ -205,6 +205,6 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D06 | Audit log of salary edits                                  | out of scope | —          |
 | PB-D07 | Web response types are aligned with the API's zod by hand  | todo         | —          |
 | PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |
-| PB-D09 | Phase 10 has no ticket for the web ask bar itself          | todo         | PB-068     |
+| PB-D09 | Phase 10 has no ticket for the web ask bar itself          | done         | PB-068     |
 | PB-D10 | The model adapter has no test of its own                   | done         | —          |
 | PB-D11 | The Review table in `todo.md` stops at phase 4              | todo         | —          |
