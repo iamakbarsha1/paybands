@@ -67,7 +67,7 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 
 ### 4. `packages/core` as a separate workspace package
 
-**WEAK** · reversal: cheap, a folder move and an import path · 2026-10-13 · repo layout, before any code exists
+**SOUND** · reversal: cheap, a folder move and an import path · 2026-10-13 · repo layout, before any code exists · upgraded 2026-10-16 (`PB-075`)
 
 **Decision:** Comp maths and shared domain types in their own package, framework-free, consumed by both apps.
 
@@ -82,7 +82,9 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 **Cheaper:** `apps/api/src/domain/`, with the web app importing types through one generated API-contract file.
 **Falsifier:** If by phase 9 the web app imports real functions from core — formatting, band-position maths for a chart — this upgrades to SOUND. If it only ever imports types, the package should collapse and this log should say so.
 
-**Update, phase 1:** Still WEAK; one objection answered. The enforcement point no longer holds — `eslint.config.js` fails the build if anything in `packages/core` imports Fastify, Next, React, Prisma or an I/O builtin. The untested claim stands: both apps import *values* (`apps/web/app/page.tsx:1`, `apps/api/src/app.ts:2`), but they are enum tables, not the arithmetic the package exists for. The phase 9 test remains.
+**Since, `PB-075`:** the falsifier fired in favour. Four web files import values rather than types, and three of them compute: `apps/web/app/(app)/reports/bands/page.tsx:3` takes `bandSpread` and `money` and fills the spread column with them, `apps/web/components/salary-change-form.tsx:3` parses typed money with `moneyFromMajorUnits` and validates with `salaryChangeInput`, `apps/web/lib/money.ts:1` formats through `minorUnitsFor`, and `apps/web/components/employee-form.tsx:3` validates against the API's own `employeeInput` and `employeePatch`. That is the arithmetic and the validation the package exists for, in the browser, so the package stays and `PB-D05` is answered rather than open.
+
+**Update, phase 1:** One objection answered. The enforcement point no longer holds — `eslint.config.js` fails the build if anything in `packages/core` imports Fastify, Next, React, Prisma or an I/O builtin. The untested claim stands: both apps import *values* (`apps/web/app/page.tsx:1`, `apps/api/src/app.ts:2`), but they are enum tables, not the arithmetic the package exists for. The phase 9 test remains.
 
 ---
 
@@ -874,7 +876,7 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 ### 45. The harness seeds about fifty explicit employees, not the shipped ten thousand
 
-**WEAK** · reversal: cheap, the fixture is one file the tests import · 2026-10-15 · phase 5, `PB-042`
+**SOUND** · reversal: cheap, the fixture is one file the tests import · 2026-10-15 · phase 5, `PB-042` · upgraded 2026-10-16 (`PB-075`)
 
 **Decision:** The harness reuses the seed's reference tables verbatim — `CURRENCIES`, `COUNTRIES`, `FX_RATES`, `DEPARTMENTS`, `JOB_LEVELS`, `buildPayBands()` from `src/seed/reference.ts` — and writes about fifty hand-specified employees with their salary records, instead of running `src/seed/index.ts`.
 
@@ -888,6 +890,10 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Truncate and run the shipped seed once per test run, with the suite asserting the properties `generate.test.ts` already names. Rejected on run time, which is the claim above that has not been measured. If a full seed against a local container turns out to cost seconds rather than minutes, this entry is the one to revisit.
 **Falsifier:** A measured full-seed time against the container under about twenty seconds, or a report test that needs seed-scale statistics to be meaningful. Either makes the second fixture the more expensive option.
+
+**Since, `PB-075`:** the untested half is measured and the conclusion survives it. A full seed against the local container takes **14.4 s** — seconds rather than minutes, and under the twenty this entry named, so "too slow" was thinner than it read. What saves the decision is the unit: the database tests reset between files (`resetAndSeed` truncates and rewrites the fixture, and `fileParallelism` is off), so the shipped seed costs 14.4 s per *file*, not per run. Eighteen files is four and a half minutes against about a second each today. `PB-D01` pays it twice deliberately, in one file, and the database suite went from 30 s to 67 s — the same arithmetic, measured.
+
+---
 
 ### 46. Database tests skip themselves without `TEST_DATABASE_URL`, and CI refuses to let them
 

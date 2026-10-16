@@ -164,9 +164,9 @@ Run the skills, fix what they find, commit the reports as artifacts.
 
 - [x] `attack-surface-audit` — secrets, auth, database, input, exposure. Every FAIL fixed or consciously accepted in writing.
 - [x] `legal-exposure-audit` — salary and gender data is personal data under GDPR; privacy notes belong in a product handling it
-- [ ] `decision-critic` end-of-build sweep — rank every logged decision by cost-to-reverse
+- [x] `decision-critic` end-of-build sweep — rank every logged decision by cost-to-reverse
 - [x] `docs/security.md`, `docs/decisions/*.md` written from those reports
-- [ ] Commit: `docs: security audit and decision log`
+- [x] Commit: `docs: security audit and decision log`
 
 ## Phase 13 — Ship
 

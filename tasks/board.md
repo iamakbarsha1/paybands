@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 80 of 90 done (phases 0–11 complete, phase 12 all but the decision sweep).
+**Progress** — 82 of 90 done (phases 0–12 complete, phase 13 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -25,9 +25,9 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 9 Web reports           | 5       | 5    |
 | 10 Ask bar (optional)   | 5       | 5    |
 | 11 Performance          | 3       | 3    |
-| 12 Audits               | 4       | 3    |
+| 12 Audits               | 4       | 4    |
 | 13 Ship                 | 8       | 1    |
-| Debt and missed         | 11      | 6    |
+| Debt and missed         | 11      | 7    |
 
 ---
 
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                    | Status | Blocked by |
 | ------ | ---------------------------------------- | ------ | ---------- |
-| PB-075 | Decision sweep ranked by cost to reverse | next   | PB-D01     |
+| PB-077 | Production database                      | next   | PB-025     |
 
 ---
 
@@ -177,7 +177,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | ------ | ------------------------------------------ | ------ | -------------- |
 | PB-073 | Attack surface audit                       | done   | PB-051         |
 | PB-074 | Legal exposure audit                       | done   | PB-073         |
-| PB-075 | Decision sweep ranked by cost to reverse   | todo   | PB-D01         |
+| PB-075 | Decision sweep ranked by cost to reverse   | done   | PB-D01         |
 | PB-076 | Security document written from the reports | done   | PB-073, PB-074 |
 
 ## Phase 13 — Ship
@@ -201,7 +201,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D02 | The Legal level-mix fix has no test                        | done         | —          |
 | PB-D03 | Local commits are not pushed                               | done         | —          |
 | PB-D04 | Six clarifying questions still unanswered                  | todo         | —          |
-| PB-D05 | The `packages/core` collapse test (decision 4)             | blocked      | PB-064     |
+| PB-D05 | The `packages/core` collapse test (decision 4)             | done         | PB-064     |
 | PB-D06 | Audit log of salary edits                                  | out of scope | —          |
 | PB-D07 | Web response types are aligned with the API's zod by hand  | todo         | —          |
 | PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |
