@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 85 of 90 done (phases 0–12 complete, phase 13 is the deploy).
+**Progress** — 87 of 94 done; phases 0 to 12 are complete and all seven that remain need a person (the deploy, the video, the submission, and six unanswered clarifying questions). The denominator is every ticket on this board except `PB-D06`, which is out of scope — earlier headlines said "of 90", which predated the eleven debt tickets.
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
