@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 72 of 90 done (phases 0–10 complete, phase 11 next).
+**Progress** — 75 of 90 done (phases 0–11 complete, phase 12 next).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -24,7 +24,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 8 Web employees         | 6       | 6    |
 | 9 Web reports           | 5       | 5    |
 | 10 Ask bar (optional)   | 5       | 5    |
-| 11 Performance          | 3       | 0    |
+| 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 0    |
 | 13 Ship                 | 8       | 1    |
 | Debt and missed         | 11      | 4    |
@@ -33,9 +33,9 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 ## In flight
 
-| ID     | Story                                                  | Status | Blocked by |
-| ------ | ------------------------------------------------------ | ------ | ---------- |
-| PB-070 | Measure every analytics endpoint against the full seed | next   | PB-048     |
+| ID     | Story                | Status | Blocked by |
+| ------ | -------------------- | ------ | ---------- |
+| PB-073 | Attack surface audit | next   | PB-051     |
 
 ---
 
@@ -167,9 +167,9 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                                  | Status | Blocked by |
 | ------ | ------------------------------------------------------ | ------ | ---------- |
-| PB-070 | Measure every analytics endpoint against the full seed | next   | PB-048     |
-| PB-071 | Fix the slow ones and prove the fix                    | todo   | PB-070     |
-| PB-072 | Performance notes                                      | todo   | PB-071     |
+| PB-070 | Measure every analytics endpoint against the full seed | done   | PB-048     |
+| PB-071 | Fix the slow ones and prove the fix                    | done   | PB-070     |
+| PB-072 | Performance notes                                      | done   | PB-071     |
 
 ## Phase 12 — Audits
 

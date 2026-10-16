@@ -133,3 +133,15 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-16.** Decision 55 guards `translate.ts` with `no-restricted-imports`, and the obvious next step was the same rule on `routes/ask.ts`, which holds a client and is one line from putting a row in a prompt. Mutating the handler to paste the outliers report into the question leaked real surnames to the model boundary using only `run` from `ask/run.ts` — the module the handler exists to call, which no rule could ever ban. A repository ban there would have stayed silent through the exact leak it was written for.
 
 **Rule:** an import rule constrains what a file can reach, not what it does with what it is already allowed to reach. Before writing one, mutate the file to commit the offence and check the rule fires. A rule that reads like a guarantee and is not is worse than no rule, because it stops anyone writing the test.
+
+## A query plan is measured at the narrowest boundary in the stack
+
+**2026-10-16.** `PB-070` found the analytics endpoints answering in 85–186 ms, and `EXPLAIN (ANALYZE, BUFFERS)` on every statement Prisma emitted came back clean: the right indexes, 18 ms of planning and execution between the two statements a sliced report issues. The plan was not the problem and there was no index to add. The 95 ms was somewhere `EXPLAIN` cannot see — Postgres' own `log_min_duration_statement = 0` put 43 ms on those statements, because a logged duration includes delivering the rows to the client, and a timer around the repository call put 95, because what was left was Prisma building one nested object per employee.
+
+**Rule:** three numbers before proposing a performance change — `EXPLAIN ANALYZE` planning plus execution, the server's logged statement duration, and wall clock around the call. Each boundary excludes the next one out. A latency claim built on `EXPLAIN ANALYZE` alone is a claim about the planner, and the planner is often the one part that was already fine.
+
+## An ORM's nested read is two statements, and the second one carries the first one's keys
+
+**2026-10-16.** The expensive statement in every sliced report was not expensive to execute. Prisma compiles `include`/nested `select` into a second query that binds every id of the first result — `WHERE employee_id IN ($1…$9226)` — and parsing it took 8.4 ms, binding it 9.4 ms, against 14 ms of execution. Over half the server time went on the parameter list before a row was read, and it shows up in the plan as planning time, which no index reduces. One join returning flat rows took the endpoint from 95 ms to 45.
+
+**Rule:** when an ORM query is slow, read the SQL it actually sent before touching the schema. Count the bind parameters. A parameter list that scales with the result set is a shape problem, and the repair is a join, not an index.

@@ -148,10 +148,15 @@ Strictly bounded. See [`docs/design-notes.md`](../docs/design-notes.md) §7.
 
 ## Phase 11 — Performance
 
-- [ ] Measure every analytics endpoint against the full 10k seed
-- [ ] `EXPLAIN ANALYZE` on the slow ones, index or rewrite, measure again
-- [ ] Record before/after in `docs/performance.md` — numbers, not adjectives
-- [ ] Commit: `perf: index analytics hot paths` + `docs: performance notes`
+- [x] Measure every analytics endpoint against the full 10k seed
+- [x] `EXPLAIN ANALYZE` on the slow ones, index or rewrite, measure again
+- [x] Record before/after in `docs/performance.md` — numbers, not adjectives
+- [x] Commit: `perf(api): analytics reports fetch their rows as one join` + `docs: performance notes` — no index was added, because every plan already used one
+
+> The reports that fetch rows were 85–186 ms and are 38–55 ms. Postgres was answering in 18 of
+> those 95 ms; the rest was Prisma compiling a nested `findMany` into a second statement with
+> 9,226 bind parameters and building an object graph from it. Decision 57, and decision 48 now
+> carries the number its **T** line said nobody had measured.
 
 ## Phase 12 — Audits
 

@@ -934,6 +934,8 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 **Cheaper:** `percentile_cont` in SQL with the rate table joined in. Rejected because it duplicates decisions 33 to 36 in a second language; kept as the first thing to try if `PB-070` finds the fetch too slow, and single-currency slices need no conversion at all.
 **Falsifier:** A measurement in `PB-070` showing the row fetch dominates the request. Then the split moves for the grouped reports and the parity test becomes the thing that keeps the SQL honest.
 
+**Since:** `PB-070` measured it and the falsifier half fired. The fetch does dominate — 40 ms of a 45 ms distribution request — but the **T** line blamed the wrong thing. Ten thousand rows crossing the wire is not what cost 95 ms: Postgres answered in 18 and the rest was Prisma materialising a nested object per employee, which decision 57 removed without moving any arithmetic. The price of this split is now a measured number rather than an open question: 7–10 ms for the distribution percentiles, 18–19 ms for the pay gap's per-person USD conversion, both over 9,226 people, against the second implementation of decisions 33 to 36 that SQL would have cost. See `docs/performance.md`.
+
 ### 49. Argon2id at OWASP's 19 MiB profile, with the algorithm held by a test rather than a flag
 
 **SOUND** · reversal: cheap, the parameters live in one constant and a raise costs a rehash on next login · 2026-10-15 · phase 7, `PB-049`
@@ -1087,3 +1089,20 @@ The guarantee is about data the system holds, not about the words the user typed
 **Falsifier:** A second caller wanting a different model or a different effort for the same translation — a batch importer, or a cheaper model behind a setting. The key stops being the whole configuration then, and one branch at the edge stops being enough.
 
 **Since:** The cap is 4096, not the 1024 above. `max_tokens` covers the model's reasoning as well as what it writes, so at 1024 a translation could reach the ceiling mid-object and `translate` refused the fragment with "did not answer with JSON" — this file's ceiling, reported as the model's fault. `PB-069` pins the model id, the cap and the effort in `apps/api/src/ask/anthropic.test.ts`, so moving any of the three is now a deliberate edit in two places.
+
+### 57. The sliced reports fetch their rows as one join, written out as SQL
+
+**SOUND** · reversal: cheap, one private function and two query strings · 2026-10-16 · phase 11, `PB-071`
+
+**Decision:** `activeWithOpenSalary` in `apps/api/src/repositories/analytics.ts` is one `$queryRaw` left join — every active employee with their open salary record, as flat rows — and the distribution, comp-ratio and pay-gap repositories all read it. `bandedSalaries` is the same join with the two names the outliers report links to, inner-joined on the salary record. The nested `findMany` each of them used to issue is gone. Nothing above the repository changed: same response shapes, same arithmetic in `packages/core`.
+
+**Evidence:** `PB-070` measured the endpoints against the full seed and `docs/performance.md` records it. A nested `findMany` is two statements: the employees, then their salary records with all 9,226 ids of the first result bound in as parameters. Parsing and binding that list cost 18 ms before a row was read, and `EXPLAIN (ANALYZE, BUFFERS)` showed the access path was already the right one — the salary lookup rides `one_open_salary_per_employee`, the partial unique index from decision 21. Postgres spent 18 ms on a request that took 95; the remainder was the object graph. One join, the same rows: distribution 95 ms to 45, comp-ratio 116 to 43, pay-gap 111 to 50, outliers 186 to 55.
+
+- **D** — Needed now. `PB-070` is the measurement and `PB-071` is the ticket that acts on it; the numbers came first and the change second.
+- **O** — Cheap. One private function, two query strings, and four call sites that each lost more code than they gained. Reverting is putting the `findMany` back.
+- **U** — The claim is those four numbers, on a container on one laptop, against this seed, one request at a time. Nothing here measures Neon's round trips, ten concurrent reports, or a cold cache.
+- **B** — The four analytics repositories, and every column a later report wants: it has to be added to the SQL and to the row interface, not to a `select`.
+- **T** — Gives up the compile-time check that a column exists. A migration that renames `amount_minor` now typechecks and fails at run time. The db test of each report is what catches it, which is why the mutation was tried: turning the left join into an inner one drops an employee with no open salary record out of the headcount, and `analytics-comp-ratio.db.test.ts` fails on exactly that.
+
+**Cheaper:** Ask Prisma to do the join — `relationLoadStrategy: 'join'`. Not available: the client generated from 7.10 carries no such option. Cheaper still would have been an index, and there was none to add.
+**Falsifier:** A report that needs a column this join does not carry, often enough that the SQL becomes a list of every column any report might want. Then the join is a view with no name and the per-report `select` was the honest shape. Also: a later Prisma that compiles `include` to a join and materialises it flat, which would make this hand-written SQL a 20-line way to say `include`.
