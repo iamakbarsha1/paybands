@@ -157,3 +157,18 @@ Corrections made during the build, kept so the same mistake is not repeated.
 **2026-10-16.** `PB-D01` asserts the seed writes the same database twice: run the writer, digest four tables and every sequence, run it again, compare. To prove the assertion bites, the salt that makes the demo login row byte-identical was mutated. Derived per call — `Buffer.from(String(Date.now())…)` inside the function — the test failed, correctly. Derived once at module load, the same mutation passed: both runs in one process read the one value, so the digests agreed about a salt that would differ tomorrow. The test is sound for what it covers and blind to that class.
 
 **Rule:** a determinism test that runs the subject twice in one process proves per-call determinism, not per-run. Module-load constants, lazily-initialised caches and a clock read at import are invisible to it. Catching those needs a value committed to the repository — a hash, a fixture — that a later process is compared against, and when you mutate to prove a test bites, mutate at both scopes.
+
+## Two runs of the database suite share one database, and neither knows
+
+**2026-10-16.** Verifying at the end of this session, `pnpm test` was started while an earlier
+`pnpm test` was still running against the same `TEST_DATABASE_URL`. Three files failed and
+sixteen tests were skipped, and the run took 43 minutes instead of 74 seconds. Nothing was
+wrong with the code: `resetAndSeed` truncates every table at the top of each file, so two runs
+delete each other's fixtures between an arrange and an assert. The harness guards the database
+*name* (`assertDisposable` refuses anything not ending in `_test`) and `fileParallelism: false`
+serialises files within one run, and neither guard sees a second run.
+
+**Rule:** a shared-database suite is single-instance. Check for a run in flight before starting
+one — `pgrep -fl vitest` — and treat a failure that appears only under concurrency as a
+scheduling problem before reading it as a regression. The repair, if it ever earns one, is a
+Postgres advisory lock taken in the global setup, not more guards per file.
