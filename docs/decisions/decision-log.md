@@ -449,7 +449,7 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 
 ### 24. Determinism is proved on the generator, not on the database
 
-**WEAK** · reversal: cheap, a database-level check is additive · 2026-10-14 · phase 3 seed
+**SOUND** · reversal: cheap, a database-level check is additive · 2026-10-14 · phase 3 seed · strengthened 2026-10-16 (`PB-D01`)
 
 **Decision:** The committed test calls `generate(SEED)` twice, deep-equals the two results, and asserts a SHA-256 of the canonical output against a constant. No database.
 
@@ -465,6 +465,12 @@ Two assertions rather than one, because they fail on different things. The deep-
 
 **Cheaper:** The deep-equal alone. Rejected for exactly that case.
 **Falsifier:** A reseed that produces a different database while this test passes.
+
+**Since, `PB-D01`:** the hand-run digest comparison is now an assertion. `apps/api/src/seed/determinism.db.test.ts` runs the writer twice against the test database and compares `md5(string_agg(row::text ORDER BY id))` over `employee`, `salary_record`, `pay_band` and `app_user`, plus every sequence's `last_value`. The writer moved to `apps/api/src/seed/write.ts` and takes a client, which is what made it callable from a test; `index.ts` kept the environment, the client and the refusal to truncate a database this seed did not write. A third assertion checks the first run wrote rows at all, so the comparison cannot pass by agreeing about two empty tables — it caught a sequence query that silently matched nothing.
+
+Two mutations were tried. A salt derived per call fails the digest comparison, which is the assertion working. A salt derived once at module load passes it, because both runs in one process read the same value — the case this test cannot see, and the reason the verdict says what it covers rather than "deterministic". Everything generated is covered against that case by the committed hash in `generate.test.ts`; the one row outside it is `app_user.password_hash`, whose salt is a literal in a tracked file and changes only in a reviewable edit.
+
+The cost is two full seeds, about 35 seconds, which took the database suite from 30 to 67. That is the price of the claim and it is paid only where there is a database: `describe.skipIf(!hasTestDatabase())`.
 
 **Run by hand, 2026-10-14:** three consecutive seeds, with an `md5(string_agg(row::text ORDER BY id))` taken over `employee`, `salary_record`, `pay_band` and `app_user` between runs. All four digests identical, and `employee_id_seq` and `salary_record_id_seq` both back at their row counts. That is the argument executed rather than asserted, including the fixed argon2 salt holding `app_user` steady. The verdict stays WEAK because this ran on a laptop against one database and CI still cannot.
 

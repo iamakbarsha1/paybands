@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 79 of 90 done (phases 0–11 complete, phase 12 all but the decision sweep).
+**Progress** — 80 of 90 done (phases 0–11 complete, phase 12 all but the decision sweep).
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -27,7 +27,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 3    |
 | 13 Ship                 | 8       | 1    |
-| Debt and missed         | 11      | 5    |
+| Debt and missed         | 11      | 6    |
 
 ---
 
@@ -197,7 +197,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                                      | Status       | Blocked by |
 | ------ | ---------------------------------------------------------- | ------------ | ---------- |
-| PB-D01 | Database-level determinism assertion (decision 24 is WEAK) | todo         | —          |
+| PB-D01 | Database-level determinism assertion (decision 24 was WEAK) | done         | —          |
 | PB-D02 | The Legal level-mix fix has no test                        | done         | —          |
 | PB-D03 | Local commits are not pushed                               | done         | —          |
 | PB-D04 | Six clarifying questions still unanswered                  | todo         | —          |
