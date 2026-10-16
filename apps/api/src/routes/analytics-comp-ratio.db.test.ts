@@ -116,6 +116,37 @@ describe.skipIf(!hasTestDatabase())('GET /analytics/comp-ratio', () => {
     );
   });
 
+  /**
+   * Neither the fixture nor the shipped seed leaves an active employee without an open salary
+   * record, so the branch that handles one is reachable only by closing a record. It is the
+   * one row the repository's join has to produce as a null rather than drop: an employee who
+   * vanished from the headcount would be a person the report stopped counting.
+   */
+  it('keeps someone with no open salary record in the headcount, measured or not', async () => {
+    const employee = ACTIVE.find((candidate) => ratioOf(candidate) !== null);
+    const open = employee === undefined ? undefined : OPEN.get(employee.id);
+    if (employee === undefined || open === undefined) {
+      throw new Error('the fixture has nobody with a band and an open record');
+    }
+
+    const before = byCountry.groups.find((group) => group.key === employee.countryCode);
+    await prisma.salaryRecord.update({
+      where: { id: open.id },
+      data: { effectiveTo: FIXTURE.today },
+    });
+
+    try {
+      const { body } = await read('country');
+      const after = body.groups.find((group) => group.key === employee.countryCode);
+
+      expect(after?.headcount).toBe(before?.headcount);
+      expect(after?.measured).toBe((before?.measured ?? 0) - 1);
+      expect(after?.unbanded).toBe(before?.unbanded);
+    } finally {
+      await prisma.salaryRecord.update({ where: { id: open.id }, data: { effectiveTo: null } });
+    }
+  });
+
   it('counts each slice in its own local currency', () => {
     expect(byCountry.groups).toHaveLength(FIXTURE.countries.length);
 

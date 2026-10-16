@@ -1,4 +1,4 @@
-import { isCurrencyCode, type FxRate, type Gender } from '@paybands/core';
+import { GENDERS, isCurrencyCode, type FxRate, type Gender } from '@paybands/core';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { MoneyRow } from './employees';
 
@@ -77,6 +77,64 @@ function sliceKey(employee: Sliceable, groupBy: SliceGroup): string {
   return String(employee.jobLevelId);
 }
 
+interface ActivePerson extends Sliceable {
+  readonly gender: Gender;
+  /** Null is nobody's pay on record, which the three sliced reports each handle differently. */
+  readonly salary: MoneyRow | null;
+}
+
+interface ActiveRow extends Sliceable {
+  readonly gender: string;
+  readonly amountMinor: bigint | null;
+  readonly currencyCode: string | null;
+}
+
+/**
+ * Everyone still here with their open salary record joined on, one row each.
+ *
+ * Asked as one join rather than as a nested `findMany`, which Prisma sends as two queries —
+ * the employees, then their salary records with every id of the first result bound into an
+ * `IN` list nine thousand parameters long. Postgres answers both in 13 ms and spends 8 of
+ * them planning that list; the rest of the 95 ms a sliced report took was Prisma building a
+ * nested object per employee. Same rows, same work for the database, materialised flat:
+ * 95 ms to 36 ms, measured in `docs/performance.md`.
+ *
+ * The SQL is written out because the shape is a join rather than a model read, and nothing
+ * checks it against the schema at compile time. The db test of each report does that at run
+ * time, against the seed.
+ */
+async function activeWithOpenSalary(prisma: PrismaClient): Promise<ActivePerson[]> {
+  const rows = await prisma.$queryRaw<ActiveRow[]>`
+    SELECT e.country_code AS "countryCode",
+           e.department_id AS "departmentId",
+           e.job_level_id AS "jobLevelId",
+           e.gender::text AS "gender",
+           s.amount_minor AS "amountMinor",
+           s.currency_code AS "currencyCode"
+    FROM employee e
+    LEFT JOIN salary_record s ON s.employee_id = e.id AND s.effective_to IS NULL
+    WHERE e.termination_date IS NULL
+  `;
+
+  return rows.map((row) => ({
+    countryCode: row.countryCode,
+    departmentId: row.departmentId,
+    jobLevelId: row.jobLevelId,
+    gender: asGender(row.gender),
+    salary:
+      row.amountMinor === null || row.currencyCode === null
+        ? null
+        : { amountMinor: row.amountMinor, currencyCode: row.currencyCode },
+  }));
+}
+
+/** The column is an enum of exactly these four, so a fifth value is a migration nobody told us about. */
+function asGender(value: string): Gender {
+  const gender = GENDERS.find((known) => known === value);
+  if (gender === undefined) throw new RangeError(`employee.gender holds ${value}`);
+  return gender;
+}
+
 export interface DistributionSlice {
   readonly key: string;
   readonly name: string;
@@ -100,18 +158,7 @@ export async function salaryDistribution(
 ): Promise<DistributionSlice[]> {
   const [groups, employees] = await Promise.all([
     groupRows(prisma, groupBy),
-    prisma.employee.findMany({
-      where: { terminationDate: null },
-      select: {
-        countryCode: true,
-        departmentId: true,
-        jobLevelId: true,
-        salaryRecords: {
-          where: { effectiveTo: null },
-          select: { amountMinor: true, currencyCode: true },
-        },
-      },
-    }),
+    activeWithOpenSalary(prisma),
   ]);
 
   const headcounts = new Map<string, number>();
@@ -121,10 +168,9 @@ export async function salaryDistribution(
     const key = sliceKey(employee, groupBy);
     headcounts.set(key, (headcounts.get(key) ?? 0) + 1);
 
-    const open = employee.salaryRecords[0];
-    if (open === undefined) continue;
+    if (employee.salary === null) continue;
     const held = salaries.get(key) ?? [];
-    held.push({ amountMinor: open.amountMinor, currencyCode: open.currencyCode });
+    held.push(employee.salary);
     salaries.set(key, held);
   }
 
@@ -203,18 +249,7 @@ export async function compRatioSlices(
 ): Promise<CompRatioSlice[]> {
   const [groups, employees, bands] = await Promise.all([
     groupRows(prisma, groupBy),
-    prisma.employee.findMany({
-      where: { terminationDate: null },
-      select: {
-        countryCode: true,
-        departmentId: true,
-        jobLevelId: true,
-        salaryRecords: {
-          where: { effectiveTo: null },
-          select: { amountMinor: true, currencyCode: true },
-        },
-      },
-    }),
+    activeWithOpenSalary(prisma),
     prisma.payBand.findMany({ where: { effectiveTo: null } }),
   ]);
 
@@ -236,13 +271,9 @@ export async function compRatioSlices(
     const key = sliceKey(employee, groupBy);
     headcounts.set(key, (headcounts.get(key) ?? 0) + 1);
 
-    const open = employee.salaryRecords[0];
     const held = people.get(key) ?? [];
     held.push({
-      salary:
-        open === undefined
-          ? null
-          : { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
+      salary: employee.salary,
       band: bandFor.get(`${employee.jobLevelId}:${employee.countryCode}`) ?? null,
     });
     people.set(key, held);
@@ -274,33 +305,17 @@ export async function genderedSalaries(
 ): Promise<GenderedSlice[]> {
   const [groups, employees] = await Promise.all([
     groupRows(prisma, groupBy),
-    prisma.employee.findMany({
-      where: { terminationDate: null },
-      select: {
-        gender: true,
-        countryCode: true,
-        departmentId: true,
-        jobLevelId: true,
-        salaryRecords: {
-          where: { effectiveTo: null },
-          select: { amountMinor: true, currencyCode: true },
-        },
-      },
-    }),
+    activeWithOpenSalary(prisma),
   ]);
 
   const people = new Map<string, { gender: Gender; salary: MoneyRow }[]>();
 
   for (const employee of employees) {
-    const open = employee.salaryRecords[0];
-    if (open === undefined) continue;
+    if (employee.salary === null) continue;
 
     const key = sliceKey(employee, groupBy);
     const held = people.get(key) ?? [];
-    held.push({
-      gender: employee.gender,
-      salary: { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
-    });
+    held.push({ gender: employee.gender, salary: employee.salary });
     people.set(key, held);
   }
 
@@ -329,20 +344,43 @@ export interface OutlierCandidate {
  * joined and already filtered, because neither the join nor "still employed" is something a
  * pure function can work out (decision 40).
  */
+interface BandedRow {
+  readonly employeeId: number;
+  readonly employeeCode: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly countryCode: string;
+  readonly jobLevelId: number;
+  readonly departmentName: string;
+  readonly jobLevelName: string;
+  readonly amountMinor: bigint;
+  readonly currencyCode: string;
+}
+
 export async function bandedSalaries(prisma: PrismaClient): Promise<OutlierCandidate[]> {
+  // The same join `activeWithOpenSalary` makes, with the two names this report links to and
+  // an inner join for "whose pay is on record". Prisma loads `include`d relations as their
+  // own queries and builds an object graph per row, which is where 204 ms of a 186 ms
+  // request went; this is 48 ms for the same rows (`docs/performance.md`).
   const [employees, bands] = await Promise.all([
-    prisma.employee.findMany({
-      where: { terminationDate: null, salaryRecords: { some: { effectiveTo: null } } },
-      include: {
-        department: true,
-        jobLevel: true,
-        salaryRecords: {
-          where: { effectiveTo: null },
-          select: { amountMinor: true, currencyCode: true },
-        },
-      },
-      orderBy: { id: 'asc' },
-    }),
+    prisma.$queryRaw<BandedRow[]>`
+      SELECT e.id AS "employeeId",
+             e.employee_code AS "employeeCode",
+             e.first_name AS "firstName",
+             e.last_name AS "lastName",
+             e.country_code AS "countryCode",
+             e.job_level_id AS "jobLevelId",
+             d.name AS "departmentName",
+             j.name AS "jobLevelName",
+             s.amount_minor AS "amountMinor",
+             s.currency_code AS "currencyCode"
+      FROM employee e
+      JOIN salary_record s ON s.employee_id = e.id AND s.effective_to IS NULL
+      JOIN department d ON d.id = e.department_id
+      JOIN job_level j ON j.id = e.job_level_id
+      WHERE e.termination_date IS NULL
+      ORDER BY e.id
+    `,
     prisma.payBand.findMany({ where: { effectiveTo: null } }),
   ]);
 
@@ -357,22 +395,15 @@ export async function bandedSalaries(prisma: PrismaClient): Promise<OutlierCandi
     ]),
   );
 
-  return employees.flatMap((employee) => {
-    const open = employee.salaryRecords[0];
-    if (open === undefined) return [];
-
-    return [
-      {
-        employeeId: employee.id,
-        employeeCode: employee.employeeCode,
-        firstName: employee.firstName,
-        lastName: employee.lastName,
-        countryCode: employee.countryCode,
-        departmentName: employee.department.name,
-        jobLevelName: employee.jobLevel.name,
-        salary: { amountMinor: open.amountMinor, currencyCode: open.currencyCode },
-        band: bandFor.get(`${employee.jobLevelId}:${employee.countryCode}`) ?? null,
-      },
-    ];
-  });
+  return employees.map((employee) => ({
+    employeeId: employee.employeeId,
+    employeeCode: employee.employeeCode,
+    firstName: employee.firstName,
+    lastName: employee.lastName,
+    countryCode: employee.countryCode,
+    departmentName: employee.departmentName,
+    jobLevelName: employee.jobLevelName,
+    salary: { amountMinor: employee.amountMinor, currencyCode: employee.currencyCode },
+    band: bandFor.get(`${employee.jobLevelId}:${employee.countryCode}`) ?? null,
+  }));
 }
