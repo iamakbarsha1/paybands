@@ -107,6 +107,7 @@ Node 24 · TypeScript 6 · Fastify 5 · PostgreSQL via Prisma · Next.js 16 · R
 | [`docs/design-notes.md`](docs/design-notes.md) | The reasoning behind the scope and the stack |
 | [`docs/decisions/decision-log.md`](docs/decisions/decision-log.md) | Every real decision, argued against when it was made |
 | [`docs/clarifications.md`](docs/clarifications.md) | Questions asked before building, and the defaults assumed while waiting |
+| [`docs/performance.md`](docs/performance.md) | Every analytics endpoint timed against the 10,000-row seed, before and after the one change made |
 | [`tasks/todo.md`](tasks/todo.md) | Phase-by-phase build order |
 
 ## CI
