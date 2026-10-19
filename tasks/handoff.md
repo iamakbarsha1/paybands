@@ -9,12 +9,19 @@ moves there in the same commit as the code.
 
 ## Where the build is
 
-87 of 94 tickets. 344 tests green, typecheck and lint clean, working tree clean. Phases 0 to
-12 are complete: the API, the auth, the employee screens, all five reports, the ask bar with
-its browser caller, the performance numbers, and both audits with their fixes.
+91 of 99 tickets. 351 tests green, typecheck, lint and build clean, working tree clean. Phases
+0 to 12 are complete: the API, the auth, the employee screens, all five reports, the ask bar
+with its browser caller, the performance numbers, and both audits with their fixes.
 
-**Every one of the seven open tickets needs a person, not a session.** Nothing is left that
-can be built from here without credentials, a camera or an answer from the client.
+**Seven of the eight open tickets need a person, not a session** — credentials, a camera, or an
+answer from the client. The eighth is `PB-D12`, a committed browser smoke test, which
+`architecture.md` opened when it found that `design-notes.md` §6 names one and the repository
+has none.
+
+A later session added the two artifacts the brief names that the build had never produced
+([`architecture.md`](../docs/architecture.md), [`api.md`](../docs/api.md)) and went back to the
+three decisions the phase-12 sweep left WEAK. None of the three verdicts moved, which was the
+finding. `sweep.md` §"What phase 13 closed" has it.
 
 ## What this session built
 
@@ -89,7 +96,14 @@ commands.
 
 ## If you want more from a session
 
-There is nothing left on the board that does not need you. What a session could still usefully
-do: write `docs/architecture.md` and `docs/api.md`, which `design-notes.md` lists as planned
-and nothing has produced; or take the three WEAK decisions — the ask bar's existence, the
-rounding mode, the in-memory limiter — and close the two that a deployment would settle.
+Both suggestions that used to live here are done. `docs/architecture.md` and `docs/api.md`
+exist, and the three WEAK decisions were revisited: 36's bias is measured at **$25.86, one part
+in 31.7 million** against an estimated $50; 51's dangerous leg is fixed and tested, with
+`TRUST_PROXY` now a variable the deployment can set rather than a Fastify default nobody read;
+and 7 is closed as unanswerable from inside the repository, because the **U** line needs a
+reviewer and a reviewer is not an instrument this project owns.
+
+What is left for a session: `PB-D12`, the Playwright smoke that `design-notes.md` §6 names and
+nothing wrote. Also still missing from the §5 artifact list are `testing.md`, `seed-design.md`
+and `demo.md` — the first two describe things that exist and are reconstructable from the code,
+and the third is the video script, which blocks on `PB-083`.

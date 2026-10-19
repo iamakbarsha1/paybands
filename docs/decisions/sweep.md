@@ -129,6 +129,11 @@ for completeness rather than discussion; the verdict column is where any argumen
 Six entries carried a WEAK verdict into phase 12. Three are now SOUND because the fact each
 one was waiting for arrived; three are still WEAK, and this is what each is still waiting for.
 
+> **Superseded in part.** Phase 13 went back to the three that were still WEAK and collected
+> what was collectable. None of the verdicts moved. [What phase 13 closed](#what-phase-13-closed)
+> at the end of this document records what changed and what each entry is now waiting for,
+> which for two of the three is nothing.
+
 **24 — determinism proved on the generator, not the database. Strengthened.** `PB-D01` turned
 the hand-run digest comparison into an assertion: `apps/api/src/seed/determinism.db.test.ts`
 runs the writer twice and compares a digest of four tables and every sequence. The entry's
@@ -192,3 +197,45 @@ there is a second process to share one with.
   count.
 - `PB-D05`, the `packages/core` collapse test, is answered by decision 4's evidence.
 - Nothing was found that contradicts a decision. No entry moved to WRONG.
+
+## What phase 13 closed
+
+The sweep left three entries WEAK and said what each was waiting for. Two of the three were
+waiting for something that could be produced without a deployment, and were not. This is that
+work. **No verdict moved**, which is the finding rather than a disappointment — in each case
+the measurement confirmed the reason the entry was WEAK instead of overturning it.
+
+**36 — the rounding mode. The thin part is no longer thin.** The sweep said the falsifier was
+unfired "because nothing reconciles converted USD against an external figure". Something does
+now, by a method the shipped code does not share: `apps/api/src/seed/fx-rounding.test.ts` sums
+the whole active payroll three ways over the shipped seed, one of them accumulating undivided
+numerators and dividing once at the end. The exact total is **$818,621,426.23**; half away from
+zero lands 75 minor units above it and truncation 2,586 below — **$25.86, one part in 31.7
+million**, against the entry's estimated "$50 … one part in ten million". The estimate was
+pessimistic by half, because 3,997 of the 9,226 rows are USD and divide exactly. The verdict
+stays WEAK on the **D** line, which said the choice between modes is near-free either way;
+$25.86 on $818 million is that sentence with a number in it. Nothing further is collectable
+here: the falsifier as written needs an external authority, and this project will never have
+one.
+
+**51 — the in-memory limiter. The dangerous leg is fired and fixed.** The sweep said both
+falsifiers were unfired "for the same reason: there is one process and no proxy, because
+nothing is deployed". That was true of the multi-instance leg and wrong about the proxy leg —
+`inject` can put every request behind one address and name the client in `X-Forwarded-For`,
+which is what a proxy does. `auth-rate-limit.db.test.ts` now holds both behaviours: untrusted,
+five wrong passwords lock out the next person through the same proxy; trusted, they refuse only
+the guesser. The sweep also said `PB-078` is where the deployment decides this, and there was
+nothing for it to decide with — `trustProxy` defaulted to false and no code read it. It is now
+`TRUST_PROXY`, read at the edge. The verdict stays WEAK on the other leg: two instances still
+keep two counters, and that one genuinely needs a second process.
+
+**7 — the ask bar's existence. Closed as unanswerable here.** The sweep had this right and
+phase 13 adds only the conclusion: the **D** line already concedes this serves a candidate's
+reason rather than a user's, and the **U** line is unverifiable until a reviewer reacts. Every
+falsifiable claim around the feature is settled in its own entry — 54, 55, 56, 58. There is no
+instrument in this repository that can move this one, so it stops being an open question and
+becomes a recorded position.
+
+Three tickets carry the work: `PB-D13` (the `trustProxy` knob that did not exist), `PB-D14`
+(decision 36's unmeasured claim), and `PB-D12`, which this pass opened rather than closed —
+`design-notes.md` §6 names one Playwright smoke and the repository has none.

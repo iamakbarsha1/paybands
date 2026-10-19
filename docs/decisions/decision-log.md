@@ -143,6 +143,12 @@ Decisions logged as they were made, not reconstructed afterwards. Each one argue
 **Cheaper:** Skip it. Write a paragraph on why a language model should not be near money arithmetic, and spend the hours on test depth.
 **Falsifier:** If phases 1–9 are not finished and polished, this phase should not start. That is the gate.
 
+**Since, phase 13:** the gate was passed — phases 1 to 9 were finished before phase 10 started, and `PB-D09` gave the bar a browser caller. Everything else about this entry is unchanged, and the point of this note is to say that it is unchangeable from inside the repository.
+
+The **D** line is not a claim evidence can reach. It already concedes the honest answer: the HR manager's job is done by the reports, and this exists because the role description asks for LLM experience. No test moves that sentence. The **U** line — "it demonstrates judgment about where a model belongs" — is explicitly unverifiable until a reviewer reacts, and a reviewer is not an instrument this project owns. Every falsifiable claim *around* the feature has been settled in its own entry: the model never sees a row (55, with a lint rule and a database-backed test), it never computes a number (54), the key is read once at the edge (56), the answer is a link rather than rows (58), and the whole thing deletes cleanly because nothing in phases 1–9 imports it.
+
+So the verdict stays WEAK and stops being an open question. It is a statement about whose reason the feature serves, and the only thing that can settle it is somebody reading the submission. That is recorded here rather than left looking like evidence nobody got around to collecting.
+
 ---
 
 ### 8. Public repository
@@ -714,6 +720,18 @@ The class of defect is the one `tasks/lessons.md` names: two correct halves in t
 **Cheaper:** `(amountMinor * rateMicros * scale) / 1_000_000n`, BigInt truncation, one line and no tie rule. It is genuinely defensible at this scale, and if the three lines ever get in the way this is what replaces them.
 **Falsifier:** A report that sums converted USD across all 10,000 employees and is reconciled against an external figure. Then the rounding mode has to match whatever that source does, and this choice is made by them rather than by us.
 
+**Since, `PB-D14`:** the **U** line's arithmetic is measured. `apps/api/src/seed/fx-rounding.test.ts` sums every active employee's open salary converted to USD three ways over the shipped seed, with no database — the generator is deterministic, so its rows are the database's rows. The third way is the reconciliation figure the falsifier asks for, computed by a method the other two do not share: no per-row division at all, every undivided numerator accumulated and divided once at the end.
+
+| | Total | From exact |
+| --- | --- | --- |
+| Exact, one division at the end | $818,621,426.23 | — |
+| Shipped, half away from zero per row | $818,621,426.98 | **+75** minor units |
+| Truncated, BigInt `/` per row | $818,621,400.37 | **−2,586** minor units |
+
+9,226 rows, of which 5,229 leave a remainder. So the estimate in the **U** line was pessimistic by about half: the truncation bias is **$25.86, one part in 31.7 million**, not "about $50 … one part in ten million". Two reasons it is smaller than half a cent a row. The 3,997 USD rows are quoted at 1,000,000 micros and divide exactly, so both modes agree on every one of them; across the 5,229 rows that do round, the loss is 0.4946 of a minor unit, which is the half-cent the line predicted. The shipped mode's own residual is 75 cents on $818 million — about one part in a billion — because half away from zero has no direction to drift in and the errors cancel.
+
+**The verdict does not move, and the measurement is why.** WEAK here was never about the size of the bias; the **D** line said the choice between modes is near-free either way, and $25.86 on $818,621,426 is that sentence with a number in it. What is now closed is the open question rather than the entry: nothing in this project reconciles against an external authority, so the falsifier as written cannot fire here, and no further evidence is available to collect. The three lines stay for the reason the **U** line already gave — "rounded to the nearest cent" is explainable and truncation is asymmetric across the sign — and the cheaper one line remains genuinely defensible, which is the whole of what WEAK claims.
+
 ---
 
 ### 37. Comp ratio is a plain number from one double division, not a scaled integer division
@@ -998,6 +1016,14 @@ Decision 41 is what makes this safe rather than merely pragmatic. Suppression ke
 
 **Cheaper:** Nothing cheaper that still counts. Refusing the second attempt within a second would be smaller and would stop nothing: a guesser waits a second.
 **Falsifier:** A second API instance, or a proxy in front of one. The first makes the counter wrong by a factor of however many instances there are; the second makes it wrong in the other direction, and dangerous.
+
+**Since, `PB-D13`:** the falsifier has two legs and the dangerous one is fired, in a test rather than in production. A deployment was never needed to fire it: `inject` can put every request behind one address and name the real client in `X-Forwarded-For`, which is what a platform proxy does. `apps/api/src/routes/auth-rate-limit.db.test.ts` now drives both halves. Untrusted, five wrong passwords from one client refuse the *next person through the same proxy* — on a public URL that is every visitor. Trusted, the same five refuse only the client that sent them, and the bystander signs in.
+
+The entry said `PB-078` is where the deployment decides this. That was the gap: there was nothing for it to decide with. Fastify's `trustProxy` defaults to `false` and no code read it, so the only way to set it was to edit `app.ts` during a deploy. It is now `TRUST_PROXY`, read once at the edge (`apps/api/src/index.ts`) and passed through `buildApp` — `true` trusts the nearest hop, which is what a single platform proxy needs, and anything else is handed to Fastify as the addresses or subnets it may trust. Unset stays off, which is correct for a server reached directly and is why this is a deployment decision rather than a default.
+
+The option's type is Fastify 5's own, `boolean | string | string[]`, and the first draft of this widened it to include `number` for a hop count. That does not typecheck: `number` is accepted by `proxy-addr` at runtime but is not in the declared type, and adding it made TypeScript fall through every `Fastify()` overload and report the HTTP/2 one. The hop count was dropped rather than cast around, because one proxy is what every host here puts in front of a service and `true` already says that.
+
+**The verdict stays WEAK, on the other leg.** Both ceilings in the **T** line were real and only one of them has been removed. A second instance still means two counters and twice the attempts, and that is not fireable without a second process to fire it with — the upgrade is a shared store, and it is still not premature until there is something to share one with. What changed is that the remaining ceiling is now the arithmetic one rather than the dangerous one: counting per instance under-enforces by a known factor, where counting the proxy refused everybody.
 
 ---
 

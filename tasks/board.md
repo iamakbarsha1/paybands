@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 87 of 94 done; phases 0 to 12 are complete and all seven that remain need a person (the deploy, the video, the submission, and six unanswered clarifying questions). The denominator is every ticket on this board except `PB-D06`, which is out of scope — earlier headlines said "of 90", which predated the eleven debt tickets.
+**Progress** — 91 of 99 done; phases 0 to 12 are complete. Of the eight that remain, seven need a person — the deploy, the video, the submission, and six unanswered clarifying questions — and one (`PB-D12`, a committed browser smoke test) does not. The denominator is every ticket on this board except `PB-D06`, which is out of scope — earlier headlines said "of 90" and "of 94", which predated the debt tickets and the two documentation tickets phase 13 added.
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -26,8 +26,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 10 Ask bar (optional)   | 5       | 5    |
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 4    |
-| 13 Ship                 | 8       | 2    |
-| Debt and missed         | 11      | 9    |
+| 13 Ship                 | 10      | 4    |
+| Debt and missed         | 14      | 11   |
 
 ---
 
@@ -192,6 +192,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-082 | AI usage documented           | done   | —              |
 | PB-083 | Demo video                    | todo   | PB-079         |
 | PB-084 | Submit                        | todo   | PB-081, PB-083 |
+| PB-085 | Architecture diagrams         | done   | —              |
+| PB-086 | API contract document         | done   | —              |
 
 ## Debt and missed items
 
@@ -208,3 +210,6 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D09 | Phase 10 has no ticket for the web ask bar itself          | done         | PB-068     |
 | PB-D10 | The model adapter has no test of its own                   | done         | —          |
 | PB-D11 | The Review table in `todo.md` stops at phase 4              | done         | —          |
+| PB-D12 | No committed browser smoke test, though §6 names one       | todo         | —          |
+| PB-D13 | `trustProxy` had no knob, so `PB-078` had nothing to decide | done         | —          |
+| PB-D14 | Decision 36's immateriality claim was never measured        | done         | —          |

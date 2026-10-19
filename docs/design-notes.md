@@ -86,10 +86,10 @@ The brief names six. This adds the ones it implies.
 |---|---|
 | Requirements | [`requirements.md`](requirements.md) — committed before the first implementation commit, so the order is itself evidence |
 | Planning / design notes | this document |
-| Architecture diagrams | `architecture.md` — system diagram and request flow for one analytics query |
+| Architecture diagrams | [`architecture.md`](architecture.md) — system diagram and request flow for one analytics query |
 | AI prompts | `ai-usage.md` — prompts used, and where AI output was rejected and why |
 | Trade-offs | [`decisions/decision-log.md`](decisions/decision-log.md) |
-| Performance | `performance.md` — query plans and timings against the full seed |
+| Performance | [`performance.md`](performance.md) — query plans and timings against the full seed |
 
 **Added**
 
@@ -97,7 +97,7 @@ The brief names six. This adds the ones it implies.
 |---|---|---|
 | ER diagram | [`data-model.md`](data-model.md) | The schema is the centre of this problem. A reviewer should judge it without reading a migration. |
 | README | [`../README.md`](../README.md) | Clone to running in two minutes, or nothing else gets read |
-| API contract | `api.md` | Makes the backend reviewable independently of the UI |
+| API contract | [`api.md`](api.md) | Makes the backend reviewable independently of the UI |
 | Test strategy | `testing.md` | What is unit versus integration tested, and why the maths gets the heaviest coverage |
 | Seed design | `seed-design.md` | Distributions, salary spread, and the outliers planted so the outlier report finds something true |
 | Glossary | [`glossary.md`](glossary.md) | One vocabulary for the UI, the code and the tests |

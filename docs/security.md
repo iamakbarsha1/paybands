@@ -52,7 +52,12 @@ per fifteen minutes per address, because there is no session yet. `POST /ask` co
 questions per fifteen minutes per session, because there always is one and what it spends is
 a paid key rather than a password. A refused question never reaches the model. Both windows
 are in one process and in memory: two instances mean two counters, and a client behind a
-proxy counts as the proxy until `trustProxy` is set. Decision 51 carries both ceilings.
+proxy counts as the proxy until `TRUST_PROXY` is set. Decision 51 carries both ceilings, and
+`PB-D13` closed the second one as far as code can: the option is read at the edge
+(`apps/api/src/index.ts`) and both behaviours are held by tests — untrusted, five wrong
+passwords refuse the next person through the same proxy; trusted, they refuse only the
+guesser. Setting it correctly at deploy time is still a human decision, and an unset
+`TRUST_PROXY` behind a proxy is the dangerous configuration rather than a merely weak one.
 
 **SQL is parameterised everywhere it is written by hand.** The two `$queryRaw` joins in
 `apps/api/src/repositories/analytics.ts` interpolate nothing. The two `$executeRawUnsafe`
@@ -169,7 +174,7 @@ the honest statement of it; no row describes anybody.
 | Question | What would settle it | When |
 | --- | --- | --- |
 | Is the API served over TLS, so the `Secure` cookie arrives at all? | The deployed URL and its certificate | `PB-078` |
-| Is `trustProxy` set, so the login limiter counts clients rather than the proxy? | The platform's proxy behaviour and one Fastify option | `PB-078` |
+| Is `TRUST_PROXY` set, so the login limiter counts clients rather than the proxy? | The platform's proxy behaviour, and the variable now wired to read it | `PB-078` |
 | Does the runtime database role own the tables, or is it restricted? | The role's grants in the database console | `PB-077` |
 | Is the data encrypted at rest, in an appropriate region, under a signed processor agreement? | The host's console and DPA | `PB-077` |
 | Does the model provider retain question text, and for how long? | The provider account's data settings | Before real data is typed into the bar |

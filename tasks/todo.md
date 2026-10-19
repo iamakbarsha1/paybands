@@ -170,14 +170,29 @@ Run the skills, fix what they find, commit the reports as artifacts.
 
 ## Phase 13 — Ship
 
-- [ ] Neon production branch, migrations applied, seed run
-- [ ] API deployed (Render or Fly), health check green
-- [ ] Web deployed on Vercel, pointed at the API
+Everything here except `PB-D12` needs a person. The three deployment tickets are one sitting;
+the rest follow from them.
+
+- [ ] **`PB-077`** — Neon production branch, migrations applied against `DIRECT_URL`, seed run
+- [ ] **`PB-078`** — API deployed (Render or Fly), health check green. **Set `TRUST_PROXY`** — both rate limiters count by `request.ip`, and behind a proxy with it unset, five wrong passwords lock out every visitor (decision 51, `PB-D13`). `docs/security.md` lists the other four things to confirm while the console is open: TLS so the `Secure` cookie arrives, the database role's grants, encryption and region, and the model provider's retention
+- [ ] **`PB-079`** — Web deployed on Vercel, `NEXT_PUBLIC_API_URL` pointed at the API, `WEB_ORIGIN` pointed back at it
 - [x] CORS locked to the web origin, not `*` — pulled forward in phase 8, since the browser cannot reach the API without it
-- [ ] README: live URL, demo credentials, two-minute local setup
+- [ ] **`PB-081`** — README: live URL, demo credentials, two-minute local setup
 - [x] `docs/ai-usage.md` — the prompts, the skills, and where AI output was rejected and why
-- [ ] Demo video, 3–5 minutes, scripted in `docs/demo.md`
-- [ ] Reply to the email with the repo link
+- [ ] **`PB-083`** — Demo video, 3–5 minutes, scripted in `docs/demo.md` (the script is not written either)
+- [ ] **`PB-084`** — Reply to the email with the repo link
+- [x] **`PB-085`** — [`docs/architecture.md`](../docs/architecture.md): system diagram, the boundaries and what enforces them, one analytics request traced hop by hop
+- [x] **`PB-086`** — [`docs/api.md`](../docs/api.md): all sixteen routes, the one error shape, auth, limits, CORS
+
+### Carried into phase 13, needing a person
+
+- [ ] **`PB-D04`** — six clarifying questions still unanswered in [`docs/clarifications.md`](../docs/clarifications.md). They were sent and nothing came back; the build assumed an answer for each and recorded which
+- [ ] **`PB-D12`** — no committed browser smoke test, though `design-notes.md` §6 names one Playwright smoke in the stack. The screens were driven by hand. This is the one remaining ticket that does not need a person
+
+### Closed in phase 13, without a deployment
+
+- [x] **`PB-D13`** — `trustProxy` had no knob. Now `TRUST_PROXY`, read at the edge, with both behaviours held by tests. Decision 51's dangerous leg is fired and fixed; the multi-instance leg still needs a second process
+- [x] **`PB-D14`** — decision 36's "about $50, one part in ten million" was never measured. It is **$25.86, one part in 31.7 million** against the shipped seed. The verdict stays WEAK, because WEAK was always the **D** line rather than the size of the bias
 
 ---
 
@@ -199,3 +214,4 @@ An index, not a second copy. Each phase's outcome is recorded in its own section
 | 10 | 53–56, 58 | The model is handed a question and a schema and never a row, and a lint rule proved unable to guarantee that — the handler reaches data through the module it exists to call. The bar answers with what it understood and a link, not with the rows |
 | 11 | 57 | `EXPLAIN (ANALYZE, BUFFERS)` said the queries were fine and they were. The 95 ms was the ORM's nested read binding 9,226 keys into a second statement; one join took it to 45 |
 | 12 | 59–60 | Two audits, three security findings fixed and one accepted in writing. All 60 decisions ranked by cost to reverse, and two WEAK entries flipped by their own falsifiers rather than by argument |
+| 13 | — | In progress; nothing is deployed. Two artifacts the brief names were written from the code rather than from the plan, and [`architecture.md`](../docs/architecture.md) found a planning note that was never true: §6 credits server components with keeping the 10k rows off the client, and every screen that reads data is a client component. What actually does it is the `limit` cap of 100. The three remaining WEAK decisions were revisited and **none moved** — 36's bias measured at $25.86 against an estimated $50, 51's dangerous leg fixed and tested while its other leg still needs a second process, and 7 closed as unanswerable from inside the repository |
