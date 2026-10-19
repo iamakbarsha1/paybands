@@ -1242,3 +1242,23 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** No smoke, and a line in `testing.md` saying the screens are driven by hand. Rejected because the document already claimed the smoke existed, and a claimed test is worse than an absent one.
 **Falsifier:** A flake. If `next dev`'s on-demand compile makes the 120-second readiness budget unreliable on a cold CI runner, the cheaper answer is `pnpm build` before `pnpm test` and `next start`, which also removes the second T above. One red build for a reason that is not the code is the signal to make that trade.
+
+---
+
+### 63. `SameSite` on the session cookie is a deployment fact, read at the edge
+
+**SOUND** · reversal: cheap, one boolean and two call sites · 2026-10-19 · phase 13, `PB-D15`
+
+**Decision:** The session cookie was `SameSite=Strict` unconditionally. It is now `Strict` by default and `None` when `CROSS_SITE_COOKIE=true`, read in `index.ts` and handed to `buildApp` the same way `TRUST_PROXY` is. `Lax` is not offered: it covers top-level navigation, and every request this API serves is a `fetch` from a script, which `Lax` does not send either. The choice is two-valued, so it is a boolean rather than the cookie's own vocabulary.
+
+**Evidence:** Found by running the browser smoke with the page on `localhost` and the API on `127.0.0.1`, which is cross-site by the same rule that makes `paybands.vercel.app` and `paybands-api.onrender.com` cross-site. `POST /auth/login` answered **200** with a well-formed `Set-Cookie: ...; Secure; SameSite=Strict`, Chromium's cookie jar was **empty**, `GET /auth/me` answered 401, and the page bounced back to `/login`. Nothing in the API was wrong and nothing in the response was wrong. `auth-cross-site.db.test.ts` holds both values; reverting the fix fails two of its cases and leaves the `Strict` default passing.
+
+- **D** — Needed, and it was a shipping blocker rather than a hardening task. The planned deployment is Vercel plus Render, which is two registrable domains, so the build as it stood would have deployed green and been unusable.
+- **O** — Cheap. One boolean on `buildApp`, one branch in `sessionCookiePolicy`, and the three call sites that issue or clear the cookie.
+- **U** — No claim that `None` is as safe as `Strict`. It is not. The claim is that the remaining defence is sufficient for this API, and that claim is itself a test rather than a sentence.
+- **B** — `auth/session.ts`, `routes/auth.ts`, `app.ts`, `index.ts`, the test harness, `.env.example`, `security.md` and `deploy.md`.
+- **T** — Gives up the browser-enforced CSRF defence when the flag is on. What remains is that CORS allows exactly one origin, and every route that changes anything takes a JSON body: a cross-site form post cannot set `content-type: application/json` and is refused at the body parser with 415 before any handler runs, which `auth-cross-site.db.test.ts` asserts against a signed-in session. A cross-site `fetch` can send the request but cannot read the response.
+- **T** — Gives up a single correct answer. The right value now depends on how the thing is deployed, which is one more variable an operator can get wrong, and getting it wrong in the safe direction produces the confusing failure rather than the dangerous one. That was the deliberate ordering: only the exact string `true` turns it on, so a typo falls back to `Strict`.
+
+**Cheaper:** Put both apps under one registrable domain, through a custom domain pair or a Vercel rewrite proxying the API. Then `Strict` is correct and no flag is needed. That is the better deployment and it is what the document recommends; the flag exists because the free-tier default is two vendor domains, and a build that only works on a paid custom domain is a build that does not work.
+**Falsifier:** A second browser client on a third origin. The flag is one boolean for one web app, and CORS is already one origin for the same reason; a second consumer turns both into a list, which is a different design rather than a bigger value.

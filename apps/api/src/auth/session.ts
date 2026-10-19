@@ -7,6 +7,29 @@ export const SESSION_COOKIE = 'paybands_session';
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
 /**
+ * Whether the browser and this API are on different sites, which decides `SameSite`.
+ *
+ * `Strict` is the safer value and the right one when both are served from the same
+ * registrable domain. It is also the value that silently breaks a split deployment: a browser
+ * on `app.vercel.app` talking to `api.onrender.com` is making a cross-site request, so it
+ * discards a `Strict` cookie on arrival. The login then answers 200, sets a cookie that is
+ * never stored, and every screen afterwards is signed out — a failure that looks like a bug in
+ * the session code and is not (decision 63, `PB-D15`).
+ *
+ * `Lax` is not an option worth offering. It covers top-level navigation, and every request
+ * this API serves is a `fetch` from a script, which Lax does not send either. So the choice is
+ * two-valued, and it is modelled as a boolean rather than as the cookie vocabulary.
+ */
+export function sessionCookiePolicy(crossSite: boolean) {
+  return {
+    httpOnly: true,
+    secure: true,
+    sameSite: crossSite ? ('none' as const) : ('strict' as const),
+    path: '/',
+  };
+}
+
+/**
  * The cookie carries the user id and its own expiry, signed. The expiry is inside the
  * signature rather than left to `Max-Age` alone, because `Max-Age` is a request the browser
  * honours and a replayed cookie is not sent by a browser.
@@ -14,13 +37,15 @@ export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
  * There is no session table: logout clears the cookie, and a cookie stolen before then stays
  * valid until it expires. That ceiling is decision 50; a table of session ids is the upgrade.
  */
-export function issueSession(reply: FastifyReply, userId: number, now: Date = new Date()): void {
+export function issueSession(
+  reply: FastifyReply,
+  userId: number,
+  crossSite: boolean,
+  now: Date = new Date(),
+): void {
   reply.setCookie(SESSION_COOKIE, `${userId}.${now.getTime() + SESSION_TTL_MS}`, {
+    ...sessionCookiePolicy(crossSite),
     signed: true,
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    path: '/',
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
   });
 }
@@ -44,11 +69,7 @@ export function readSession(request: FastifyRequest, now: Date = new Date()): nu
   return userId;
 }
 
-export function clearSession(reply: FastifyReply): void {
-  reply.clearCookie(SESSION_COOKIE, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    path: '/',
-  });
+/** Cleared with the attributes it was set with, or the browser keeps the one it has. */
+export function clearSession(reply: FastifyReply, crossSite: boolean): void {
+  reply.clearCookie(SESSION_COOKIE, sessionCookiePolicy(crossSite));
 }

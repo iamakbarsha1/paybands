@@ -21,7 +21,7 @@ function onWire(user: AppUserRow): z.infer<typeof userResponse> {
   return { user: { id: user.id, email: user.email, displayName: user.displayName } };
 }
 
-export function registerAuthRoutes(app: App, prisma: PrismaClient): void {
+export function registerAuthRoutes(app: App, prisma: PrismaClient, crossSite: boolean): void {
   const take = createLimiter(LOGIN_ATTEMPTS, LOGIN_WINDOW_MS);
 
   app.post(
@@ -48,7 +48,7 @@ export function registerAuthRoutes(app: App, prisma: PrismaClient): void {
         return reply.code(401).send(REFUSED);
       }
 
-      issueSession(reply, user.id);
+      issueSession(reply, user.id, crossSite);
       return reply.send(onWire(user));
     },
   );
@@ -63,7 +63,7 @@ export function registerAuthRoutes(app: App, prisma: PrismaClient): void {
       const user = await findUserById(prisma, userId);
       if (user === null) {
         // The signature was good and the account is gone: the cookie outlived its subject.
-        clearSession(reply);
+        clearSession(reply, crossSite);
         return reply.code(401).send(REFUSED);
       }
 
@@ -72,7 +72,7 @@ export function registerAuthRoutes(app: App, prisma: PrismaClient): void {
   );
 
   app.post('/auth/logout', async (_request, reply) => {
-    clearSession(reply);
+    clearSession(reply, crossSite);
     return reply.code(204).send();
   });
 }

@@ -30,6 +30,7 @@ const app = buildApp({
   webOrigin: process.env['WEB_ORIGIN'] ?? 'http://localhost:3000',
   complete: anthropicKey === '' ? null : anthropicComplete(anthropicKey),
   trustProxy: trustProxyFromEnv(process.env['TRUST_PROXY']),
+  crossSiteCookie: flag(process.env['CROSS_SITE_COOKIE']),
 });
 
 try {
@@ -47,6 +48,15 @@ try {
  * directly, and wrong behind a proxy, where it counts the whole internet as one client.
  * `PB-078` is where the deployment sets it.
  */
+/**
+ * `CROSS_SITE_COOKIE` is on only for the exact string `true`. Unset, empty and anything else
+ * leave the session cookie at `SameSite=Strict`, because the safer value is the one a typo
+ * should fall back to. `PB-079` is where a split deployment sets it.
+ */
+function flag(raw: string | undefined): boolean {
+  return raw?.trim() === 'true';
+}
+
 function trustProxyFromEnv(raw: string | undefined): boolean | string {
   if (raw === undefined || raw.trim() === '') return false;
   const value = raw.trim();

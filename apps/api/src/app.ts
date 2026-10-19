@@ -75,6 +75,13 @@ export interface BuildAppOptions {
    * internet as one client (decision 51).
    */
   trustProxy?: boolean | string | string[];
+  /**
+   * Whether the browser reaching this API is on a different site from it, which decides the
+   * session cookie's `SameSite`. Off by default, because `Strict` is the safer value and is
+   * right whenever both are served from one registrable domain. A split deployment has to turn
+   * it on or the login sets a cookie the browser discards (decision 63, `PB-D15`).
+   */
+  crossSiteCookie?: boolean;
 }
 
 /** Strict, so `?departmant=2` is a 400 rather than a filter that quietly did nothing. */
@@ -161,7 +168,7 @@ export function buildApp(options: BuildAppOptions): App {
   app.register(cookie, { secret: options.sessionSecret });
   registerGuard(app);
 
-  registerAuthRoutes(app, options.prisma);
+  registerAuthRoutes(app, options.prisma, options.crossSiteCookie ?? false);
   registerEmployeeRoutes(app, options.prisma);
   registerAnalyticsRoutes(app, options.prisma);
   registerAskRoutes(app, options.prisma, complete);

@@ -175,6 +175,7 @@ the honest statement of it; no row describes anybody.
 | --- | --- | --- |
 | Is the API served over TLS, so the `Secure` cookie arrives at all? | The deployed URL and its certificate | `PB-078` |
 | Is `TRUST_PROXY` set, so the login limiter counts clients rather than the proxy? | The platform's proxy behaviour, and the variable now wired to read it | `PB-078` |
+| Is `CROSS_SITE_COOKIE` set, so the browser keeps the session cookie at all? | Whether the web app and the API end up on one registrable domain | `PB-078`, `PB-079` |
 | Does the runtime database role own the tables, or is it restricted? | The role's grants in the database console | `PB-077` |
 | Is the data encrypted at rest, in an appropriate region, under a signed processor agreement? | The host's console and DPA | `PB-077` |
 | Does the model provider retain question text, and for how long? | The provider account's data settings | Before real data is typed into the bar |

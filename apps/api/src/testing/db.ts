@@ -89,6 +89,7 @@ export function testApp(
     signedIn?: boolean;
     complete?: Complete | null;
     trustProxy?: boolean | string | string[];
+    crossSiteCookie?: boolean;
   } = {},
 ): App {
   const app = buildApp({
@@ -96,6 +97,7 @@ export function testApp(
     sessionSecret: TEST_SESSION_SECRET,
     complete: options.complete ?? null,
     trustProxy: options.trustProxy ?? false,
+    crossSiteCookie: options.crossSiteCookie ?? false,
   });
   if (options.signedIn === false) return app;
 
