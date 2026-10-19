@@ -33,6 +33,28 @@ export default defineConfig({
           fileParallelism: false,
         },
       },
+      {
+        test: {
+          name: 'smoke',
+          // Rooted in the API because that is where the fixture and the database helpers
+          // live. It drives the web app in a browser; it belongs to neither app alone.
+          root: './apps/api',
+          environment: 'node',
+          include: ['src/smoke/**/*.smoke.ts'],
+          // Seeds the fixture and starts both servers, or says why it is about to skip.
+          globalSetup: ['./src/smoke/stack.ts'],
+          // Projects run in parallel unless told otherwise, and `api-db` truncates the same
+          // database this one seeds. A later group than every other project, so the two
+          // suites take turns rather than clobbering each other's rows.
+          sequence: { groupOrder: 1 },
+          // One browser against one pair of ports.
+          fileParallelism: false,
+          // `next dev` compiles each route on its first request, and `api-db` has already
+          // migrated the database this run shares.
+          testTimeout: 60_000,
+          hookTimeout: 180_000,
+        },
+      },
     ],
   },
 });

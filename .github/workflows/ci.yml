@@ -47,6 +47,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # The browser the smoke project drives. `--with-deps` pulls the shared libraries
+      # Chromium needs on a bare runner; without it the launch fails rather than skips.
+      - name: Install Chromium
+        run: pnpm --filter @paybands/api exec playwright install --with-deps chromium
+
       # Four named steps, so a red build says which gate failed without opening the log.
       - name: Typecheck
         run: pnpm typecheck
