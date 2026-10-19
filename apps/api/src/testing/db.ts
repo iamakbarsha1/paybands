@@ -85,12 +85,17 @@ export function sessionCookie(): string {
  */
 export function testApp(
   prisma: PrismaClient,
-  options: { signedIn?: boolean; complete?: Complete | null } = {},
+  options: {
+    signedIn?: boolean;
+    complete?: Complete | null;
+    trustProxy?: boolean | string | string[];
+  } = {},
 ): App {
   const app = buildApp({
     prisma,
     sessionSecret: TEST_SESSION_SECRET,
     complete: options.complete ?? null,
+    trustProxy: options.trustProxy ?? false,
   });
   if (options.signedIn === false) return app;
 

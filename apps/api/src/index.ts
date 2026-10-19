@@ -29,6 +29,7 @@ const app = buildApp({
   sessionSecret,
   webOrigin: process.env['WEB_ORIGIN'] ?? 'http://localhost:3000',
   complete: anthropicKey === '' ? null : anthropicComplete(anthropicKey),
+  trustProxy: trustProxyFromEnv(process.env['TRUST_PROXY']),
 });
 
 try {
@@ -36,4 +37,20 @@ try {
 } catch (error) {
   app.log.error(error);
   process.exit(1);
+}
+
+/**
+ * Whether Fastify may read the client's address out of `X-Forwarded-For`, which decides what
+ * `request.ip` is and therefore what both rate limiters count by (decision 51). `true` trusts
+ * the nearest hop, which is what a single platform proxy needs; anything else is handed to
+ * Fastify as the addresses or subnets it may trust. Unset is off: right for a server reached
+ * directly, and wrong behind a proxy, where it counts the whole internet as one client.
+ * `PB-078` is where the deployment sets it.
+ */
+function trustProxyFromEnv(raw: string | undefined): boolean | string {
+  if (raw === undefined || raw.trim() === '') return false;
+  const value = raw.trim();
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
 }

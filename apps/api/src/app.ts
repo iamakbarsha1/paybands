@@ -67,6 +67,14 @@ export interface BuildAppOptions {
    * (decision 56) — this file never reads a key.
    */
   complete?: Complete | null;
+  /**
+   * What Fastify may believe about `X-Forwarded-For`, and therefore what `request.ip` is.
+   * Off by default: a server reached directly that trusts the header lets any caller claim
+   * any address, which is a limiter that counts nothing. Behind a proxy it has to be set,
+   * because every request then arrives from the proxy and both limiters count the whole
+   * internet as one client (decision 51).
+   */
+  trustProxy?: boolean | string | string[];
 }
 
 /** Strict, so `?departmant=2` is a 400 rather than a filter that quietly did nothing. */
@@ -81,7 +89,10 @@ const noQuery = z.strictObject({});
 
 /** Builds the instance without starting it, so tests drive it through `inject()` and never bind a port. */
 export function buildApp(options: BuildAppOptions): App {
-  const app = Fastify({ logger: options.logger ?? false }).withTypeProvider<ZodTypeProvider>();
+  const app = Fastify({
+    logger: options.logger ?? false,
+    trustProxy: options.trustProxy ?? false,
+  }).withTypeProvider<ZodTypeProvider>();
   // Read once, so the flag on /health and the route's own behaviour cannot disagree.
   const complete = options.complete ?? null;
 

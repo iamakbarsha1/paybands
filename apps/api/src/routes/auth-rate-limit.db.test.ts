@@ -74,3 +74,64 @@ describe.skipIf(!hasTestDatabase())('login rate limit', () => {
     expect(health.statusCode).toBe(200);
   });
 });
+
+/** Every request arrives from here, which is what a proxy does to an address. */
+const PROXY = '10.1.1.1';
+const GUESSER = '203.0.113.10';
+const BYSTANDER = '203.0.113.99';
+
+/**
+ * Half of decision 51's falsifier — *"a proxy in front of one ... makes it wrong in the other
+ * direction, and dangerous"* — fired here rather than waited for. A deployment is not needed
+ * to show it: `inject` can put every request behind one address and name the real client in
+ * `X-Forwarded-For`, which is exactly what a platform proxy does.
+ *
+ * What the two tests prove is that the limiter is correct either way and the configuration
+ * is the whole of the risk. Untrusted, five wrong passwords from one client refuse the next
+ * person through the same proxy — every visitor, on a public URL. Trusted, the same five
+ * refuse only the client that sent them.
+ */
+describe.skipIf(!hasTestDatabase())('login rate limit behind a proxy', () => {
+  let prisma: PrismaClient;
+
+  beforeAll(async () => {
+    prisma = testPrisma();
+    await resetAndSeed(prisma);
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  function forwarded(instance: App, client: string, password = 'wrong-password') {
+    return instance.inject({
+      method: 'POST',
+      url: '/auth/login',
+      remoteAddress: PROXY,
+      headers: { 'x-forwarded-for': client },
+      payload: { email: EMAIL, password },
+    });
+  }
+
+  it('counts the proxy as the client when it is not trusted, and locks out everyone behind it', async () => {
+    const behindProxy = testApp(prisma, { signedIn: false });
+    for (let index = 0; index < LOGIN_ATTEMPTS; index += 1) await forwarded(behindProxy, GUESSER);
+
+    const bystander = await forwarded(behindProxy, BYSTANDER, FIXTURE_PASSWORD);
+
+    expect(bystander.statusCode).toBe(429);
+    await behindProxy.close();
+  });
+
+  it('counts the forwarded client once the proxy is trusted, and refuses only the guesser', async () => {
+    const behindProxy = testApp(prisma, { signedIn: false, trustProxy: true });
+    for (let index = 0; index < LOGIN_ATTEMPTS; index += 1) await forwarded(behindProxy, GUESSER);
+
+    const bystander = await forwarded(behindProxy, BYSTANDER, FIXTURE_PASSWORD);
+    const guesser = await forwarded(behindProxy, GUESSER, FIXTURE_PASSWORD);
+
+    expect(bystander.statusCode).toBe(200);
+    expect(guesser.statusCode).toBe(429);
+    await behindProxy.close();
+  });
+});
