@@ -202,3 +202,39 @@ the HTTP/2 secure variant.
 almost never about that variant. Check the type of the property most recently added against
 the library's own declaration before reading anything else in the message, and prefer the
 library's declared union to one inferred from what the runtime tolerates.
+
+## Co-location is the most dangerous default a test harness supplies
+
+Every gate was green — typecheck, lint, 355 tests, build, and a new browser smoke driving the
+real UI — and the deployment would still have been unusable. The session cookie was
+`SameSite=Strict`, and the planned hosts are two registrable domains, which makes every call
+cross-site. A browser discards a Strict cookie arriving cross-site, so the login answers 200
+with a correct `Set-Cookie`, stores nothing, and signs the user out of every screen.
+
+The smoke could not see it because the harness ran both halves on one host. Nothing was wrong
+with the response, the log, or the code under test. The only wrong thing was an assumption the
+harness made true for free.
+
+**The rule.** When a test harness co-locates things that production separates, list what it
+made equal: hostname, scheme, port, origin, clock, process count. For each, construct the local
+case that makes it different. Here that was one line: point the browser at `localhost` while
+the API stayed on `127.0.0.1`, which is cross-site by the same rule as two vendor domains. All
+four smoke cases failed immediately.
+
+**The second rule.** Write the deployment document before the deployment, and treat it as a
+falsifier rather than paperwork. Writing "set this variable" forces you to name the two hosts,
+and naming them is what exposed the gap. No amount of staring at the session code would have.
+
+## An absence is not an assertion until something proves the locator finds things
+
+The smoke had to check that the ask bar is hidden on a server with no API key. A test that
+only checks the box is missing passes against a broken selector, a page that never rendered,
+and a feature that was deleted. It would have passed on an empty page.
+
+The fix was a fourth case that stubs the health response to say the key is there and requires
+the *same* locator to find the box. Then the pair means something: one says it appears, the
+other says it does not, and no single bug satisfies both.
+
+Generalised: for every assertion of the form "X is not present", write the sibling that makes X
+present through the same code path and the same locator. Then falsify both — here by giving the
+spawned server a key, which failed the absence case and left the presence case passing.
