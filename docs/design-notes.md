@@ -87,7 +87,7 @@ The brief names six. This adds the ones it implies.
 | Requirements | [`requirements.md`](requirements.md) — committed before the first implementation commit, so the order is itself evidence |
 | Planning / design notes | this document |
 | Architecture diagrams | [`architecture.md`](architecture.md) — system diagram and request flow for one analytics query |
-| AI prompts | `ai-usage.md` — prompts used, and where AI output was rejected and why |
+| AI prompts | [`ai-usage.md`](ai-usage.md) — prompts used, and where AI output was rejected and why |
 | Trade-offs | [`decisions/decision-log.md`](decisions/decision-log.md) |
 | Performance | [`performance.md`](performance.md) — query plans and timings against the full seed |
 
@@ -98,11 +98,11 @@ The brief names six. This adds the ones it implies.
 | ER diagram | [`data-model.md`](data-model.md) | The schema is the centre of this problem. A reviewer should judge it without reading a migration. |
 | README | [`../README.md`](../README.md) | Clone to running in two minutes, or nothing else gets read |
 | API contract | [`api.md`](api.md) | Makes the backend reviewable independently of the UI |
-| Test strategy | `testing.md` | What is unit versus integration tested, and why the maths gets the heaviest coverage |
-| Seed design | `seed-design.md` | Distributions, salary spread, and the outliers planted so the outlier report finds something true |
+| Test strategy | [`testing.md`](testing.md) | What is unit versus integration tested, and why the maths gets the heaviest coverage |
+| Seed design | [`seed-design.md`](seed-design.md) | Distributions, salary spread, and the outliers planted so the outlier report finds something true |
 | Glossary | [`glossary.md`](glossary.md) | One vocabulary for the UI, the code and the tests |
-| Security note | `security.md` | Sensitive data, public deployment. Auth, hashing, what is not logged. |
-| Demo | `demo.md` + video | Short script plus the recording |
+| Security note | [`security.md`](security.md) | Sensitive data, public deployment. Auth, hashing, what is not logged. |
+| Demo | [`demo.md`](demo.md) + video | Short script plus the recording |
 
 Not planned: changelog, contribution guide, issue templates. Nobody else is contributing, and the commit history already tells the story.
 
@@ -123,6 +123,25 @@ The role description reads *"4+ years of experience in ReactJS, Node, TypeScript
 | Tests | Vitest + Testing Library + one Playwright smoke | Fast and deterministic, which the brief asks for by name |
 | CI | GitHub Actions | A visibly green build says more than a paragraph about CI |
 | Deploy | Vercel (web) + Render or Fly (API) + Neon (DB) | Public URL, free tier, reproducible |
+
+**Two rows of that table turned out not to describe what was built.** Recorded here rather
+than edited away, because the planning note being wrong is itself worth a reviewer's time.
+
+The UI row credits server components with keeping the 10,000-row pages off the client. Every
+screen that reads data is a client component, and the four server components fetch nothing.
+What actually keeps the rows off the client is the `limit` cap of 100 on `GET /employees`.
+[`architecture.md`](architecture.md) found this and carries it.
+
+The Tests row names Testing Library. It was never installed, and `apps/web` has no test file
+of its own. The Playwright smoke in the same row does now exist (`PB-D12`,
+[decision 62](decisions/decision-log.md)) and is the only thing in the repository that
+executes code in `apps/web`. [`testing.md`](testing.md) carries this one, along with what it
+leaves untested.
+
+The Deploy row is still a plan. [`deploy.md`](deploy.md) is the runbook, and writing it found
+a third thing this table could not have told anybody: the web app and the API on two vendor
+domains are cross-site, which made the session cookie's `SameSite=Strict` a deployment that
+answers 200 and signs everyone out ([decision 63](decisions/decision-log.md), `PB-D15`).
 
 ---
 

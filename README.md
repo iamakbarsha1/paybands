@@ -4,16 +4,43 @@ Salary management and pay analytics for 10,000 employees across multiple countri
 
 The user is an HR manager who runs all of this in spreadsheets today. Two jobs: keep the salary data, and answer questions about how the organisation pays people.
 
-> Status: schema, migrations and a 10,000-employee seed in place. Comp maths next. Build order: [`tasks/todo.md`](tasks/todo.md).
+## Live
 
-## Running it
+| | |
+|---|---|
+| Web | _not deployed yet_ — [`docs/deploy.md`](docs/deploy.md) is the runbook |
+| API | _not deployed yet_ |
+| Email | `hr@paybands.example` |
+| Password | `paybands-demo-2026` |
 
-Node 24 (see `.nvmrc`) and pnpm via Corepack:
+The login is the seed's own and ships on purpose. Every row behind it is synthetic: names
+recombined from per-country pools, emails at the reserved `.example` domain, salaries computed
+by the generator ([`docs/security.md`](docs/security.md)). No real person is in this database.
+
+## Two minutes, from clone to running
+
+Node 24 (see `.nvmrc`), pnpm via Corepack, Docker for the database.
 
 ```bash
 corepack enable
 pnpm install
+
+docker compose up -d                                        # Postgres 17 on :5433
+cp apps/api/.env.example apps/api/.env                       # then set DATABASE_URL and DIRECT_URL
+#   both to: postgresql://paybands:paybands@localhost:5433/paybands_test
+#   and SESSION_SECRET to anything 32 characters or longer
+
+pnpm --filter @paybands/api db:migrate
+pnpm --filter @paybands/api db:seed                          # 10,000 employees, about 16 seconds
+pnpm dev                                                     # web on :3000, API on :3001
 ```
+
+Open `http://localhost:3000` and sign in with the credentials above.
+
+The ask bar needs `ANTHROPIC_API_KEY` in `apps/api/.env`. Without one it is off and every
+other screen works, which is the supported default rather than a degraded mode.
+
+## Commands
 
 | Command | Does |
 |---|---|
@@ -25,38 +52,26 @@ pnpm install
 
 ## Database
 
-Postgres on Neon, schema managed by Prisma.
-
-```bash
-cp apps/api/.env.example apps/api/.env       # fill in both URLs
-pnpm --filter @paybands/api db:migrate       # apply migrations
-pnpm --filter @paybands/api db:seed          # 10,000 employees, ~35k salary records
-```
+Postgres on Neon in production, a container locally. Schema managed by Prisma.
 
 Two connection strings rather than one. `DATABASE_URL` is pooled and serves the app; `DIRECT_URL` is unpooled and serves migrations, which take advisory locks and build a shadow database ([decision 20](docs/decisions/decision-log.md)).
 
-The seed is deterministic. Running it twice produces the same database, and `apps/api/src/seed/generate.test.ts` holds that to a committed hash.
+The seed is deterministic. Running it twice produces the same database, and `apps/api/src/seed/generate.test.ts` holds that to a committed hash. 10,000 employees and 34,898 salary records in about sixteen seconds.
 
-| Seeded login | |
-|---|---|
-| Email | `hr@paybands.example` |
-| Password | `paybands-demo-2026` |
+It contains planted outliers, because a report that finds nothing demonstrates nothing: 40 employees paid below their band minimum, 25 above the maximum, one department with a real gender pay gap, and one department too small for a gap to be reportable. [`docs/seed-design.md`](docs/seed-design.md) has the distributions and why each one is shaped the way it is.
 
-Every row in it is synthetic — names recombined from per-country pools, emails at the reserved `.example` domain, salaries computed by the generator ([`docs/security.md`](docs/security.md)).
+### Tests that need a database, and one that needs a browser
 
-It contains planted outliers, because a report that finds nothing demonstrates nothing: 40 employees paid below their band minimum, 25 above the maximum, one department with a real gender pay gap, and one department too small for a gap to be reportable.
-
-### Tests that need a database
-
-API tests ending in `.db.test.ts` run against real Postgres, not a mock. They skip themselves when `TEST_DATABASE_URL` is unset, so `pnpm test` works on a fresh clone; CI always sets it ([decision 46](docs/decisions/decision-log.md)).
+Four vitest projects. `core` and `api` need nothing. `api-db` runs against real Postgres, not a mock. `smoke` starts both apps against a seeded database and drives Chromium at them. Both of the last two skip themselves when what they need is missing, so `pnpm test` works on a fresh clone and runs 227 of the 360; CI refuses to let either skip ([decision 46](docs/decisions/decision-log.md)).
 
 ```bash
 docker compose up -d                           # Postgres 17 on :5433, data in tmpfs
 export TEST_DATABASE_URL='postgresql://paybands:paybands@localhost:5433/paybands_test'
-pnpm test                                      # migrations apply, then the suite runs
+pnpm exec playwright install chromium          # once, for the browser smoke
+pnpm test                                      # migrations apply, then all four projects run
 ```
 
-The harness loads 50 people rather than the shipped 10,000 — the same reference tables, a population small enough to reload between runs, and one planted example of every case a report has to render ([decision 45](docs/decisions/decision-log.md)). It refuses any database whose name does not end in `_test`.
+The harness loads 50 people rather than the shipped 10,000 — the same reference tables, a population small enough to reload between runs, and one planted example of every case a report has to render ([decision 45](docs/decisions/decision-log.md)). It refuses any database whose name does not end in `_test`. [`docs/testing.md`](docs/testing.md) has the strategy.
 
 ## API
 
@@ -108,13 +123,19 @@ Node 24 · TypeScript 6 · Fastify 5 · PostgreSQL via Prisma · Next.js 16 · R
 | [`docs/glossary.md`](docs/glossary.md) | Comp ratio, range penetration, percentile method, mean vs median gap |
 | [`docs/design-notes.md`](docs/design-notes.md) | The reasoning behind the scope and the stack |
 | [`docs/decisions/decision-log.md`](docs/decisions/decision-log.md) | Every real decision, argued against when it was made |
-| [`docs/decisions/sweep.md`](docs/decisions/sweep.md) | All 60 decisions ranked by what reversing one costs, with the one-way doors named |
-| [`docs/clarifications.md`](docs/clarifications.md) | Questions asked before building, and the defaults assumed while waiting |
+| [`docs/decisions/sweep.md`](docs/decisions/sweep.md) | The first 60 decisions ranked by what reversing one costs, with the one-way doors named |
+| [`docs/clarifications.md`](docs/clarifications.md) | Questions asked before building, the defaults assumed while waiting, and what each one would cost to be wrong |
+| [`docs/architecture.md`](docs/architecture.md) | System diagram, the boundaries and what enforces them, one analytics request traced hop by hop |
+| [`docs/api.md`](docs/api.md) | All sixteen routes, the one error shape, auth, limits and CORS |
+| [`docs/testing.md`](docs/testing.md) | What is unit tested, what is integration tested, why the maths carries 42% of the suite, and what is not tested at all |
+| [`docs/seed-design.md`](docs/seed-design.md) | Distributions, how the 48 bands are built, and the rows planted so the reports find something true |
 | [`docs/ai-usage.md`](docs/ai-usage.md) | How this build used an AI assistant, and the places its output was rejected |
 | [`docs/performance.md`](docs/performance.md) | Every analytics endpoint timed against the 10,000-row seed, before and after the one change made |
 | [`docs/security.md`](docs/security.md) | The two audits before deploy: what holds a credential, what the model is allowed to see, what personal data is held and what this build does not implement |
+| [`docs/deploy.md`](docs/deploy.md) | The runbook for the three deployment tickets, and the two environment variables that fail silently |
+| [`docs/demo.md`](docs/demo.md) | The demo script, minute by minute |
 | [`tasks/todo.md`](tasks/todo.md) | Phase-by-phase build order |
 
 ## CI
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs install → typecheck → lint → test → build on every push, as four named steps so a red build says which gate failed.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs install → typecheck → lint → test → build on every push, as four named gates so a red build says which one failed. A Postgres service container and a Chromium install sit in front of them, because the integration suite and the browser smoke refuse to skip in CI ([decision 46](docs/decisions/decision-log.md)).

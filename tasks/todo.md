@@ -170,29 +170,40 @@ Run the skills, fix what they find, commit the reports as artifacts.
 
 ## Phase 13 — Ship
 
-Everything here except `PB-D12` needs a person. The three deployment tickets are one sitting;
-the rest follow from them.
+**97 of 102.** Five tickets are open and every one of them needs a person: the three
+deployments, the video recording, and the email. Everything that did not need a person is
+closed, including the three that were only ever waiting for somebody to write them down.
+
+[`docs/deploy.md`](../docs/deploy.md) is the runbook for `PB-077`, `PB-078` and `PB-079`, in
+the order they have to happen and with the two variables that fail silently called out. It is
+a checklist to execute rather than a set of decisions to make.
 
 - [ ] **`PB-077`** — Neon production branch, migrations applied against `DIRECT_URL`, seed run
 - [ ] **`PB-078`** — API deployed (Render or Fly), health check green. **Set `TRUST_PROXY`** — both rate limiters count by `request.ip`, and behind a proxy with it unset, five wrong passwords lock out every visitor (decision 51, `PB-D13`). `docs/security.md` lists the other four things to confirm while the console is open: TLS so the `Secure` cookie arrives, the database role's grants, encryption and region, and the model provider's retention
-- [ ] **`PB-079`** — Web deployed on Vercel, `NEXT_PUBLIC_API_URL` pointed at the API, `WEB_ORIGIN` pointed back at it
+- [ ] **`PB-079`** — Web deployed on Vercel, `NEXT_PUBLIC_API_URL` pointed at the API, `WEB_ORIGIN` pointed back at it. **Set `CROSS_SITE_COOKIE=true`** unless both apps end up on one registrable domain (decision 63, `PB-D15`)
 - [x] CORS locked to the web origin, not `*` — pulled forward in phase 8, since the browser cannot reach the API without it
-- [ ] **`PB-081`** — README: live URL, demo credentials, two-minute local setup
+- [x] **`PB-081`** — README: demo credentials and a two-minute local setup. The seed timing in it was measured (15.7s for 10,000 employees and 34,898 salary records) and the boot path is the one the browser smoke drives on every run. The live URL is a marked placeholder [`docs/deploy.md`](../docs/deploy.md) fills in
 - [x] `docs/ai-usage.md` — the prompts, the skills, and where AI output was rejected and why
-- [ ] **`PB-083`** — Demo video, 3–5 minutes, scripted in `docs/demo.md` (the script is not written either)
+- [ ] **`PB-083`** — Demo video, 3–5 minutes. The script is written: [`docs/demo.md`](../docs/demo.md), minute by minute with what to leave out. Only the recording needs a person
 - [ ] **`PB-084`** — Reply to the email with the repo link
 - [x] **`PB-085`** — [`docs/architecture.md`](../docs/architecture.md): system diagram, the boundaries and what enforces them, one analytics request traced hop by hop
 - [x] **`PB-086`** — [`docs/api.md`](../docs/api.md): all sixteen routes, the one error shape, auth, limits, CORS
 
-### Carried into phase 13, needing a person
+### Carried into phase 13, and closed here
 
-- [ ] **`PB-D04`** — six clarifying questions still unanswered in [`docs/clarifications.md`](../docs/clarifications.md). They were sent and nothing came back; the build assumed an answer for each and recorded which
-- [ ] **`PB-D12`** — no committed browser smoke test, though `design-notes.md` §6 names one Playwright smoke in the stack. The screens were driven by hand. This is the one remaining ticket that does not need a person
+Both were on the board as needing a person. Neither did.
+
+
+- [x] **`PB-D04`** — seven clarifying questions went out and nothing came back. Six carried a default the build depended on, and [`docs/clarifications.md`](../docs/clarifications.md) now prices each one: what it bought and what being wrong would cost. Only multi-currency is a real one-way door. An answer arriving late is now a change with a known price
+- [x] **`PB-D12`** — a fourth vitest project, `smoke`, on the bare `playwright` package rather than `@playwright/test`, so `pnpm test` still runs everything. Four cases: login reaching a session, the band report rendering money, the ask bar absent without a key, and a stubbed `/health` proving the absence check is not vacuous. Decision 62
 
 ### Closed in phase 13, without a deployment
 
 - [x] **`PB-D13`** — `trustProxy` had no knob. Now `TRUST_PROXY`, read at the edge, with both behaviours held by tests. Decision 51's dangerous leg is fired and fixed; the multi-instance leg still needs a second process
 - [x] **`PB-D14`** — decision 36's "about $50, one part in ten million" was never measured. It is **$25.86, one part in 31.7 million** against the shipped seed. The verdict stays WEAK, because WEAK was always the **D** line rather than the size of the bias
+- [x] **`PB-D15`** — the session cookie was `SameSite=Strict` unconditionally, and the planned deployment is two registrable domains. A browser discards a Strict cookie arriving cross-site, so the login would have answered 200 and left every screen signed out, with nothing wrong in the log or the response. Now `CROSS_SITE_COOKIE`, read at the edge, with both values held by tests. Decision 63
+- [x] **`PB-087`** — [`docs/testing.md`](../docs/testing.md) and [`docs/seed-design.md`](../docs/seed-design.md), the last two artifacts `design-notes.md` §5 listed and nothing had written. Writing the first found that §6's "Testing Library" was never installed
+- [x] **`PB-088`** — [`docs/deploy.md`](../docs/deploy.md) and [`docs/demo.md`](../docs/demo.md). Writing the runbook is what found `PB-D15`
 
 ---
 
@@ -214,4 +225,4 @@ An index, not a second copy. Each phase's outcome is recorded in its own section
 | 10 | 53–56, 58 | The model is handed a question and a schema and never a row, and a lint rule proved unable to guarantee that — the handler reaches data through the module it exists to call. The bar answers with what it understood and a link, not with the rows |
 | 11 | 57 | `EXPLAIN (ANALYZE, BUFFERS)` said the queries were fine and they were. The 95 ms was the ORM's nested read binding 9,226 keys into a second statement; one join took it to 45 |
 | 12 | 59–60 | Two audits, three security findings fixed and one accepted in writing. All 60 decisions ranked by cost to reverse, and two WEAK entries flipped by their own falsifiers rather than by argument |
-| 13 | — | In progress; nothing is deployed. Two artifacts the brief names were written from the code rather than from the plan, and [`architecture.md`](../docs/architecture.md) found a planning note that was never true: §6 credits server components with keeping the 10k rows off the client, and every screen that reads data is a client component. What actually does it is the `limit` cap of 100. The three remaining WEAK decisions were revisited and **none moved** — 36's bias measured at $25.86 against an estimated $50, 51's dangerous leg fixed and tested while its other leg still needs a second process, and 7 closed as unanswerable from inside the repository |
+| 13 | 62–63 | Nothing is deployed, and everything that does not need a deployment is done. Five artifacts the brief or §5 names were written from the code rather than from the plan, and writing them found three things no test could: §6 credits server components with keeping the 10k rows off the client and every data-reading screen is a client component (the `limit` cap of 100 is what actually does it); §6 names Testing Library, which was never installed; and the deploy runbook named two vendor domains, which made the session cookie's `SameSite=Strict` a deployment that answers 200 and signs everyone out (`PB-D15`). The browser smoke `design-notes.md` has promised since phase 0 now exists, four cases, the fourth there to stop the third passing vacuously. The three remaining WEAK decisions were revisited and **none moved** — 36's bias measured at $25.86 against an estimated $50, 51's dangerous leg fixed and tested while its other leg still needs a second process, and 7 closed as unanswerable from inside the repository |
