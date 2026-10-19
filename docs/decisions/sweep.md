@@ -2,6 +2,11 @@
 
 `PB-075`, run at `256f002` over all 60 entries in [`decision-log.md`](decision-log.md).
 
+Two decisions postdate the ranking and are not in the tiers below: **61**, the response shapes
+moving to `packages/core`, and **62**, the browser smoke. Both record their own reversal cost
+in their log entries, and both are cheap, so neither would move a tier boundary. The sweep is
+not re-run for them; this line is here so the count reads as deliberate rather than stale.
+
 A log of 60 decisions read front to back is a list. Ranked by what it costs to undo each one,
 it is a map of where the build is committed and where it is still free. That is the only
 question this file answers: **if this turns out to be wrong, what does putting it right

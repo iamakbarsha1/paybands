@@ -1222,3 +1222,23 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** Leave the interfaces hand-written and add a test that compares `z.toJSONSchema` of each response against a committed snapshot, failing with "update `api-types.ts`". That is a tripwire rather than a guarantee: it tells you the shape moved, and still leaves two descriptions to reconcile by hand.
 **Falsifier:** A second consumer with a different idea of a response — a mobile client that wants dates as timestamps, or an export job that wants money as a number. Then one shared schema becomes a negotiation between consumers, and a generated client per consumer is the lazier answer.
+
+---
+
+### 62. The browser smoke is four cases on the bare `playwright` package, not a second test runner
+
+**SOUND** · reversal: cheap, one vitest project and two files · 2026-10-19 · phase 13, `PB-D12`
+
+**Decision:** `design-notes.md` §6 named one Playwright smoke from phase 0 and nothing had written it. It is now a fourth vitest project, `smoke`, rooted in `apps/api` beside the fixture and the database helpers it reuses. It seeds the 50-person fixture, starts the API and `next dev` against it, and drives Chromium at the pair. It uses the `playwright` package directly rather than `@playwright/test`, so `pnpm test` still runs every suite and there is no second config, reporter or CLI. Four cases: login reaching a session the next screen is admitted with, the band report rendering money, the ask bar absent on a keyless server, and the same locator finding the bar when `/health` is stubbed to say the key is there.
+
+**Evidence:** The fourth case exists because the third is an absence, and an absence passes against a broken locator, a crashed page and a feature that was never built. Falsified by giving the spawned server a key: the off-state case fails on its health assertion and the stubbed case still passes. Both halves of the gate were measured rather than assumed — `process.loadEnvFile` leaves an already-set variable alone, so the spawned API cannot reach a developer's database through `apps/api/.env`, and vitest runs projects in parallel unless given a `sequence.groupOrder`, which is why the smoke takes a later group than the `api-db` suite that truncates the same database.
+
+- **D** — Needed. Every screen had been driven by hand, and `design-notes.md` §5 and §6 both promised otherwise. It is also the only test that executes any code in `apps/web`.
+- **O** — Cheap. Deleting it is one project block in `vitest.config.ts`, one directory, one devDependency and one CI step.
+- **U** — No claim that four cases cover five report screens. They cover the three seams between the browser and the server: a cookie, a rendered number, and a feature flag read from the server rather than the build. The screens' arithmetic is `packages/core`'s 150 tests and the routes' 124 integration tests.
+- **B** — One devDependency on `@paybands/api`, a fourth vitest project, a Chromium install step in CI, and two new files. No report screen was touched.
+- **T** — Gives up the web-first assertions `@playwright/test` provides. Every wait is written out, which is more lines and says what it waits for. Gives up the trace viewer, the HTML report and retries, none of which a four-case smoke has yet needed.
+- **T** — Gives up a production build. It drives `next dev`, so `pnpm test` works on a fresh clone without a prior `pnpm build`, and the smoke sees the dev compiler rather than the bundle Vercel serves. A rendering difference between the two would pass here.
+
+**Cheaper:** No smoke, and a line in `testing.md` saying the screens are driven by hand. Rejected because the document already claimed the smoke existed, and a claimed test is worse than an absent one.
+**Falsifier:** A flake. If `next dev`'s on-demand compile makes the 120-second readiness budget unreliable on a cold CI runner, the cheaper answer is `pnpm build` before `pnpm test` and `next start`, which also removes the second T above. One red build for a reason that is not the code is the signal to make that trade.

@@ -15,7 +15,7 @@ import migrate from '../testing/global-setup';
  * covered anywhere else: a password reaching a session cookie, a report screen turning a
  * response into rendered money, and the ask bar's off-state. Everything below that line is
  * already held by 351 unit and integration tests, and a browser is the slowest place to
- * re-check any of it (decision 61).
+ * re-check any of it (decision 62).
  *
  * The server is started with no `ANTHROPIC_API_KEY`, which is the deployment this repository
  * ships by default and the state the third assertion is about.
