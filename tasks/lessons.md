@@ -172,3 +172,33 @@ serialises files within one run, and neither guard sees a second run.
 one — `pgrep -fl vitest` — and treat a failure that appears only under concurrency as a
 scheduling problem before reading it as a regression. The repair, if it ever earns one, is a
 Postgres advisory lock taken in the global setup, not more guards per file.
+
+## An estimate in a document is a number nobody has run
+
+**2026-10-19.** Decision 36 claimed truncating the FX conversion would cost "about $50 …
+roughly one part in ten million", and said plainly that this was the thin part of the entry.
+Measuring it took one test and no database: sum the converted payroll three ways, with the
+third accumulating undivided numerators and dividing once at the end so it rounds nowhere the
+other two do. The real figure is **$25.86, one part in 31.7 million** — pessimistic by about
+half, because 3,997 of the 9,226 rows are USD, quoted at 1,000,000 micros, and divide exactly.
+The first assertion written was `loss ≈ 0.5 × rows` and it failed at 0.28, which is how the
+exact-division rows were found at all.
+
+**Rule:** when a document states a number nobody has run, run it before quoting it again —
+the cost is usually one test, and the result is usually close enough to keep the conclusion
+and wrong enough to be worth replacing. Write the assertion against the claim as stated, so a
+mistaken model of the data fails loudly instead of being rounded into a passing bound.
+
+## A union type can break an overload you did not touch
+
+**2026-10-19.** Adding `trustProxy` to `Fastify({ … })` produced five errors about
+`Http2SecureServer` missing `maxHeadersCount`, in a file with no HTTP/2 in it. Fastify 5 types
+the option as `boolean | string | string[]`; the new code offered `boolean | number | string`,
+because `proxy-addr` accepts a hop count at runtime. `number` matches no overload, so
+TypeScript fell through all of them and reported the last one it tried, which happens to be
+the HTTP/2 secure variant.
+
+**Rule:** an overload error naming a server, transport or variant the code never mentions is
+almost never about that variant. Check the type of the property most recently added against
+the library's own declaration before reading anything else in the message, and prefer the
+library's declared union to one inferred from what the runtime tolerates.
