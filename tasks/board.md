@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 91 of 99 done; phases 0 to 12 are complete. Of the eight that remain, seven need a person — the deploy, the video, the submission, and six unanswered clarifying questions — and one (`PB-D12`, a committed browser smoke test) does not. The denominator is every ticket on this board except `PB-D06`, which is out of scope — earlier headlines said "of 90" and "of 94", which predated the debt tickets and the two documentation tickets phase 13 added.
+**Progress** — 97 of 102 done; phases 0 to 12 are complete and phase 13 is down to what a person has to do. The five that remain are the three deployments, the video recording, and the submission. Nothing on this board is now waiting on a session. The denominator is every ticket here except `PB-D06`, which is out of scope — earlier headlines said "of 90", "of 94" and "of 99", each predating tickets a later phase added.
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -26,8 +26,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 10 Ask bar (optional)   | 5       | 5    |
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 4    |
-| 13 Ship                 | 10      | 4    |
-| Debt and missed         | 14      | 11   |
+| 13 Ship                 | 12      | 7    |
+| Debt and missed         | 15      | 14   |
 
 ---
 
@@ -188,12 +188,14 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-078 | API deployed                  | todo   | PB-077         |
 | PB-079 | Web deployed                  | todo   | PB-078         |
 | PB-080 | CORS locked to the web origin | done   | —              |
-| PB-081 | README points at the live app | todo   | PB-079         |
+| PB-081 | README points at the live app | done   | —              |
 | PB-082 | AI usage documented           | done   | —              |
 | PB-083 | Demo video                    | todo   | PB-079         |
 | PB-084 | Submit                        | todo   | PB-081, PB-083 |
 | PB-085 | Architecture diagrams         | done   | —              |
 | PB-086 | API contract document         | done   | —              |
+| PB-087 | Test strategy and seed design documents | done | — |
+| PB-088 | Deploy runbook and demo script          | done | — |
 
 ## Debt and missed items
 
@@ -202,7 +204,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D01 | Database-level determinism assertion (decision 24 was WEAK) | done         | —          |
 | PB-D02 | The Legal level-mix fix has no test                        | done         | —          |
 | PB-D03 | Local commits are not pushed                               | done         | —          |
-| PB-D04 | Six clarifying questions still unanswered                  | todo         | —          |
+| PB-D04 | Seven clarifying questions unanswered, each default priced | done         | —          |
 | PB-D05 | The `packages/core` collapse test (decision 4)             | done         | PB-064     |
 | PB-D06 | Audit log of salary edits                                  | out of scope | —          |
 | PB-D07 | Web response types are aligned with the API's zod by hand  | done         | —          |
@@ -210,6 +212,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D09 | Phase 10 has no ticket for the web ask bar itself          | done         | PB-068     |
 | PB-D10 | The model adapter has no test of its own                   | done         | —          |
 | PB-D11 | The Review table in `todo.md` stops at phase 4              | done         | —          |
-| PB-D12 | No committed browser smoke test, though §6 names one       | todo         | —          |
+| PB-D12 | No committed browser smoke test, though §6 names one       | done         | —          |
 | PB-D13 | `trustProxy` had no knob, so `PB-078` had nothing to decide | done         | —          |
 | PB-D14 | Decision 36's immateriality claim was never measured        | done         | —          |
+| PB-D15 | Session cookie was SameSite=Strict, deployment is cross-site | done       | —          |

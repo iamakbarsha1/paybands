@@ -17,16 +17,19 @@ product exists to produce.
 |---|---|---|---|---|
 | `core` | `packages/core` | 9 | 150 | nothing |
 | `api` | `apps/api` | 8 | 77 | nothing |
-| `api-db` | `apps/api` | 18 | 124 | Postgres |
+| `api-db` | `apps/api` | 19 | 129 | Postgres |
 | `smoke` | `apps/api` | 1 | 4 | Postgres and Chromium |
 
-355 tests across 36 files. 71 seconds with a database and a browser, of which the smoke is 26.
+360 tests across 37 files. Between 71 and 146 seconds with a database and a browser, measured
+over two runs on the same machine. The variance is almost all `next dev` compiling each route
+on its first request, which is the price of the smoke not needing a prior `pnpm build`
+(decision 62).
 
 `pnpm test` runs all four. `pnpm vitest run --project core` runs one.
 
 ## Where the weight is, and why
 
-150 of 355 tests are in `packages/core`, which holds no framework, no I/O and no database.
+150 of 360 tests are in `packages/core`, which holds no framework, no I/O and no database.
 That is 42% of the suite aimed at 781 lines across ten files, against 4,219 lines in
 `apps/api` and 3,967 in `apps/web`. The smallest layer carries the most tests by a wide
 margin, and the ratio is the strategy stated as a number.
@@ -90,9 +93,16 @@ seed's own hash test pins (decision 45). The reference tables are imported from 
 rather than retyped, so only the population differs. `seed-design.md` has the planted rows.
 
 `harness.db.test.ts` is the harness proving itself, in 7 tests: migrations applied, the
-fixture loaded, the same rows every run. Everything the other 17 files assert rests on those
+fixture loaded, the same rows every run. Everything the other 18 files assert rests on those
 three facts, and when they are false the failures they produce point anywhere but at the
 cause.
+
+`auth-cross-site.db.test.ts` is the newest of them and the odd one out: it asserts a
+deployment fact rather than a behaviour. The session cookie is `SameSite=Strict` by default
+and `None` when the browser is on another site, and both values are pinned, because getting it
+wrong produces a login that answers 200 and signs everyone out. It also asserts what replaces
+the CSRF defence that `None` gives up, since `deploy.md` makes that claim in writing: a
+form-encoded POST from a signed-in session is refused with 415 before any handler runs.
 
 Without `TEST_DATABASE_URL` these skip, so `pnpm test` is green on a fresh clone with no
 Docker. With `CI` set the global setup throws instead, because a skipped integration suite and
@@ -118,7 +128,7 @@ was falsified by giving the spawned server a key: the third case fails on its he
 and the fourth still passes.
 
 Four cases and not forty. The seams between a browser and a server are a cookie, a rendered
-number and a flag; everything underneath is already held by the 351 tests above, and a browser
+number and a flag; everything underneath is already held by the 356 tests above, and a browser
 is the slowest place in this repository to re-check any of it.
 
 ## What is not tested, and why
@@ -153,7 +163,7 @@ pnpm exec playwright install chromium   # once, for the smoke
 pnpm test
 ```
 
-Without the first three lines, `pnpm test` runs 227 tests and skips the rest, and says so.
+Without the first three lines, `pnpm test` runs 227 tests and skips 133, and says so.
 
 ## The thing that was actually found
 

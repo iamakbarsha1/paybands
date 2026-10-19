@@ -1,5 +1,14 @@
 # Handoff
 
+> **Superseded for status, 2026-10-19.** Everything below was true at the end of phase 12 and
+> is kept as that session's record. Current state: **97 of 102**, 360 tests across 37 files,
+> typecheck, lint and build clean. Phase 13 closed everything that did not need a person:
+> `testing.md`, `seed-design.md`, `deploy.md`, `demo.md`, the clarification pricing (`PB-D04`),
+> the browser smoke (`PB-D12`), and one shipping blocker the runbook found (`PB-D15`, the
+> session cookie was `SameSite=Strict` against a cross-site deployment). Five tickets remain
+> and all five need a person: three deployments, the recording, the email.
+> [`board.md`](board.md) is the authority.
+
 Written at the end of the session that finished phase 12 and cleared the last of the debt a
 machine could clear. Read this, then `board.md` for status and `todo.md` for build order.
 
@@ -32,7 +41,7 @@ finding. `sweep.md` §"What phase 13 closed" has it.
 | `PB-074` | Legal exposure audit. The ask bar now says the question goes to Anthropic before anyone types in it, the route logs the translated query and never the question, and the demo data is confirmed synthetic with the method stated |
 | `PB-076` | `docs/security.md` — both audits as one artifact, including the five questions only a deployment can settle |
 | `PB-D01` | The seed's determinism is an assertion now, not an argument: `seed/determinism.db.test.ts` runs the writer twice and compares digests and sequences. Decision 24 is SOUND |
-| `PB-075` | `docs/decisions/sweep.md` — all 61 decisions ranked by cost to reverse, the one-way doors named, every WEAK entry resolved or restated |
+| `PB-075` | `docs/decisions/sweep.md` — all 60 decisions ranked by cost to reverse, the one-way doors named, every WEAK entry resolved or restated |
 | `PB-082` | `docs/ai-usage.md` — how this build used an AI assistant and the eight places its output was rejected |
 | `PB-D11` | The Review table in `todo.md` reaches phase 12 |
 | `PB-D07` | `packages/core/src/wire.ts`: one declaration per response, the API serialising through it and the browser's types inferred from it |
