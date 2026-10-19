@@ -59,11 +59,18 @@ Deploy `apps/api`. It is a pnpm workspace, so the build has to run from the repo
 
 | | |
 |---|---|
-| Build | `pnpm install --frozen-lockfile && pnpm --filter @paybands/api... build` |
+| Build | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @paybands/api... build` |
 | Start | `node apps/api/dist/index.js` |
 | Health check path | `/health` |
+| Root directory | blank — it is a pnpm workspace, so the build runs from the repository root |
 
-`postinstall` runs `prisma generate`, so the client is built before the API is.
+`corepack enable` comes first so `pnpm` is the version `packageManager` names, which is the
+version the lockfile was written by. `--frozen-lockfile` is the part that cares.
+
+`postinstall` runs `prisma generate`, so the client is built before the API is. That generate
+needs no database, and since `PB-D16` it no longer asks for one — it used to resolve
+`DIRECT_URL` at config load and take `pnpm install` down with it wherever no `.env` existed,
+which is every platform build and every fresh clone.
 
 ### Environment
 
@@ -75,6 +82,7 @@ Deploy `apps/api`. It is a pnpm workspace, so the build has to run from the repo
 | `TRUST_PROXY` | `true` | See below. This is the one that bites |
 | `CROSS_SITE_COOKIE` | `true`, unless both apps share one registrable domain | See below. This is the other one |
 | `ANTHROPIC_API_KEY` | A key, or leave it empty | Empty means the ask bar is off and everything else works |
+| `NODE_VERSION` | `24` | `engines.node` is `>=24` with no upper bound, which resolves to whatever is newest. Pin it |
 | `PORT`, `HOST` | Usually set by the platform | — |
 
 `DIRECT_URL` is not needed at runtime. The API does not migrate.
@@ -95,7 +103,7 @@ attacker gets ten attempts rather than five. Deploy one instance, or accept that
 
 ### `CROSS_SITE_COOKIE` is the one that looks like a bug in your code
 
-`paybands.vercel.app` and `paybands-api.onrender.com` are two different registrable domains,
+`paybands-flame.vercel.app` and `paybands-api.onrender.com` are two different registrable domains,
 which makes every call from the browser to the API a **cross-site** request. The session cookie
 ships as `SameSite=Strict`, and a browser discards a Strict cookie that arrives on a cross-site
 response.
@@ -145,6 +153,11 @@ from the lockfile.
 `NEXT_PUBLIC_API_URL` is inlined at build time, not read at runtime. Changing it needs a
 redeploy, not a restart.
 
+Read the production alias off the deployment rather than predicting it. Vercel project names
+are not yours to assume: `paybands` was taken, so this one is aliased `paybands-flame`. That
+is the whole reason `WEB_ORIGIN` is set second — guess it and CORS fails against a URL that
+looks right.
+
 Then go back to the API and set `WEB_ORIGIN` to the Vercel URL, and restart it. Until that
 happens every request from the browser fails preflight, which in the UI looks like "Could not
 reach the server" on every screen.
@@ -177,6 +190,24 @@ Fill the live URL into [`../README.md`](../README.md) where it is marked, which 
 purpose: `hr@paybands.example` / `paybands-demo-2026`.
 
 Then record the URL and the date in [`../tasks/todo.md`](../tasks/todo.md) under phase 13.
+
+## What shipped, 2026-10-19
+
+| | |
+|---|---|
+| Web | <https://paybands-flame.vercel.app>, Vercel, root directory `apps/web` |
+| API | <https://paybands-api.onrender.com>, Render free, Singapore, one instance |
+| Database | Neon `broad-base-15080110`, branch `production` (`br-long-truth-a1putcqw`) |
+
+Both platforms build from `main` on push, so a merge redeploys both.
+
+Render's free tier stops a service after 15 minutes without traffic and takes about a minute
+to start again. The README says so, because otherwise the first thing a reviewer meets is a
+login screen that hangs and no reason given.
+
+Two things this runbook got wrong before anybody ran it, now fixed above: the build command
+needed `corepack enable`, and `NODE_VERSION` needed pinning. A third was in the code rather
+than the document — see `PB-D16`.
 
 ## The rollback
 

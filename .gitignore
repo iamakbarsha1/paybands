@@ -23,3 +23,6 @@ next-env.d.ts
 
 # Playwright MCP writes snapshots and console logs here during verification.
 .playwright-mcp/
+
+# Project linkage written by `vercel link`. Local, and it names the team.
+.vercel

@@ -238,3 +238,43 @@ other says it does not, and no single bug satisfies both.
 Generalised: for every assertion of the form "X is not present", write the sibling that makes X
 present through the same code path and the same locator. Then falsify both — here by giving the
 spawned server a key, which failed the absence case and left the presence case passing.
+
+## A green gate on your machine and a green gate in CI are two different claims
+
+Five session summaries in a row reported typecheck, lint, tests and build clean. All five were
+honest. CI had been failing for five days at the same time, and nobody noticed, because the
+local run produced the green checklist everyone was looking for and the CI tab was never
+opened.
+
+The bug could only ever fail elsewhere. `prisma.config.ts` resolved `env('DIRECT_URL')` at
+config load, and `postinstall` runs `prisma generate` on every install. Locally a gitignored
+`.env` supplied the variable, so `pnpm install` worked. On CI, on a fresh clone, and on the
+Render build there is no `.env`, so install died before a single gate ran. Running the four
+commands locally could not have surfaced it however many times it was repeated.
+
+Reproducing it took one command — hide `.env`, run `prisma generate` — and the fix was to read
+the variable late. Measured both directions afterwards: generate now passes with no variable,
+and `migrate deploy` still fails loudly with `Connection url is empty` rather than silently
+connecting nowhere.
+
+Generalised: name the environment a result came from before calling it verification. When an
+authoritative environment exists — CI, staging, the deploy target — a local pass is a weaker
+claim wearing the same green tick, and the gap between them is exactly where environment-shaped
+bugs live. Go read the authoritative one. `gh run list` is two seconds.
+
+## The assumptions line at the top of a runbook is its most valuable test
+
+`docs/deploy.md` opened with "Everything below assumes the repository is pushed and CI is
+green." Both halves were false when the runbook was first executed: eight unpushed commits, and
+CI red since Oct 14. Checking the sentence instead of reading past it cost two commands and
+caught the blocker above — which would otherwise have surfaced as a failed build on a hosting
+dashboard, mid-deploy, with cloud resources already half-created.
+
+The same pass should cover tooling and credentials for *every* step, not just the first. The
+chain here was database then API then web, each needing the previous one's URL; discovering at
+step 2 that no Render CLI or key existed would have stranded a seeded database behind a step
+that could not run.
+
+Generalised: a procedure's stated preconditions are the conditions its author knew mattered and
+its reader is most likely to skim. Verify them, and the prerequisites of the whole chain, before
+the first irreversible action.

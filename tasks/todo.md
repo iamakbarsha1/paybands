@@ -170,19 +170,20 @@ Run the skills, fix what they find, commit the reports as artifacts.
 
 ## Phase 13 — Ship
 
-**97 of 102.** Five tickets are open and every one of them needs a person: the three
-deployments, the video recording, and the email. Everything that did not need a person is
-closed, including the three that were only ever waiting for somebody to write them down.
+**101 of 103.** Two tickets are open and both need a person: the video recording and the
+email. The three deployments went live on **2026-10-19** at
+<https://paybands-flame.vercel.app>, against the API at
+<https://paybands-api.onrender.com>.
 
 [`docs/deploy.md`](../docs/deploy.md) is the runbook for `PB-077`, `PB-078` and `PB-079`, in
 the order they have to happen and with the two variables that fail silently called out. It is
 a checklist to execute rather than a set of decisions to make.
 
-- [ ] **`PB-077`** — Neon production branch, migrations applied against `DIRECT_URL`, seed run
-- [ ] **`PB-078`** — API deployed (Render or Fly), health check green. **Set `TRUST_PROXY`** — both rate limiters count by `request.ip`, and behind a proxy with it unset, five wrong passwords lock out every visitor (decision 51, `PB-D13`). `docs/security.md` lists the other four things to confirm while the console is open: TLS so the `Secure` cookie arrives, the database role's grants, encryption and region, and the model provider's retention
-- [ ] **`PB-079`** — Web deployed on Vercel, `NEXT_PUBLIC_API_URL` pointed at the API, `WEB_ORIGIN` pointed back at it. **Set `CROSS_SITE_COOKIE=true`** unless both apps end up on one registrable domain (decision 63, `PB-D15`)
+- [x] **`PB-077`** — Neon production branch `production` (`br-long-truth-a1putcqw`) off `main`, migrations applied against `DIRECT_URL`, seed run. The branch copies its parent, so it arrived holding dev's drift — `max(id)` 10003 against the 10000 the seed writes — and the seed refused it until `PAYBANDS_SEED_FORCE=1` truncated. Verified by query rather than by the seed's own summary: employee 10000, app_user 1, salary_record 34898
+- [x] **`PB-078`** — API on Render free (`paybands-api`, Singapore, one instance), `/health` green on Render's own dashboard. `TRUST_PROXY=true` and `CROSS_SITE_COOKIE=true`, the second confirmed on the wire: the login cookie ships `Secure; SameSite=None`. Two things the runbook could not have known: `NODE_VERSION` is pinned to 24 because `engines.node` is an unbounded `>=24` that Render resolves to the newest release, and the build command needs `corepack enable` in front of it to get the pnpm the lockfile was written by
+- [x] **`PB-079`** — Web on Vercel, `NEXT_PUBLIC_API_URL` pointed at Render and `WEB_ORIGIN` pointed back. The production alias is `paybands-flame`, not `paybands` — that name was taken, which is why `WEB_ORIGIN` can only be set after the web app exists. CORS checked both ways: 204 for the real origin, 401 for anything else
 - [x] CORS locked to the web origin, not `*` — pulled forward in phase 8, since the browser cannot reach the API without it
-- [x] **`PB-081`** — README: demo credentials and a two-minute local setup. The seed timing in it was measured (15.7s for 10,000 employees and 34,898 salary records) and the boot path is the one the browser smoke drives on every run. The live URL is a marked placeholder [`docs/deploy.md`](../docs/deploy.md) fills in
+- [x] **`PB-081`** — README: demo credentials and a two-minute local setup. The seed timing in it was measured (15.7s for 10,000 employees and 34,898 salary records) and the boot path is the one the browser smoke drives on every run. The live URL placeholder was filled in on 2026-10-19, along with a note that Render's free tier sleeps after 15 idle minutes and the first request back waits about a minute — otherwise the reviewer's first impression is a login screen that hangs
 - [x] `docs/ai-usage.md` — the prompts, the skills, and where AI output was rejected and why
 - [ ] **`PB-083`** — Demo video, 3–5 minutes. The script is written: [`docs/demo.md`](../docs/demo.md), minute by minute with what to leave out. Only the recording needs a person
 - [ ] **`PB-084`** — Reply to the email with the repo link

@@ -1,13 +1,15 @@
 # Handoff
 
 > **Superseded for status, 2026-10-19.** Everything below was true at the end of phase 12 and
-> is kept as that session's record. Current state: **97 of 102**, 360 tests across 37 files,
-> typecheck, lint and build clean. Phase 13 closed everything that did not need a person:
-> `testing.md`, `seed-design.md`, `deploy.md`, `demo.md`, the clarification pricing (`PB-D04`),
-> the browser smoke (`PB-D12`), and one shipping blocker the runbook found (`PB-D15`, the
-> session cookie was `SameSite=Strict` against a cross-site deployment). Five tickets remain
-> and all five need a person: three deployments, the recording, the email.
-> [`board.md`](board.md) is the authority.
+> is kept as that session's record. Current state: **101 of 103**, 360 tests across 37 files,
+> typecheck, lint and build clean, and CI green. Phase 13 closed everything that did not need
+> a person: `testing.md`, `seed-design.md`, `deploy.md`, `demo.md`, the clarification pricing
+> (`PB-D04`), the browser smoke (`PB-D12`), and two shipping blockers the runbook found
+> (`PB-D15`, the session cookie was `SameSite=Strict` against a cross-site deployment;
+> `PB-D16`, `prisma generate` resolved `DIRECT_URL` at config load and failed every install
+> without an `.env`, which had CI red for five days and would have failed the platform build).
+> The deployment is live at <https://paybands-flame.vercel.app>. Two tickets remain and both
+> need a person: the recording and the email. [`board.md`](board.md) is the authority.
 
 Written at the end of the session that finished phase 12 and cleared the last of the debt a
 machine could clear. Read this, then `board.md` for status and `todo.md` for build order.

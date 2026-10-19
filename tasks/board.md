@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 97 of 102 done; phases 0 to 12 are complete and phase 13 is down to what a person has to do. The five that remain are the three deployments, the video recording, and the submission. Nothing on this board is now waiting on a session. The denominator is every ticket here except `PB-D06`, which is out of scope — earlier headlines said "of 90", "of 94" and "of 99", each predating tickets a later phase added.
+**Progress** — 101 of 103 done; phases 0 to 12 are complete and the three deployments are live. The two that remain are the video recording and the submission, and both need a person in front of a camera or an inbox. The denominator is every ticket here except `PB-D06`, which is out of scope — earlier headlines said "of 90", "of 94", "of 99" and "of 102", each predating tickets a later phase added.
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -26,8 +26,8 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 10 Ask bar (optional)   | 5       | 5    |
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 4    |
-| 13 Ship                 | 12      | 7    |
-| Debt and missed         | 15      | 14   |
+| 13 Ship                 | 12      | 10   |
+| Debt and missed         | 16      | 15   |
 
 ---
 
@@ -35,7 +35,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                                    | Status | Blocked by |
 | ------ | ---------------------------------------- | ------ | ---------- |
-| PB-077 | Production database                      | next   | PB-025     |
+| PB-083 | Demo video                               | next   | —          |
 
 ---
 
@@ -184,9 +184,9 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 
 | ID     | Story                         | Status | Blocked by     |
 | ------ | ----------------------------- | ------ | -------------- |
-| PB-077 | Production database           | todo   | PB-025         |
-| PB-078 | API deployed                  | todo   | PB-077         |
-| PB-079 | Web deployed                  | todo   | PB-078         |
+| PB-077 | Production database           | done   | PB-025         |
+| PB-078 | API deployed                  | done   | PB-077         |
+| PB-079 | Web deployed                  | done   | PB-078         |
 | PB-080 | CORS locked to the web origin | done   | —              |
 | PB-081 | README points at the live app | done   | —              |
 | PB-082 | AI usage documented           | done   | —              |
@@ -216,3 +216,4 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D13 | `trustProxy` had no knob, so `PB-078` had nothing to decide | done         | —          |
 | PB-D14 | Decision 36's immateriality claim was never measured        | done         | —          |
 | PB-D15 | Session cookie was SameSite=Strict, deployment is cross-site | done       | —          |
+| PB-D16 | `prisma generate` resolved `DIRECT_URL` at load, so `pnpm install` failed wherever no `.env` existed — CI red since Oct 14 | done | — |
