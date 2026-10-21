@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod';
-import { CURRENCY_CODES, GENDERS, SALARY_REASONS, SLICE_GROUPS } from './domain';
+import { CURRENCY_CODES, GENDERS, ROLES, SALARY_REASONS, SLICE_GROUPS } from './domain';
 
 /** Minor units as a string: JSON has no integer wide enough to be trusted with money. */
 export const moneyWire = z.strictObject({
@@ -170,12 +170,53 @@ export const referenceData = z.strictObject({
   jobLevels: z.array(z.strictObject({ id: z.number(), name: z.string() })),
 });
 
+/**
+ * `role` travels so the browser can stop offering a write it is going to be refused. It
+ * decides nothing: the API enforces the same role on every write it serves, and a screen
+ * that drew the button anyway would still get a 403.
+ */
 export const sessionUser = z.strictObject({
-  user: z.strictObject({ id: z.number(), email: z.string(), displayName: z.string() }),
+  user: z.strictObject({
+    id: z.number(),
+    email: z.string(),
+    displayName: z.string(),
+    role: z.enum(ROLES),
+  }),
 });
 
 /** `ask` is false on a server started without a key, and the ask bar reads it. */
 export const health = z.strictObject({ status: z.literal('ok'), ask: z.boolean() });
+
+/**
+ * `POST /ask`: one member per analytics endpoint, carrying exactly the parameters that
+ * endpoint already takes. `report` is the URL path segment, so a translated query names the
+ * route that runs it. Every member is strict: an invented key is a refusal rather than a
+ * field quietly dropped on the way to a report that then answers a different question.
+ *
+ * It lives here rather than in the API because the ask bar switches on `report` and the
+ * switch has to stop compiling the day a sixth report is added. Hand-copied beside the
+ * browser's own union, it did not — which is the falsifier decision 53 named for itself.
+ */
+export const askQuery = z.discriminatedUnion('report', [
+  z.strictObject({
+    report: z.literal('bands'),
+    country: z.string().length(2).optional(),
+    level: z.number().int().positive().optional(),
+  }),
+  z.strictObject({ report: z.literal('distribution'), groupBy: z.enum(SLICE_GROUPS) }),
+  z.strictObject({ report: z.literal('comp-ratio'), groupBy: z.enum(SLICE_GROUPS) }),
+  z.strictObject({ report: z.literal('pay-gap'), groupBy: z.enum(SLICE_GROUPS) }),
+  z.strictObject({ report: z.literal('outliers') }),
+]);
+
+/**
+ * The query travels beside the numbers because the screen has to show what the question was
+ * understood to mean. `result` is whatever report the query named, and each of the five
+ * already carries a schema on its own route; checking it here for being JSON catches a
+ * report handing back a bigint without restating a union that goes stale the day a report
+ * gains a field.
+ */
+export const askAnswer = z.strictObject({ query: askQuery, result: z.json() });
 
 export type MoneyWire = z.infer<typeof moneyWire>;
 export type EmployeeListItem = z.infer<typeof employeeListItem>;
@@ -197,3 +238,5 @@ export type PayGapReport = z.infer<typeof payGapReport>;
 export type ReferenceData = z.infer<typeof referenceData>;
 export type SessionUser = z.infer<typeof sessionUser>;
 export type Health = z.infer<typeof health>;
+export type AskQuery = z.infer<typeof askQuery>;
+export type AskAnswer = z.infer<typeof askAnswer>;

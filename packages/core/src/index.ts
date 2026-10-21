@@ -6,8 +6,8 @@ export {
   isCurrencyCode,
   minorUnitsFor,
 } from './domain';
-export { SLICE_GROUPS } from './domain';
-export type { Gender, SalaryReason, CurrencyCode, SliceGroup } from './domain';
+export { SLICE_GROUPS, ROLES } from './domain';
+export type { Gender, SalaryReason, CurrencyCode, SliceGroup, Role } from './domain';
 export { money, addMoney, compareMoney, moneyFromMajorUnits } from './money';
 export type { Money } from './money';
 export { employeeInput, employeePatch, salaryChangeInput } from './contracts';

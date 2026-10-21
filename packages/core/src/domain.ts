@@ -11,6 +11,16 @@ export type Gender = (typeof GENDERS)[number];
 export const SALARY_REASONS = ['hire', 'merit', 'promotion', 'market'] as const;
 export type SalaryReason = (typeof SALARY_REASONS)[number];
 
+/**
+ * What a signed-in person may do. `admin` is the HR administrator the brief describes and
+ * the only one who may write; `analyst` reads the same employees and the same reports.
+ *
+ * Coarse on purpose: a manager who may see their own reports only needs `app_user` joined to
+ * `employee`, and that join is the question decision 16 declined to answer (`docs/security.md`).
+ */
+export const ROLES = ['admin', 'analyst'] as const;
+export type Role = (typeof ROLES)[number];
+
 /** The groupings every sliced report offers. One closed set, so two reports cannot disagree. */
 export const SLICE_GROUPS = ['country', 'department', 'level'] as const;
 export type SliceGroup = (typeof SLICE_GROUPS)[number];
