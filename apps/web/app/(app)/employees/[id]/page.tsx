@@ -10,6 +10,7 @@ import { api } from '../../../../lib/api';
 import type { EmployeeDetail, ReferenceData } from '../../../../lib/api-types';
 import { formatMoney, formatRatio } from '../../../../lib/money';
 import { useApi } from '../../../../lib/use-api';
+import { useRole } from '../../../../lib/use-role';
 
 export default function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -19,6 +20,7 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   const [form, setForm] = useState<'none' | 'edit' | 'salary'>('none');
   const detail = useApi<EmployeeDetail>(`/employees/${id}`, saved);
   const reference = useApi<ReferenceData>('/reference');
+  const role = useRole();
 
   function afterWrite(): void {
     setForm('none');
@@ -74,31 +76,36 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={form === 'edit' ? 'primary' : 'outline'}
-          size="sm"
-          disabled={reference.state !== 'ready'}
-          onClick={() => {
-            setForm(form === 'edit' ? 'none' : 'edit');
-          }}
-        >
-          Edit details
-        </Button>
-        <Button
-          variant={form === 'salary' ? 'primary' : 'outline'}
-          size="sm"
-          disabled={reference.state !== 'ready'}
-          onClick={() => {
-            setForm(form === 'salary' ? 'none' : 'salary');
-          }}
-        >
-          Record a salary change
-        </Button>
-        {reference.state === 'error' && (
-          <Failure>{reference.message} The forms need the department and level lists.</Failure>
-        )}
-      </div>
+      {/* An analyst is shown the person and refused the forms, which is what the API does
+          with the same two writes. The buttons are absent rather than disabled: a disabled
+          control invites a second click, where an absent one has already said no. */}
+      {role === 'admin' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={form === 'edit' ? 'primary' : 'outline'}
+            size="sm"
+            disabled={reference.state !== 'ready'}
+            onClick={() => {
+              setForm(form === 'edit' ? 'none' : 'edit');
+            }}
+          >
+            Edit details
+          </Button>
+          <Button
+            variant={form === 'salary' ? 'primary' : 'outline'}
+            size="sm"
+            disabled={reference.state !== 'ready'}
+            onClick={() => {
+              setForm(form === 'salary' ? 'none' : 'salary');
+            }}
+          >
+            Record a salary change
+          </Button>
+          {reference.state === 'error' && (
+            <Failure>{reference.message} The forms need the department and level lists.</Failure>
+          )}
+        </div>
+      )}
 
       {reference.state === 'ready' && form === 'edit' && (
         <div className="rounded-[var(--radius)] border border-border p-4">

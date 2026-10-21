@@ -385,11 +385,16 @@ export type SalaryChangeResult =
  * Closing the open record and opening the next one is one transaction, because a history with
  * two open records — or none — is worse than a failed raise. The partial unique index is the
  * backstop underneath it (decision 18): two of these landing together, the loser hits P2002.
+ *
+ * The audit row is written inside that same transaction rather than after it, so there is no
+ * window in which a salary exists and the record of who set it does not. That is the whole
+ * claim this table makes, and committing it separately would be the one way to break it.
  */
 export async function recordSalaryChange(
   prisma: PrismaClient,
   employeeId: number,
   input: SalaryChangeInput,
+  actorUserId: number,
 ): Promise<SalaryChangeResult> {
   const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (employee === null) return { ok: false, reason: 'not-found', detail: 'no such employee' };
@@ -414,31 +419,45 @@ export async function recordSalaryChange(
     }
   }
 
-  const writes = [
-    ...(open === null
-      ? []
-      : [
-          prisma.salaryRecord.update({
-            where: { id: open.id },
-            data: { effectiveTo: effectiveFrom },
-          }),
-        ]),
-    prisma.salaryRecord.create({
-      data: {
-        employeeId,
-        amountMinor: input.amountMinor,
-        currencyCode: input.currencyCode,
-        effectiveFrom,
-        effectiveTo: null,
-        reason: input.reason,
-      },
-    }),
-  ];
-
   try {
-    const written = await prisma.$transaction(writes);
-    const created = written.at(-1);
-    if (created === undefined) throw new Error('the transaction wrote nothing');
+    // Interactive rather than an array of writes, because the audit row names the salary row
+    // this change created and that id does not exist until the create has run.
+    const created = await prisma.$transaction(async (tx) => {
+      if (open !== null) {
+        await tx.salaryRecord.update({
+          where: { id: open.id },
+          data: { effectiveTo: effectiveFrom },
+        });
+      }
+
+      const record = await tx.salaryRecord.create({
+        data: {
+          employeeId,
+          amountMinor: input.amountMinor,
+          currencyCode: input.currencyCode,
+          effectiveFrom,
+          effectiveTo: null,
+          reason: input.reason,
+        },
+      });
+
+      await tx.salaryAudit.create({
+        data: {
+          actorUserId,
+          employeeId,
+          salaryRecordId: record.id,
+          amountMinor: record.amountMinor,
+          currencyCode: record.currencyCode,
+          effectiveFrom: record.effectiveFrom,
+          reason: record.reason,
+          // The record this one closed, which is what "what did it change from" means here.
+          previousAmountMinor: open?.amountMinor ?? null,
+          previousCurrencyCode: open?.currencyCode ?? null,
+        },
+      });
+
+      return record;
+    });
 
     return {
       ok: true,
@@ -462,4 +481,32 @@ export async function recordSalaryChange(
         }
       : failed;
   }
+}
+
+/**
+ * Erasure: the person and everything written about them, in one transaction.
+ *
+ * Three tables, in the order the foreign keys allow — audit rows and salary rows both point
+ * at the employee, so both go before the employee does. One transaction because a half-erased
+ * subject is the failure this answers a request to avoid: salary history with no person
+ * attached is still their salary history.
+ *
+ * The audit rows go too. They exist to say who changed a salary, and keeping them after the
+ * subject has asked to be removed would keep the thing being audited — their pay — on file
+ * under a different table name (`docs/security.md`).
+ */
+export async function eraseEmployee(prisma: PrismaClient, id: number): Promise<boolean> {
+  const employee = await prisma.employee.findUnique({ where: { id }, select: { id: true } });
+  if (employee === null) return false;
+
+  // A manager's reports would orphan a foreign key, so they are detached rather than deleted:
+  // erasing one person is not a reason to erase the people who reported to them.
+  await prisma.$transaction(async (tx) => {
+    await tx.employee.updateMany({ where: { managerId: id }, data: { managerId: null } });
+    await tx.salaryAudit.deleteMany({ where: { employeeId: id } });
+    await tx.salaryRecord.deleteMany({ where: { employeeId: id } });
+    await tx.employee.delete({ where: { id } });
+  });
+
+  return true;
 }

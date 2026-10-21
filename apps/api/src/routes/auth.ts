@@ -18,7 +18,14 @@ const unauthorized = z.strictObject({ message: z.string() });
 const REFUSED = { message: 'Email or password is wrong' };
 
 function onWire(user: AppUserRow): z.infer<typeof userResponse> {
-  return { user: { id: user.id, email: user.email, displayName: user.displayName } };
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    },
+  };
 }
 
 export function registerAuthRoutes(app: App, prisma: PrismaClient, crossSite: boolean): void {
@@ -48,7 +55,7 @@ export function registerAuthRoutes(app: App, prisma: PrismaClient, crossSite: bo
         return reply.code(401).send(REFUSED);
       }
 
-      issueSession(reply, user.id, crossSite);
+      issueSession(reply, { userId: user.id, role: user.role }, crossSite);
       return reply.send(onWire(user));
     },
   );
@@ -57,17 +64,20 @@ export function registerAuthRoutes(app: App, prisma: PrismaClient, crossSite: bo
     '/auth/me',
     { schema: { response: { 200: userResponse, 401: unauthorized } } },
     async (request, reply) => {
-      const userId = readSession(request);
-      if (userId === null) return reply.code(401).send(REFUSED);
+      const session = readSession(request);
+      if (session === null) return reply.code(401).send(REFUSED);
 
-      const user = await findUserById(prisma, userId);
+      const user = await findUserById(prisma, session.userId);
       if (user === null) {
         // The signature was good and the account is gone: the cookie outlived its subject.
         clearSession(reply, crossSite);
         return reply.code(401).send(REFUSED);
       }
 
-      return reply.send(onWire(user));
+      // The cookie's role, not the row's. They differ only between a demotion and the next
+      // sign-in, and in that window the cookie is what the guard enforces — so it is also
+      // what the screen should describe, or the browser hides a button the API would allow.
+      return reply.send(onWire({ ...user, role: session.role }));
     },
   );
 

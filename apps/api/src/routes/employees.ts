@@ -15,10 +15,12 @@ import {
 import { z } from 'zod';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
+import { readSession } from '../auth/session';
 import {
   createEmployee,
   EMPLOYEE_SORTS,
   EMPLOYEE_STATUSES,
+  eraseEmployee,
   findEmployeeDetail,
   listEmployees,
   recordSalaryChange,
@@ -94,6 +96,45 @@ function asMoney(row: MoneyRow): Money {
   return money(row.amountMinor, row.currencyCode);
 }
 
+/**
+ * The detail payload, built once because two routes answer with it: the screen reads it and
+ * the subject-rights export saves it. Null is "no such employee".
+ */
+async function detailOnWire(
+  prisma: PrismaClient,
+  id: number,
+): Promise<z.infer<typeof detailResponse> | null> {
+  const detail = await findEmployeeDetail(prisma, id);
+  if (detail === null) return null;
+
+  const salary = detail.currentSalary === null ? null : asMoney(detail.currentSalary);
+  // `undefined` rather than null, because that is what core reads as "no band" (decision 38).
+  const band =
+    detail.band === null
+      ? undefined
+      : {
+          min: asMoney(detail.band.min),
+          mid: asMoney(detail.band.mid),
+          max: asMoney(detail.band.max),
+        };
+
+  return {
+    employee: detail.employee,
+    salaryHistory: detail.salaryHistory.map((record) => ({ ...record, ...onWire(record) })),
+    currentSalary: detail.currentSalary === null ? null : onWire(detail.currentSalary),
+    band:
+      detail.band === null
+        ? null
+        : {
+            min: onWire(detail.band.min),
+            mid: onWire(detail.band.mid),
+            max: onWire(detail.band.max),
+          },
+    compRatio: salary === null ? null : compRatio(salary, band),
+    rangePenetration: salary === null ? null : rangePenetration(salary, band),
+  };
+}
+
 export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
   app.get(
     '/employees',
@@ -122,37 +163,53 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
     '/employees/:id',
     { schema: { params: idParam, response: { 200: detailResponse, 404: notFound } } },
     async (request, reply) => {
-      const detail = await findEmployeeDetail(prisma, request.params.id);
+      const detail = await detailOnWire(prisma, request.params.id);
       if (detail === null) {
         return reply.code(404).send({ message: `No employee with id ${request.params.id}` });
       }
 
-      const salary = detail.currentSalary === null ? null : asMoney(detail.currentSalary);
-      // `undefined` rather than null, because that is what core reads as "no band" (decision 38).
-      const band =
-        detail.band === null
-          ? undefined
-          : {
-              min: asMoney(detail.band.min),
-              mid: asMoney(detail.band.mid),
-              max: asMoney(detail.band.max),
-            };
+      return reply.send(detail);
+    },
+  );
 
-      return reply.send({
-        employee: detail.employee,
-        salaryHistory: detail.salaryHistory.map((record) => ({ ...record, ...onWire(record) })),
-        currentSalary: detail.currentSalary === null ? null : onWire(detail.currentSalary),
-        band:
-          detail.band === null
-            ? null
-            : {
-                min: onWire(detail.band.min),
-                mid: onWire(detail.band.mid),
-                max: onWire(detail.band.max),
-              },
-        compRatio: salary === null ? null : compRatio(salary, band),
-        rangePenetration: salary === null ? null : rangePenetration(salary, band),
-      });
+  /**
+   * The subject's right of access: everything held about one person, as a file.
+   *
+   * Byte-for-byte the payload `GET /employees/:id` already answers with, because an export
+   * that assembles its own shape is a second description of the same person that can disagree
+   * with the first. The only difference is the header that makes a browser save it
+   * (`docs/security.md`).
+   */
+  app.get(
+    '/employees/:id/export',
+    { schema: { params: idParam, response: { 200: detailResponse, 404: notFound } } },
+    async (request, reply) => {
+      const detail = await detailOnWire(prisma, request.params.id);
+      if (detail === null) {
+        return reply.code(404).send({ message: `No employee with id ${request.params.id}` });
+      }
+
+      return reply
+        .header(
+          'content-disposition',
+          `attachment; filename="employee-${detail.employee.employeeCode}.json"`,
+        )
+        .send(detail);
+    },
+  );
+
+  /**
+   * The subject's right to erasure. Admin-only like every other write, and 204 rather than a
+   * body: there is nothing left to describe.
+   */
+  app.delete(
+    '/employees/:id',
+    { schema: { params: idParam, response: { 204: z.null(), 404: notFound } } },
+    async (request, reply) => {
+      const erased = await eraseEmployee(prisma, request.params.id);
+      return erased
+        ? reply.code(204).send(null)
+        : reply.code(404).send({ message: `No employee with id ${request.params.id}` });
     },
   );
 
@@ -198,18 +255,29 @@ export function registerEmployeeRoutes(app: App, prisma: PrismaClient): void {
         response: {
           201: salaryRecordResponse,
           400: badRequest,
+          401: notFound,
           404: notFound,
           409: notFound,
         },
       },
     },
     async (request, reply) => {
-      const written = await recordSalaryChange(prisma, request.params.id, {
-        amountMinor: BigInt(request.body.amountMinor),
-        currencyCode: request.body.currencyCode,
-        effectiveFrom: request.body.effectiveFrom,
-        reason: request.body.reason,
-      });
+      // The guard refuses this route without a session, so there is one. The audit row has a
+      // non-null actor column precisely so this cannot be reached with nobody to name.
+      const session = readSession(request);
+      if (session === null) return reply.code(401).send({ message: 'Sign in first' });
+
+      const written = await recordSalaryChange(
+        prisma,
+        request.params.id,
+        {
+          amountMinor: BigInt(request.body.amountMinor),
+          currencyCode: request.body.currencyCode,
+          effectiveFrom: request.body.effectiveFrom,
+          reason: request.body.reason,
+        },
+        session.userId,
+      );
 
       return written.ok
         ? reply.code(201).send({ ...written.record, ...onWire(written.record) })

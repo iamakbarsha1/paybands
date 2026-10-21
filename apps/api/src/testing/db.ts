@@ -1,4 +1,5 @@
 import { hash } from '@node-rs/argon2';
+import type { Role } from '@paybands/core';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../../generated/prisma/client';
 import { sign } from '@fastify/cookie';
@@ -24,6 +25,7 @@ const TABLES = [
   'pay_band',
   'employee',
   'salary_record',
+  'salary_audit',
   'app_user',
 ] as const;
 
@@ -65,9 +67,15 @@ function assertDisposable(url: string): void {
 /** Fixed, so a test can forge a cookie the app will accept and then prove it rejects it. */
 export const TEST_SESSION_SECRET = 'paybands-test-session-secret-0123456789';
 
-/** A live session for the fixture's one user, as the `Cookie` header a browser would send. */
-export function sessionCookie(): string {
-  const value = `${FIXTURE.appUsers[0]?.id ?? 1}.${Date.now() + SESSION_TTL_MS}`;
+/**
+ * A live session for one of the fixture's users, as the `Cookie` header a browser would
+ * send. Defaults to the admin, because that is the account most tests are not about.
+ */
+export function sessionCookie(role: Role = 'admin'): string {
+  const user = FIXTURE.appUsers.find((candidate) => candidate.role === role);
+  if (user === undefined) throw new Error(`the fixture has no ${role}`);
+
+  const value = `${user.id}.${role}.${Date.now() + SESSION_TTL_MS}`;
   return `${SESSION_COOKIE}=${encodeURIComponent(sign(value, TEST_SESSION_SECRET))}`;
 }
 
@@ -87,6 +95,7 @@ export function testApp(
   prisma: PrismaClient,
   options: {
     signedIn?: boolean;
+    as?: Role;
     complete?: Complete | null;
     trustProxy?: boolean | string | string[];
     crossSiteCookie?: boolean;
@@ -101,7 +110,7 @@ export function testApp(
   });
   if (options.signedIn === false) return app;
 
-  const cookie = sessionCookie();
+  const cookie = sessionCookie(options.as ?? 'admin');
 
   // Fastify's `inject` is overloaded past what a wrapper can restate, so the casts say
   // "same function, one header added" rather than reimplementing every signature.

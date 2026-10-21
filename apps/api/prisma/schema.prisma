@@ -126,6 +126,7 @@ model Employee {
   manager       Employee?      @relation("ReportsTo", fields: [managerId], references: [id])
   reports       Employee[]     @relation("ReportsTo")
   salaryRecords SalaryRecord[]
+  salaryAudits  SalaryAudit[]
 
   @@index([countryCode, departmentId, jobLevelId])
   @@index([terminationDate])
@@ -175,15 +176,71 @@ model PayBand {
   @@map("pay_band")
 }
 
+/// Two kinds of signed-in person. `admin` is the HR administrator the brief
+/// describes, and the only one who may write. `analyst` reads the same employees
+/// and the same five reports and is refused every write.
+///
+/// This is the column docs/security.md names as the thing that would make
+/// row-level security the right tool — it is not that policy. A manager who may
+/// see their own reports only needs `app_user` joined to `employee` first, and
+/// that join is still the open question decision 16 declined to answer.
+enum Role {
+  admin
+  analyst
+
+  @@map("role")
+}
+
 /// The login identity, deliberately unlinked from Employee. Joining the two
-/// raises "can she see her own row differently", and there is no role system to
-/// answer it. See docs/data-model.md.
+/// raises "can she see her own row differently", and the role column below
+/// answers only the coarser half of it. See docs/data-model.md.
 model AppUser {
   id           Int    @id @default(autoincrement())
   email        String @unique
   /// argon2id.
   passwordHash String @map("password_hash")
   displayName  String @map("display_name")
+  /// Defaulted, so every account that existed before this column is what it
+  /// already behaved as rather than silently losing its writes.
+  role         Role   @default(admin)
+
+  salaryAudits SalaryAudit[]
 
   @@map("app_user")
+}
+
+/// Every salary written, with who wrote it and what it replaced.
+///
+/// Separate from `salary_record` because that table is the state of a timeline
+/// and this is the history of edits to it: closing a record and opening another
+/// rewrites the timeline, and the row saying who rewrote it has to survive that.
+/// Append-only by use — nothing in the API updates or deletes one except the
+/// subject-rights delete, which removes the person entirely.
+model SalaryAudit {
+  id Int @id @default(autoincrement())
+
+  actorUserId Int @map("actor_user_id")
+  employeeId  Int @map("employee_id")
+  /// The `salary_record` this change created. Not a foreign key: a correction
+  /// may replace that row, and an audit entry that vanishes with the row it
+  /// describes is not an audit entry.
+  salaryRecordId Int @map("salary_record_id")
+
+  amountMinor   BigInt       @map("amount_minor")
+  currencyCode  String       @map("currency_code") @db.VarChar(3)
+  effectiveFrom DateTime     @map("effective_from") @db.Date
+  reason        SalaryReason
+
+  /// What they were on before this change. NULL on a first salary, which is a
+  /// hire rather than a raise from zero.
+  previousAmountMinor  BigInt? @map("previous_amount_minor")
+  previousCurrencyCode String? @map("previous_currency_code") @db.VarChar(3)
+
+  recordedAt DateTime @default(now()) @map("recorded_at") @db.Timestamptz(3)
+
+  actor    AppUser  @relation(fields: [actorUserId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, recordedAt])
+  @@map("salary_audit")
 }

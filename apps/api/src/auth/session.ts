@@ -1,7 +1,18 @@
 import '@fastify/cookie';
+import { ROLES, type Role } from '@paybands/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 export const SESSION_COOKIE = 'paybands_session';
+
+/** Who a request is entitled to be, and what that entitles it to. */
+export interface Session {
+  readonly userId: number;
+  readonly role: Role;
+}
+
+function isRole(value: string): value is Role {
+  return (ROLES as readonly string[]).includes(value);
+}
 
 /** One working day. Long enough that nobody logs in twice a morning, short enough to matter. */
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
@@ -30,43 +41,54 @@ export function sessionCookiePolicy(crossSite: boolean) {
 }
 
 /**
- * The cookie carries the user id and its own expiry, signed. The expiry is inside the
- * signature rather than left to `Max-Age` alone, because `Max-Age` is a request the browser
- * honours and a replayed cookie is not sent by a browser.
+ * The cookie carries the user id, the role and its own expiry, signed. The expiry is inside
+ * the signature rather than left to `Max-Age` alone, because `Max-Age` is a request the
+ * browser honours and a replayed cookie is not sent by a browser.
  *
  * There is no session table: logout clears the cookie, and a cookie stolen before then stays
  * valid until it expires. That ceiling is decision 50; a table of session ids is the upgrade.
+ *
+ * ponytail: the role rides in the cookie rather than being looked up per request, which
+ * costs a query nobody makes and buys the same ceiling decision 50 already accepted — a
+ * demotion takes effect at the next sign-in, not at the next request. The session table that
+ * fixes revocation fixes this in the same move; until there is one, a role change needs a
+ * sign-out, and that is the honest statement of it rather than a per-request round trip
+ * bought against a risk this deployment does not carry.
  */
 export function issueSession(
   reply: FastifyReply,
-  userId: number,
+  session: Session,
   crossSite: boolean,
   now: Date = new Date(),
 ): void {
-  reply.setCookie(SESSION_COOKIE, `${userId}.${now.getTime() + SESSION_TTL_MS}`, {
+  const expiry = now.getTime() + SESSION_TTL_MS;
+  reply.setCookie(SESSION_COOKIE, `${session.userId}.${session.role}.${expiry}`, {
     ...sessionCookiePolicy(crossSite),
     signed: true,
     maxAge: Math.floor(SESSION_TTL_MS / 1000),
   });
 }
 
-/** The user id a request is entitled to, or null. Null covers missing, tampered and expired. */
-export function readSession(request: FastifyRequest, now: Date = new Date()): number | null {
+/** Who a request is entitled to be, or null. Null covers missing, tampered and expired. */
+export function readSession(request: FastifyRequest, now: Date = new Date()): Session | null {
   const raw = request.cookies[SESSION_COOKIE];
   if (raw === undefined) return null;
 
   const unsigned = request.unsignCookie(raw);
   if (!unsigned.valid || unsigned.value === null) return null;
 
-  const [id, expiresAt] = unsigned.value.split('.');
-  if (id === undefined || expiresAt === undefined) return null;
+  const [id, role, expiresAt] = unsigned.value.split('.');
+  if (id === undefined || role === undefined || expiresAt === undefined) return null;
+  // A signed cookie from before this field existed parses as two parts, so it falls here
+  // rather than being read as an admin whose role happened to be a number.
+  if (!isRole(role)) return null;
 
   const userId = Number(id);
   const expiry = Number(expiresAt);
   if (!Number.isInteger(userId) || userId <= 0 || !Number.isFinite(expiry)) return null;
   if (expiry <= now.getTime()) return null;
 
-  return userId;
+  return { userId, role };
 }
 
 /** Cleared with the attributes it was set with, or the browser keeps the one it has. */

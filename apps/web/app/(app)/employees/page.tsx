@@ -7,6 +7,7 @@ import { Button, button } from '../../../components/ui/button';
 import { Empty, Failure, Loading, Skeleton } from '../../../components/ui/state';
 import type { EmployeePage, ReferenceData } from '../../../lib/api-types';
 import { useApi } from '../../../lib/use-api';
+import { useRole } from '../../../lib/use-role';
 
 /** What the API pages at (PB-037), which is how tall an unknown page is assumed to be. */
 const PAGE_SIZE = 25;
@@ -33,6 +34,7 @@ export default function EmployeesPage() {
 }
 
 function EmployeeList() {
+  const role = useRole();
   const router = useRouter();
   const params = useSearchParams();
 
@@ -86,9 +88,11 @@ function EmployeeList() {
             Twenty-five at a time, filtered and sorted by the server.
           </p>
         </div>
-        <Link href="/employees/new" className={button({ size: 'sm' })}>
-          Add an employee
-        </Link>
+        {role === 'admin' && (
+          <Link href="/employees/new" className={button({ size: 'sm' })}>
+            Add an employee
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

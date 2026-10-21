@@ -155,7 +155,7 @@ export function buildApp(options: BuildAppOptions): App {
       // Named, because the default is the browser's safelist — GET, HEAD and POST — and an
       // edit posts PATCH. `cors.test.ts` reads Fastify's route table and fails if a method
       // served here is missing from this list.
-      methods: ['GET', 'HEAD', 'POST', 'PATCH'],
+      methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
       // A string here would echo the configured origin back at every caller and leave the
       // refusal to the browser. Deciding per request means a stranger gets no header at all.
       origin(origin, callback) {

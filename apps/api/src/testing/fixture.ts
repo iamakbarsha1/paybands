@@ -1,4 +1,4 @@
-import type { CurrencyCode, Gender } from '@paybands/core';
+import type { CurrencyCode, Gender, Role } from '@paybands/core';
 import type { AppUserRow, EmployeeRow, SalaryRecordRow } from '../seed/generate';
 import {
   buildPayBands,
@@ -185,8 +185,14 @@ const payBands = buildPayBands().filter(
       band.countryCode === LANDMARKS.unbandedCountry
     ),
 );
-const appUsers: AppUserRow[] = [
-  { id: 1, email: 'hr@paybands.example', displayName: 'Test HR Manager' },
+/**
+ * Two accounts, because one role proves nothing about the other. The shipped seed still
+ * writes the single HR manager — adding a second there would move the committed hash in
+ * `generate.test.ts` for the sake of a login the demo script does not use.
+ */
+const appUsers: (AppUserRow & { role: Role })[] = [
+  { id: 1, email: 'hr@paybands.example', displayName: 'Test HR Manager', role: 'admin' },
+  { id: 2, email: 'analyst@paybands.example', displayName: 'Test Analyst', role: 'analyst' },
 ];
 
 export const FIXTURE = {
