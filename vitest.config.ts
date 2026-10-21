@@ -34,6 +34,22 @@ export default defineConfig({
         },
       },
       {
+        // The screens, in jsdom. No server and no network: `lib/api` is stubbed per file, so
+        // what is under test is the branch the screen takes on an answer, not the fetch.
+        // Node rather than a browser because the thing these cover is which of loading,
+        // empty, error and ready gets rendered — `smoke` already drives a real browser.
+        test: {
+          name: 'web',
+          root: './apps/web',
+          environment: 'jsdom',
+          include: ['{app,components,lib}/**/*.test.{ts,tsx}'],
+          setupFiles: ['./testing/setup.ts'],
+        },
+        // `tsconfig.json` leaves JSX for Next to compile (`"jsx": "preserve"`). Vitest never
+        // loads Next, so the transform has to be named here or every `.tsx` is a parse error.
+        oxc: { jsx: { runtime: 'automatic' } },
+      },
+      {
         test: {
           name: 'smoke',
           // Rooted in the API because that is where the fixture and the database helpers
