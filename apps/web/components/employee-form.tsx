@@ -275,6 +275,7 @@ function Choice({
         value={values[name]}
         onChange={(event) => set(name, event.target.value)}
         aria-invalid={error !== undefined}
+        aria-describedby={error === undefined ? undefined : `${name}-error`}
         className="h-10 w-full rounded-[var(--radius)] border border-border bg-background px-2 text-sm"
       >
         <option value="">Choose…</option>

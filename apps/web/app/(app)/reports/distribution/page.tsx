@@ -104,6 +104,9 @@ function Distribution() {
  * One bar per slice, from p25 to p90, with the median marked. The widths are a fraction of
  * the widest p90 on the page — geometry rather than money: the figures themselves are never
  * computed here, only read from the same response the table prints.
+ *
+ * `aria-hidden` because the table under it carries every figure these bars encode as width:
+ * announced, the bars are the same report read twice, the second time as unlabelled divs.
  */
 function Chart({ groups }: { groups: readonly DistributionGroup[] }) {
   const ceiling = Math.max(
@@ -113,7 +116,7 @@ function Chart({ groups }: { groups: readonly DistributionGroup[] }) {
   const across = (minor: string): number => (Number(minor) / ceiling) * 100;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" aria-hidden="true">
       {groups.map((group) => (
         <div key={group.key} className="flex items-center gap-3 text-sm">
           <span className="w-40 shrink-0 truncate" title={group.name}>
