@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../generated/prisma/client';
-import type { AskQuery } from '../ask/query';
+import type { AskQuery } from '@paybands/core';
 import { run } from '../ask/run';
 import type { Complete } from '../ask/translate';
 import { hasTestDatabase, resetAndSeed, testApp, testPrisma } from '../testing/db';

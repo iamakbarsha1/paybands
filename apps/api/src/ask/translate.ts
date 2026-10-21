@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { askQuery, type AskQuery } from './query';
+import { askQuery, type AskQuery } from '@paybands/core';
 
 /**
  * The whole of what this module asks a language model to do: take the rendered prompt and

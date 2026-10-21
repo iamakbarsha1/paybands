@@ -6,7 +6,7 @@ import {
   outliersReport,
   payGapReport,
 } from '../routes/analytics';
-import type { AskQuery } from './query';
+import type { AskQuery } from '@paybands/core';
 
 /** Whatever the chosen report answers. One member per arm of the switch below. */
 export type AskResult =

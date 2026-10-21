@@ -1,22 +1,13 @@
 import { z } from 'zod';
+import { askAnswer } from '@paybands/core';
 import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import { ASK_QUESTIONS, ASK_WINDOW_MS, createLimiter, limitHook } from '../auth/rate-limit';
 import { readSession } from '../auth/session';
-import { askQuery } from '../ask/query';
 import { run } from '../ask/run';
 import { translate, type Complete, type Translation } from '../ask/translate';
 
 const askBody = z.strictObject({ question: z.string().min(1) });
-
-/**
- * The query travels beside the numbers because the screen has to show what the question was
- * understood to mean. `result` is whatever report the query named, and each of the five
- * already carries a schema on its own route; checking it here for being JSON catches a
- * report handing back a bigint without restating a union that goes stale the day a report
- * gains a field.
- */
-const askResponse = z.strictObject({ query: askQuery, result: z.json() });
 
 /** Both ways this route declines, each with a sentence the ask bar can render. */
 const declined = z.strictObject({ message: z.string() });
@@ -42,10 +33,10 @@ export function registerAskRoutes(app: App, prisma: PrismaClient, complete: Comp
       // guard does not allow and this file does not rely on.
       onRequest: limitHook(
         take,
-        (request) => String(readSession(request) ?? request.ip),
+        (request) => String(readSession(request)?.userId ?? request.ip),
         (seconds) => `Too many questions. Try again in ${String(seconds)} seconds.`,
       ),
-      schema: { body: askBody, response: { 200: askResponse, 422: declined, 503: declined } },
+      schema: { body: askBody, response: { 200: askAnswer, 422: declined, 503: declined } },
     },
     async (request, reply) => {
       if (complete === null) return reply.code(503).send({ message: OFF });

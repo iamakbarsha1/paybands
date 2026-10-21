@@ -3,7 +3,7 @@ import type { PrismaClient } from '../../generated/prisma/client';
 import type { App } from '../app';
 import { SLICE_GROUPS, type SliceGroup } from '../repositories/analytics';
 import { hasTestDatabase, resetAndSeed, testApp, testPrisma } from '../testing/db';
-import type { AskQuery } from './query';
+import type { AskQuery } from '@paybands/core';
 import { run } from './run';
 
 /** The three reports that take a grouping. `report` is the path segment, so the URL follows. */
