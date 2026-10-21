@@ -68,6 +68,10 @@ But there is exactly one persona. A roles table and a permissions matrix would s
 
 > Ceiling: single role. An employee-facing view would need real authorisation; the route guard is where that changes.
 
+**The ceiling was lifted where it said it would be.** `PB-D20` ([decision 67](decisions/decision-log.md)) added an `analyst` role that reads everything and writes nothing, as one branch in that same route guard — a column and a default, not a permissions matrix. The plan was right about the mechanism and right to defer it: it cost one branch at the end because nothing in between had assumed a single role.
+
+What it still does not do is the thing this section actually described. Both roles see every employee, so there is no employee-facing view and no per-row authorisation. That needs `app_user` joined to `employee`, which [`security.md`](security.md) carries as the open question it has been since phase 2.
+
 ---
 
 ## 4. Data model
@@ -132,11 +136,14 @@ screen that reads data is a client component, and the four server components fet
 What actually keeps the rows off the client is the `limit` cap of 100 on `GET /employees`.
 [`architecture.md`](architecture.md) found this and carries it.
 
-The Tests row names Testing Library. It was never installed, and `apps/web` has no test file
-of its own. The Playwright smoke in the same row does now exist (`PB-D12`,
-[decision 62](decisions/decision-log.md)) and is the only thing in the repository that
-executes code in `apps/web`. [`testing.md`](testing.md) carries this one, along with what it
-leaves untested.
+The Tests row names Testing Library, and for most of the build it was wrong: nothing was
+installed and `apps/web` had no test file, leaving the Playwright smoke (`PB-D12`,
+[decision 62](decisions/decision-log.md)) as the only thing in the repository executing code
+in `apps/web`. It is right now — `PB-D21` added the `web` vitest project and 23 tests over
+the branches the smoke cannot reach. The row was accurate about the plan and wrong about the
+state of the repository for six phases, which is the thing worth a reviewer's time rather
+than the final tick. [`testing.md`](testing.md) carries what those tests cover and what they
+still do not.
 
 The Deploy row is still a plan. [`deploy.md`](deploy.md) is the runbook, and writing it found
 a third thing this table could not have told anybody: the web app and the API on two vendor

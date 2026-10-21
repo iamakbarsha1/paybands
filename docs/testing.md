@@ -9,30 +9,34 @@ least visible. A broken route returns a 500 somebody notices. A comp ratio that 
 wrong returns a number that looks exactly like a right one, and it is the number the whole
 product exists to produce.
 
-## The four projects
+## The five projects
 
-`vitest.config.ts` declares four, so a run says which layer failed without opening the log.
+`vitest.config.ts` declares five, so a run says which layer failed without opening the log.
 
 | Project | Root | Files | Tests | Needs |
 |---|---|---|---|---|
 | `core` | `packages/core` | 9 | 150 | nothing |
 | `api` | `apps/api` | 8 | 77 | nothing |
-| `api-db` | `apps/api` | 19 | 129 | Postgres |
+| `api-db` | `apps/api` | 22 | 156 | Postgres |
+| `web` | `apps/web` | 4 | 23 | nothing |
 | `smoke` | `apps/api` | 1 | 4 | Postgres and Chromium |
 
-360 tests across 37 files. Between 71 and 146 seconds with a database and a browser, measured
-over two runs on the same machine. The variance is almost all `next dev` compiling each route
-on its first request, which is the price of the smoke not needing a prior `pnpm build`
+410 tests across 44 files. Between 71 and 227 seconds with a database and a browser, measured
+over three runs on the same machine. The variance is almost all `next dev` compiling each
+route on its first request, which is the price of the smoke not needing a prior `pnpm build`
 (decision 62).
 
-`pnpm test` runs all four. `pnpm vitest run --project core` runs one.
+`pnpm test` runs all five. `pnpm vitest run --project core` runs one. On a clone with no
+database, 250 of the 410 run and the rest skip themselves.
 
 ## Where the weight is, and why
 
-150 of 360 tests are in `packages/core`, which holds no framework, no I/O and no database.
-That is 42% of the suite aimed at 781 lines across ten files, against 4,219 lines in
-`apps/api` and 3,967 in `apps/web`. The smallest layer carries the most tests by a wide
-margin, and the ratio is the strategy stated as a number.
+150 of 410 tests are in `packages/core`, which holds no framework, no I/O and no database.
+That is 37% of the suite aimed at 834 lines across ten files, against 4,291 lines in
+`apps/api` and 2,750 in `apps/web` — source only, counted with `wc -l` over every `.ts`,
+`.tsx` and `.css` outside `node_modules`, `.next` and the test files themselves. The smallest
+layer carries the most tests by a wide margin, and the ratio is the strategy stated as a
+number.
 
 The reason is a property of the domain rather than a preference. Every other layer fails
 loudly. A route with a bad schema is a 400 in a test that reads it. A query that joins wrong
@@ -93,7 +97,7 @@ seed's own hash test pins (decision 45). The reference tables are imported from 
 rather than retyped, so only the population differs. `seed-design.md` has the planted rows.
 
 `harness.db.test.ts` is the harness proving itself, in 7 tests: migrations applied, the
-fixture loaded, the same rows every run. Everything the other 18 files assert rests on those
+fixture loaded, the same rows every run. Everything the other 21 files assert rests on those
 three facts, and when they are false the failures they produce point anywhere but at the
 cause.
 
@@ -128,24 +132,28 @@ was falsified by giving the spawned server a key: the third case fails on its he
 and the fourth still passes.
 
 Four cases and not forty. The seams between a browser and a server are a cookie, a rendered
-number and a flag; everything underneath is already held by the 356 tests above, and a browser
+number and a flag; everything underneath is already held by the 406 tests above, and a browser
 is the slowest place in this repository to re-check any of it.
 
 ## What is not tested, and why
 
-**There are no component tests.** `design-notes.md` §6 lists "Vitest + Testing Library + one
-Playwright smoke" in the stack table. Testing Library was never installed, and `apps/web` has
-no test file of its own. The smoke is the only thing in the repository that executes code in
-`apps/web`.
+**The component tests cover four files, not nine screens.** For six phases there were none at
+all, and this section said so; `PB-D21` closed the gap the honest way round — by testing the
+branch the smoke cannot reach rather than by re-walking the happy path in jsdom.
 
-This is recorded rather than quietly corrected, in the same way `architecture.md` recorded §6's
-claim about server components. The honest position is that the screens are thin: they fetch,
-they branch on three states, and they hand numbers to two formatters. The branching is visible
-in the smoke, the formatters are `formatMoney` and `formatRatio` in a 22-line file over
-`Intl.NumberFormat`, and the shapes they read are inferred from the API's own zod schemas, so a
-field the API stops sending fails `pnpm typecheck` rather than a test (decision 61). What is
-genuinely untested is the rendering of a screen's error and empty branches, which the smoke
-reaches none of.
+The `web` vitest project runs in jsdom with `lib/api` stubbed per file, so what is under test
+is which of loading, error, empty and ready a screen renders, never a fetch. Twenty-three
+tests over `use-api`, `EmployeeForm`, `AskBar` and the distribution report. Two of them were
+falsified by reverting the fix they hold: removing `aria-describedby` from the `Choice`
+control fails the form's accessibility test, and a sixth member added to `askQuery` fails
+`pnpm typecheck` at `ask-bar.tsx:123`.
+
+What is still untested is the other five report screens and the employee list and detail
+pages. They branch the same four ways over the same hook, and the one screen that is covered
+is the one with geometry of its own. The formatters are `formatMoney` and `formatRatio` in a
+22-line file over `Intl.NumberFormat`, and the shapes every screen reads are inferred from
+the API's own zod schemas, so a field the API stops sending fails `pnpm typecheck` rather
+than a test (decision 61).
 
 **There are no performance regressions in CI.** `performance.md` is a measurement taken by
 hand against a separate database, not a gate. A timing assertion against a container on a

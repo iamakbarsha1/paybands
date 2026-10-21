@@ -43,7 +43,7 @@ places to show (decision 37).
 | | |
 |---|---|
 | Cookie | `paybands_session` ([`auth/session.ts:4`](../apps/api/src/auth/session.ts)) |
-| Value | `"<userId>.<expiresAtEpochMs>"`, signed with `SESSION_SECRET` |
+| Value | `"<userId>.<role>.<expiresAtEpochMs>"`, signed with `SESSION_SECRET` |
 | Flags | `httpOnly`, `secure`, `sameSite=strict`, `path=/`, `maxAge=28800` |
 | TTL | 8 hours, carried **inside** the signed value as well as in `Max-Age`, so a replayed cookie is refused even where `Max-Age` is ignored |
 | Issued | `POST /auth/login` only |
@@ -62,7 +62,27 @@ message is identical for an unknown email and a wrong password, and an unknown e
 for a dummy hash, so the response cannot be used to enumerate accounts
 ([`routes/auth.ts:43`](../apps/api/src/routes/auth.ts)).
 
-There are no roles. Decision 6 carries why, and its falsifier is any employee-facing view.
+### Roles
+
+Two, in the same hook. `admin` is the HR administrator the brief describes and may do
+everything. `analyst` reads everything and writes nothing.
+
+The refusal is `403 { "message": "Your account can read this data but not change it" }`, and
+it lands on `onRequest` alongside the 401 — before the body is parsed, so an analyst cannot
+learn the shape of a write by being told which field was wrong.
+
+What counts as a read is stated as the exception, not the rule: `GET`, `HEAD` and `OPTIONS`,
+plus `POST /ask`, which takes a body because the question is one and writes nothing. Every
+other method on every other path is admin-only, so a write route added tomorrow is closed
+until somebody names it in that set.
+
+The role travels in the signed cookie rather than being looked up per request, so a demotion
+takes effect at the next sign-in — the same ceiling decision 50 accepted for revocation.
+`GET /auth/me` reports the cookie's role for that reason: it describes what this session will
+be granted, not what the row says it should be.
+
+Both roles still see every employee. That is a column distinction, not a row one, and
+[`security.md`](security.md) carries why row-level security is still the wrong tool for it.
 
 ## Rate limits
 
@@ -151,7 +171,7 @@ halves are served here so the API and the UI cannot drift about what a valid gen
 
 | Status | Body |
 |---|---|
-| `200` | `{ "user": { "id": 1, "email": "…", "displayName": "…" } }`, plus `Set-Cookie` |
+| `200` | `{ "user": { "id": 1, "email": "…", "displayName": "…", "role": "admin" } }`, plus `Set-Cookie` |
 | `401` | `{ "message": "Email or password is wrong" }` |
 | `429` | `{ "message": "Too many sign-in attempts…" }` + `retry-after` |
 
@@ -215,7 +235,22 @@ gave it. Anything else fails validation with `not a cursor this API issued`.
 Three of those can be null independently and they mean different things: no salary on record, no
 band covering this level and country, and no ratio because one of the other two is missing.
 
-#### `POST /employees` — auth required → `201`
+#### `GET /employees/:id/export` — auth required
+
+The subject's right of access. Byte-for-byte the body `GET /employees/:id` answers with, plus
+`content-disposition: attachment; filename="employee-E-1001.json"`. One payload, not two
+descriptions of the same person ([`security.md`](security.md)).
+
+`404 { "message": "No employee with id 123" }`.
+
+#### `DELETE /employees/:id` — admin only → `204`
+
+The subject's right to erasure. The person, their salary history and their audit trail in one
+transaction; anyone who reported to them is detached, not erased. No body.
+
+`404 { "message": "No employee with id 123" }`.
+
+#### `POST /employees` — admin only → `201`
 
 Body is `employeeInput` ([`packages/core/src/contracts.ts:19`](../packages/core/src/contracts.ts)) —
 the same object the browser's form parses with, which is what stops the two from disagreeing
@@ -237,13 +272,13 @@ about a valid gender (decision 52).
 }
 ```
 
-#### `PATCH /employees/:id` — auth required → `200`
+#### `PATCH /employees/:id` — admin only → `200`
 
 Body is `employeePatch` — `employeeInput.partial()` refined to require at least one field. An
 empty object is a 400 saying `name at least one field`. The browser's form sends only what
 changed, which is what gives that refusal something to refuse.
 
-#### `POST /employees/:id/salary` — auth required → `201`
+#### `POST /employees/:id/salary` — admin only → `201`
 
 ```jsonc
 {
@@ -393,9 +428,10 @@ A question the schema cannot express is a 422 with a reason, not a guess.
 |---|---|
 | `200` | Reads, `PATCH`, login |
 | `201` | `POST /employees`, `POST /employees/:id/salary` |
-| `204` | `POST /auth/logout` |
+| `204` | `POST /auth/logout`, `DELETE /employees/:id` |
 | `400` | zod validation; `unknown-reference`, `out-of-order`, `currency-mismatch` |
 | `401` | The guard; failed login; a session naming a deleted user |
+| `403` | The guard: an `analyst` reaching a write |
 | `404` | Unmatched route; no such employee |
 | `409` | `duplicate` |
 | `422` | `/ask` could not translate the question |

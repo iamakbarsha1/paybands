@@ -35,8 +35,13 @@ schema (`apps/api/src/auth/guard.ts`). Three paths are public and they are decla
 together: `/health`, `/auth/login`, `/auth/logout`. A route added tomorrow is private
 without anybody remembering to make it so, and opening one is a visible edit to that set.
 
-**The session is a signed, HttpOnly, Secure, SameSite=Strict cookie** carrying a user id and
-its own expiry inside the signature (`apps/api/src/auth/session.ts`). The expiry is signed
+The same hook carries the role check, with the default pointed the same way: `GET`, `HEAD`,
+`OPTIONS` and `POST /ask` are reads an `analyst` may make, and everything else is admin-only.
+A write route added tomorrow is closed until somebody names it, and the 403 lands before the
+body is parsed, so an analyst cannot learn the shape of a write from a validation message.
+
+**The session is a signed, HttpOnly, Secure, SameSite=Strict cookie** carrying a user id, a
+role and its own expiry inside the signature (`apps/api/src/auth/session.ts`). The expiry is signed
 rather than left to `Max-Age`, because `Max-Age` is a request to a browser and a replayed
 cookie is not sent by a browser. There is no session table, so a stolen cookie stays valid
 until it expires — decision 50 carries that ceiling and names the upgrade. `SameSite=Strict`
@@ -138,13 +143,34 @@ identity data, and the employer's legitimate interest in pay analysis for the re
 Consent is the wrong basis for either — an employee cannot freely refuse their own payroll
 record.
 
-**Retention and the subject's rights are not implemented in this build, and that is accepted
-rather than overlooked.** There is no `DELETE /employees/:id`, no export endpoint and no purge
-job: `terminationDate` marks a leaver and keeps every row, including salary history, with no
-stated period. For a demo over synthetic rows the exposure is zero, and the work is named
-rather than done: a retention period per table, a delete that removes a person and their
-salary rows in one transaction, and an export of the same JSON the detail screen reads. A
-deployment holding real employees needs all three before it holds them.
+**Two of the subject's three rights are implemented; the retention period is stated and not
+enforced.** `PB-D19` built the two that are requests somebody makes:
+
+- **Access.** `GET /employees/:id/export` answers with the byte-for-byte payload
+  `GET /employees/:id` already serves, as an attachment. Not a second description of the same
+  person — an export that assembled its own shape could disagree with the screen.
+- **Erasure.** `DELETE /employees/:id` removes the person, their salary history and their
+  audit trail in one transaction, and detaches anyone who reported to them rather than
+  erasing them too. The audit rows go with the subject: they exist to say who changed a
+  salary, and keeping them after an erasure request would keep that salary on file under a
+  different table name.
+
+Both are admin-only, like every other write.
+
+**Retention is a stated period with no job behind it.** Nothing deletes on a schedule,
+because nothing in this deployment runs on one.
+
+| Table | Period | From |
+| --- | --- | --- |
+| `employee`, `salary_record` | 7 years | `termination_date` |
+| `salary_audit` | 7 years | `recorded_at` |
+| `app_user` | While the account exists | — |
+| Request logs | Whatever the host keeps; not configured here | — |
+
+Seven years is the usual statutory floor for payroll records in the jurisdictions the seed
+covers, and it is a number this repository chose rather than one a compliance team agreed. A
+deployment holding real employees needs the number checked and a job that acts on it; it has
+the two endpoints already.
 
 **A disputed answer can be reconstructed.** `POST /ask` logs the translated query and the
 report it ran, never the question text — the query is the part that is useful afterwards, and
@@ -180,13 +206,24 @@ the honest statement of it; no row describes anybody.
 | Is the data encrypted at rest, in an appropriate region, under a signed processor agreement? | The host's console and DPA | `PB-077` |
 | Does the model provider retain question text, and for how long? | The provider account's data settings | Before real data is typed into the bar |
 
-Row-level security is not one of these. There is one tenant, one database role and one kind
-of user: every signed-in person is an HR administrator by the brief, so `GET /employees/:id`
-serving any employee to any session is the product rather than a leak. Nothing but the API
-holds the connection string, and no browser talks to the database. A second kind of user —
-a manager who may see their own reports only — is the change that would make per-row policy
-the right tool, and it would arrive with a role column rather than as a policy bolted under
-the current one.
+Row-level security is still not one of these, and `PB-D20` moved the reason by one step
+rather than removing it.
+
+There are now two kinds of user. `admin` is the HR administrator the brief describes and the
+only one who may write; `analyst` reads the same employees and the same five reports and is
+refused every write, before the body is parsed — the guard answers 403 on `onRequest`, so an
+analyst cannot learn the shape of a write by being told which field was wrong. The role rides
+in the signed session cookie, which means a demotion takes effect at the next sign-in rather
+than the next request: the same ceiling decision 50 already accepted for revocation, and the
+session table that fixes one fixes the other.
+
+That is a *column* distinction, not a *row* one. Both roles still see every employee, so
+`GET /employees/:id` serving any employee to any session remains the product rather than a
+leak, and per-row policy would have nothing to filter on. The change that makes RLS the right
+tool is the one still missing: a manager who may see their own reports only, which needs
+`app_user` joined to `employee` — the join decision 16 declined to make, and the open question
+underneath both this row and that decision. Nothing but the API holds the connection string,
+and no browser talks to the database.
 
 ## The audits in one line each
 

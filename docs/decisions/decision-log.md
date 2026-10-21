@@ -465,7 +465,7 @@ So the verdict stays WEAK and stops being an open question. It is a statement ab
 
 - **D** — Yes. "Reseeding twice gives the same database" is a claim, and an untested claim is the thing this log exists to catch.
 - **O** — Cheap. The database-level check is added, not swapped in.
-- **U** — This is the weak part, and it is why the verdict is not SOUND. The test proves the generated rows are identical. It does not run the writer, so "the same database" rests on an argument rather than an assertion: the writer truncates, inserts explicit ids in a fixed order and sets each sequence, so its output is a function of the generator's.
+- **U** — This was the weak part, and it is why the verdict stood at WEAK until `PB-D01` below. The test proves the generated rows are identical. It does not run the writer, so "the same database" rests on an argument rather than an assertion: the writer truncates, inserts explicit ids in a fixed order and sets each sequence, so its output is a function of the generator's.
 - **B** — One test file. It runs in CI today, which the alternative does not.
 - **T** — Gives up catching nondeterminism introduced by the writer rather than the generator.
 
@@ -480,7 +480,7 @@ Two mutations were tried. A salt derived per call fails the digest comparison, w
 
 The cost is two full seeds, about 35 seconds, which took the database suite from 30 to 67. That is the price of the claim and it is paid only where there is a database: `describe.skipIf(!hasTestDatabase())`.
 
-**Run by hand, 2026-10-14:** three consecutive seeds, with an `md5(string_agg(row::text ORDER BY id))` taken over `employee`, `salary_record`, `pay_band` and `app_user` between runs. All four digests identical, and `employee_id_seq` and `salary_record_id_seq` both back at their row counts. That is the argument executed rather than asserted, including the fixed argon2 salt holding `app_user` steady. The verdict stays WEAK because this ran on a laptop against one database and CI still cannot.
+**Run by hand, 2026-10-14:** three consecutive seeds, with an `md5(string_agg(row::text ORDER BY id))` taken over `employee`, `salary_record`, `pay_band` and `app_user` between runs. All four digests identical, and `employee_id_seq` and `salary_record_id_seq` both back at their row counts. That is the argument executed rather than asserted, including the fixed argon2 salt holding `app_user` steady. On this evidence alone the verdict stayed WEAK, because it ran on a laptop against one database and CI still cannot; what lifted it to SOUND is the committed test in the `PB-D01` note above, which runs the same comparison wherever there is a database.
 
 ---
 
@@ -1262,3 +1262,106 @@ The guarantee is about data the system holds, not about the words the user typed
 
 **Cheaper:** Put both apps under one registrable domain, through a custom domain pair or a Vercel rewrite proxying the API. Then `Strict` is correct and no flag is needed. That is the better deployment and it is what the document recommends; the flag exists because the free-tier default is two vendor domains, and a build that only works on a paid custom domain is a build that does not work.
 **Falsifier:** A second browser client on a third origin. The flag is one boolean for one web app, and CORS is already one origin for the same reason; a second consumer turns both into a list, which is a different design rather than a bigger value.
+
+---
+
+### 64. The ask query moves to `packages/core`, because the switch that reads it is in the browser
+
+**SOUND** · reversal: cheap, it is a file move and five imports · 2026-10-21 · `PB-D17`
+
+**Decision:** `askQuery` and `askAnswer` live in `packages/core/src/wire.ts`. The API imports the schema it validates with; the browser infers `AskQuery` from the same declaration. `apps/api/src/ask/query.ts` is gone.
+
+**Evidence:** Decision 53 kept the ask schema in the API on the grounds that the API is its one enforcer. That was true of validation and false of consumption: `ask-bar.tsx:123` switches on `query.report` and returns from every arm, and TypeScript proves that switch exhaustive — against the browser's own hand-written union at `api-types.ts:49`, not against the schema the server validates with.
+
+- **D** — Yes. Two unions, one of them hand-maintained, with a comment saying "stays hand-aligned". A sixth report added to the server's union left the browser compiling and silently unable to describe it.
+- **O** — No. It is the same declaration in a different package.
+- **U** — Tested, not argued: a sixth member added to `askQuery` fails `pnpm typecheck` at `ask-bar.tsx:123` with "Function lacks ending return statement". Removed again, the typecheck is clean.
+- **B** — Five imports in the API, one re-export in the browser.
+- **T** — `packages/core` now knows the names of five HTTP routes. It already held every response shape (decision 61), so the boundary decision 4 draws is where it was.
+
+**Cheaper:** A test in the browser asserting the two unions match. Rejected: that is a second thing to keep accurate, where this deletes one.
+**Falsifier:** It was falsified in the other direction — decision 53 wrote "a report added to the union and not to the bar" as the thing that would prove it wrong, and that is exactly what was demonstrated above.
+
+---
+
+### 65. Every salary change writes an audit row, in the same transaction
+
+**SOUND** · reversal: moderate, a table and a column on the write path · 2026-10-21 · `PB-D18`
+
+**Decision:** `salary_audit` records the actor, the employee, the salary row created, the amount and the amount it replaced. It is written inside the `$transaction` that closes the open record and opens the next one, which is why that transaction became interactive rather than an array of writes.
+
+**Evidence:** `PB-D06` sat on the backlog with nothing behind it: `grep -rl audit apps/api/src` found no file. The write path had no actor at all — `recordSalaryChange` took a prisma client, an employee id and a body, and never learned who was asking.
+
+- **D** — Yes. Salary history is the one thing in this dataset somebody disputes afterwards, and "who set this" was unanswerable.
+- **O** — No. It is an append-only table nothing reads yet.
+- **U** — The claim is "no salary exists without a row naming who set it", and the test that holds it counts audit rows against committed raises rather than reading back the one it just wrote. Two raises racing, one losing on the partial unique index, must leave exactly one audit row.
+- **B** — The write path, the route (which now reads the session), and the test fixture's truncate list.
+- **T** — The audit is only of salary changes. A joiner and an edit go unrecorded, which is the smaller half of the question and is stated rather than implied.
+
+**Cheaper:** Writing the audit row after the transaction commits. Rejected for the one reason the table exists: that leaves a window in which the salary is on file and the record of who set it is not, and it is exactly the window a dispute lands in.
+**Falsifier:** A committed salary change with no audit row, or an audit row for a raise that was refused.
+
+**Not done, and named:** nothing reads the table. There is no `GET /employees/:id/audit`. An audit log's first job is to be written correctly and its second is to be readable; the second is a route over a table that already has the index for it.
+
+---
+
+### 66. The subject's rights are two endpoints and a stated period, not a purge job
+
+**SOUND** · reversal: cheap, two routes · 2026-10-21 · `PB-D19`
+
+**Decision:** `GET /employees/:id/export` answers with the byte-for-byte payload `GET /employees/:id` already serves, as an attachment. `DELETE /employees/:id` removes the person, their salary history and their audit rows in one transaction, and detaches their reports. Retention is a documented period per table with nothing enforcing it.
+
+**Evidence:** `security.md` named all three pieces and had none of them: *"a retention period per table, a delete that removes a person and their salary rows in one transaction, and an export of the same JSON the detail screen reads"*.
+
+- **D** — Yes for the two endpoints: they are requests a subject makes, and a deployment holding real employees cannot answer either one today.
+- **O** — The delete is, per row. That is the point of it.
+- **U** — Tested. The export is asserted equal to the detail response rather than against a shape written out again. The delete is asserted on what survives as well as what goes: the people who reported to the erased employee are still there, with a null manager.
+- **B** — One repository function, two routes, one line in the CORS method list — which the existing `cors.test.ts` would have caught had it been missed.
+- **T** — Erasing a subject takes their audit rows with them, so "who changed this salary" is unanswerable for a person who asked to be removed. That is the right trade and it is a real loss.
+
+**Cheaper:** A soft delete — a `deleted_at` column, rows kept. Rejected: a request to be erased is not answered by a flag, and the rows that make the request worth making are the ones a flag keeps.
+**Falsifier:** A `DELETE` that leaves a salary row, an audit row or an orphaned `manager_id` behind; or an export that differs from the screen.
+
+**Weak on retention.** Seven years is a number this repository chose, not one a compliance team agreed, and nothing acts on it — there is no scheduler in this deployment to act with. A period nobody enforces is a statement of intent, and `security.md` says so in those words rather than implying a job exists.
+
+---
+
+### 67. A second role is a column and one branch in the existing guard
+
+**SOUND** · reversal: cheap, the column defaults to the role everyone already had · 2026-10-21 · `PB-D20`
+
+**Decision:** `app_user.role` is `admin` or `analyst`. The guard that already refuses an unauthenticated request now refuses an analyst's write, in the same `onRequest` hook, before the body is parsed. The role rides in the signed session cookie.
+
+**Evidence:** `security.md` priced this as the change that would make row-level security the right tool, and named the shape: *"it would arrive with a role column rather than as a policy bolted under the current one"*.
+
+- **D** — Yes, narrowly. Not because this deployment has analysts, but because the role column is what every remaining access-control question in this repository was deferred against, and it cost one branch.
+- **O** — No. The column defaults to `admin`, so every account that existed before it behaves as it did.
+- **U** — Tested in both directions, which is the part that matters: an analyst is refused all four writes and served all nine reads. A role that refuses too much is the same bug with the opposite sign. Falsified by making the guard return early for everyone: five tests fail.
+- **B** — The session cookie's format, every call site of `readSession`, the login response, and the two screens that offer a write.
+- **T** — The role is in the cookie, so a demotion takes effect at the next sign-in rather than the next request.
+
+**Cheaper:** Looking the role up per request. Rejected: it buys revocation this deployment does not have anyway — decision 50 already accepted that a stolen cookie stays valid until it expires — at the price of a query on every request. The session table that fixes revocation fixes this in the same move.
+**Falsifier:** An analyst completing any write, or being refused any read.
+
+**What it does not settle.** Both roles still see every employee. That is a column distinction, not a row one, so row-level security still has nothing to filter on. The change that would need it is a manager who may see their own reports only, and that needs `app_user` joined to `employee` — the join decision 16 declined to make, and still the open question.
+
+---
+
+### 68. The component tests cover the branch the smoke cannot reach, not the one it already does
+
+**SOUND** · reversal: cheap, a vitest project and four files · 2026-10-21 · `PB-D21`
+
+**Decision:** A `web` vitest project in jsdom, with `lib/api` stubbed per file. Twenty-three tests over `use-api`, `EmployeeForm`, `AskBar` and the distribution report.
+
+**Evidence:** `design-notes.md` §6 promised Testing Library and `apps/web` had no test file; `testing.md` recorded the discrepancy and named what it left untested — *"the rendering of a screen's error and empty branches, which the smoke reaches none of"*.
+
+- **D** — Yes, and the scope is the argument. The happy path through every screen is already walked by a real browser against a real server (decision 62). What that run cannot do is make the server slow, empty or broken on demand, which is three of the four branches every screen has.
+- **O** — No.
+- **U** — Two of the tests were falsified by reverting the fix they hold: removing `aria-describedby` from the `Choice` control fails the form's accessibility test with `expected null to be 'countryCode-error'`.
+- **B** — A vitest project, a two-line setup file, and `oxc: { jsx: { runtime: 'automatic' } }` — `tsconfig.json` leaves JSX for Next to compile, and vitest never loads Next.
+- **T** — jsdom is not a browser. These tests cannot see layout, focus order or anything CSS decides.
+
+**Cheaper:** More Playwright cases. Rejected on cost: a browser is the slowest place in this repository to assert that an error message rendered, and forcing a 503 through a real server to see the sentence is a fixture for every case.
+**Falsifier:** A screen whose error or empty branch is broken while this suite is green.
+
+**Four files, not nine screens.** The other report pages and the employee list and detail pages branch the same four ways over the same hook. The one screen covered is the one with geometry of its own.

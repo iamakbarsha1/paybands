@@ -67,7 +67,7 @@ It contains planted outliers, because a report that finds nothing demonstrates n
 
 ### Tests that need a database, and one that needs a browser
 
-Four vitest projects. `core` and `api` need nothing. `api-db` runs against real Postgres, not a mock. `smoke` starts both apps against a seeded database and drives Chromium at them. Both of the last two skip themselves when what they need is missing, so `pnpm test` works on a fresh clone and runs 227 of the 360; CI refuses to let either skip ([decision 46](docs/decisions/decision-log.md)).
+Five vitest projects. `core`, `api` and `web` need nothing — `web` runs the screens in jsdom with the API stubbed. `api-db` runs against real Postgres, not a mock. `smoke` starts both apps against a seeded database and drives Chromium at them. Both of the last two skip themselves when what they need is missing, so `pnpm test` works on a fresh clone and runs 250 of the 410; CI refuses to let either skip ([decision 46](docs/decisions/decision-log.md)).
 
 ```bash
 docker compose up -d                           # Postgres 17 on :5433, data in tmpfs

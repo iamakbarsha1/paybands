@@ -14,6 +14,8 @@ erDiagram
     JOB_LEVEL ||--o{ EMPLOYEE : "grades"
     EMPLOYEE ||--o{ SALARY_RECORD : "has"
     EMPLOYEE ||--o{ EMPLOYEE : "manages"
+    EMPLOYEE ||--o{ SALARY_AUDIT : "is the subject of"
+    APP_USER ||--o{ SALARY_AUDIT : "wrote"
     JOB_LEVEL ||--o{ PAY_BAND : "defines"
     COUNTRY ||--o{ PAY_BAND : "scopes"
 
@@ -83,10 +85,26 @@ erDiagram
         string email UK
         string password_hash "argon2id"
         string display_name
+        string role "admin|analyst"
+    }
+    SALARY_AUDIT {
+        int id PK
+        int actor_user_id FK
+        int employee_id FK
+        int salary_record_id "not a FK: a correction may replace that row"
+        bigint amount_minor
+        string currency_code
+        date effective_from
+        string reason "hire|merit|promotion|market"
+        bigint previous_amount_minor "null on a first salary"
+        string previous_currency_code "null on a first salary"
+        timestamptz recorded_at
     }
 ```
 
-`APP_USER` has no link to `EMPLOYEE`. Joining the login identity to the dataset it administers raises "can she see her own row differently" — a question there is no role system to answer.
+`APP_USER` has no link to `EMPLOYEE`. Joining the login identity to the dataset it administers raises "can she see her own row differently", and `role` answers only the coarser half of that: it says what a person may do, never which rows they may do it to. The join is still the open question ([`security.md`](security.md)).
+
+`SALARY_AUDIT` is separate from `SALARY_RECORD` because that table is the state of a timeline and this is the history of edits to it. Closing one record and opening another rewrites the timeline; the row saying who rewrote it has to survive that, which is why `salary_record_id` is a plain column rather than a foreign key. The row is written inside the same transaction as the salary change, so there is no window in which a salary exists and the record of who set it does not.
 
 ## The four calls
 
