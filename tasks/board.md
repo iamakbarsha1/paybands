@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 101 of 103 done; phases 0 to 12 are complete and the three deployments are live. The two that remain are the video recording and the submission, and both need a person in front of a camera or an inbox. The denominator is every ticket here except `PB-D06`, which is out of scope — earlier headlines said "of 90", "of 94", "of 99" and "of 102", each predating tickets a later phase added.
+**Progress** — 110 of 112 done; phases 0 to 12 are complete and the three deployments are live. The two that remain are the video recording and the submission, and both need a person in front of a camera or an inbox. Everything else on this board is closed, including `PB-D06`, which was marked out of scope and is not — `PB-D18` built it. Earlier headlines said "of 90", "of 94", "of 99", "of 102" and "of 103", each predating tickets a later phase added, and this one is no different: a board is complete only against the tickets somebody had thought of.
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -27,15 +27,16 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 4    |
 | 13 Ship                 | 12      | 10   |
-| Debt and missed         | 16      | 15   |
+| Debt and missed         | 24      | 24   |
 
 ---
 
 ## In flight
 
-| ID     | Story                                    | Status | Blocked by |
-| ------ | ---------------------------------------- | ------ | ---------- |
-| PB-083 | Demo video                               | next   | —          |
+| ID     | Story                                    | Status | Blocked by           |
+| ------ | ---------------------------------------- | ------ | -------------------- |
+| PB-083 | Demo video                               | next   | a person with a mic  |
+| PB-084 | Submit                                   | next   | PB-083               |
 
 ---
 
@@ -206,7 +207,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D03 | Local commits are not pushed                               | done         | —          |
 | PB-D04 | Seven clarifying questions unanswered, each default priced | done         | —          |
 | PB-D05 | The `packages/core` collapse test (decision 4)             | done         | PB-064     |
-| PB-D06 | Audit log of salary edits                                  | out of scope | —          |
+| PB-D06 | Audit log of salary edits                                  | done         | PB-D18     |
 | PB-D07 | Web response types are aligned with the API's zod by hand  | done         | —          |
 | PB-D08 | The preflight allowed only the three safelisted methods    | done         | —          |
 | PB-D09 | Phase 10 has no ticket for the web ask bar itself          | done         | PB-068     |
@@ -217,3 +218,11 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D14 | Decision 36's immateriality claim was never measured        | done         | —          |
 | PB-D15 | Session cookie was SameSite=Strict, deployment is cross-site | done       | —          |
 | PB-D16 | `prisma generate` resolved `DIRECT_URL` at load, so `pnpm install` failed wherever no `.env` existed — CI red since Oct 14 | done | — |
+| PB-D17 | `AskQuery` was hand-copied across the package boundary, so the ask bar's exhaustive switch checked the browser's own union | done | — |
+| PB-D18 | Audit log of salary edits — the write path, closing `PB-D06` | done | — |
+| PB-D19 | Subject rights: export and erasure, and a stated retention period | done | — |
+| PB-D20 | A second role, so `security.md`'s RLS row has something to point at | done | — |
+| PB-D21 | Component tests: `apps/web` had no test file, though §6 named Testing Library | done | — |
+| PB-D22 | `Choice` set `aria-invalid` and no `aria-describedby`, so four fields announced a failure without naming it | done | — |
+| PB-D23 | The distribution chart was unlabelled `div`s in the accessibility tree, duplicating the table below it | done | — |
+| PB-D24 | Decision 24's body still read WEAK after `PB-D01` strengthened its header to SOUND | done | — |
