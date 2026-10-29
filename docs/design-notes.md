@@ -126,7 +126,7 @@ The role description reads *"4+ years of experience in ReactJS, Node, TypeScript
 | Shared | `packages/core` | Comp maths and domain types, framework-free and I/O-free. Testable without a database, HTTP or React. |
 | Tests | Vitest + Testing Library + one Playwright smoke | Fast and deterministic, which the brief asks for by name |
 | CI | GitHub Actions | A visibly green build says more than a paragraph about CI |
-| Deploy | Vercel (web) + Render or Fly (API) + Neon (DB) | Public URL, free tier, reproducible |
+| Deploy | Vercel (web and API) + Neon (DB) | Public URL, free tier, reproducible |
 
 **Two rows of that table turned out not to describe what was built.** Recorded here rather
 than edited away, because the planning note being wrong is itself worth a reviewer's time.

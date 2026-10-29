@@ -1,7 +1,8 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  // Two entry points, one app: the long-running server and the platform handler.
+  entry: ['src/index.ts', 'src/vercel.ts'],
   format: ['esm'],
   target: 'node24',
   platform: 'node',

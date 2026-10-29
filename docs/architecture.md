@@ -16,7 +16,7 @@ flowchart TB
         next["Next.js 16 App Router<br/>server-renders the shell only"]
     end
 
-    subgraph host["API host (Render or Fly)"]
+    subgraph host["API host (Vercel function, sin1)"]
         fastify["Fastify 5"]
         guard["auth guard<br/>onRequest"]
         routes["routes/<br/>auth · employees · analytics · ask"]

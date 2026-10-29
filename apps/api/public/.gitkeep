@@ -1,0 +1,2 @@
+This directory is empty on purpose. The build has no static output — every path is rewritten
+to the function in `api/` — and Vercel wants an output directory to exist anyway.

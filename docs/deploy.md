@@ -13,7 +13,7 @@ Everything below assumes the repository is pushed and CI is green.
 | | Where | Ticket |
 |---|---|---|
 | Database | Neon, production branch | `PB-077` |
-| API | Render or Fly | `PB-078` |
+| API | Vercel | `PB-078`, `PB-D26` |
 | Web | Vercel | `PB-079` |
 
 ---
@@ -53,19 +53,32 @@ app_user` returns 1.
 
 ---
 
-## 2. API (`PB-078`)
+## 2. API (`PB-078`, moved to Vercel by `PB-D26`)
 
-Deploy `apps/api`. It is a pnpm workspace, so the build has to run from the repository root.
+Deploy `apps/api` as its own Vercel project. It runs as one function rather than a long-lived
+process, which is what `src/vercel.ts` is for: the same `buildApp` the server uses, handed one
+request at a time instead of a listening socket.
 
 | | |
 |---|---|
-| Build | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @paybands/api... build` |
-| Start | `node apps/api/dist/index.js` |
+| Framework preset | Other |
+| Root directory | `apps/api`, with **Include source files outside of the Root Directory** on — the workspace packages live above it |
+| Build | `pnpm build` (set in `apps/api/vercel.json`) |
+| Output directory | `public`, which is empty on purpose; everything is rewritten to the function |
+| Node version | 24.x |
+| Region | `sin1`, set in **project settings** and not in `vercel.json` — the key there is rejected on plans limited to one region, and the setting is not |
 | Health check path | `/health` |
-| Root directory | blank — it is a pnpm workspace, so the build runs from the repository root |
 
-`corepack enable` comes first so `pnpm` is the version `packageManager` names, which is the
-version the lockfile was written by. `--frozen-lockfile` is the part that cares.
+**Why the function imports a build rather than the source.** `apps/api/api/index.js` re-exports
+`dist/vercel.js`. Vercel's bundler traces imports but does not transpile them, and
+`@paybands/core` ships TypeScript with no build step, so a function importing it through the
+workspace would ship a `.ts` file into a Node runtime. `tsup` already inlines core
+(`noExternal`), so the function is pointed at that output and there is one bundler in the
+chain instead of two.
+
+**Turn Vercel Authentication off.** New projects get it on, and on an API it answers every
+call — including the browser's — with a login page instead of JSON. The API has its own auth;
+this protection is the wrong layer for it.
 
 `postinstall` runs `prisma generate`, so the client is built before the API is. That generate
 needs no database, and since `PB-D16` it no longer asks for one — it used to resolve
@@ -82,10 +95,19 @@ which is every platform build and every fresh clone.
 | `TRUST_PROXY` | `true` | See below. This is the one that bites |
 | `CROSS_SITE_COOKIE` | `true`, unless both apps share one registrable domain | See below. This is the other one |
 | `ANTHROPIC_API_KEY` | A key, or leave it empty | Empty means the ask bar is off and everything else works |
-| `NODE_VERSION` | `24` | `engines.node` is `>=24` with no upper bound, which resolves to whatever is newest. Pin it |
-| `PORT`, `HOST` | Usually set by the platform | — |
+| `NODE_VERSION` | `24` | `engines.node` is `>=24` with no upper bound, which resolves to whatever is newest. Pin it. On Vercel this is the project's Node version setting |
+| `PORT`, `HOST` | Only read by `src/index.ts` | A function has no socket to bind |
 
-`DIRECT_URL` is not needed at runtime. The API does not migrate.
+`DIRECT_URL` is not needed at runtime — the API does not migrate — but set it anyway so
+`prisma migrate deploy` can be run against this database from a shell without assembling the
+unpooled host by hand.
+
+**Run the migrations before the first deploy, not after.** The Vercel cutover found this the
+expensive way: the production branch was two migrations behind `main`, the old host was still
+serving code old enough not to notice, and the first login against the new deployment answered
+500 with `column app_user.role does not exist`. `pnpm exec prisma migrate deploy` with
+`DIRECT_URL` pointed at the production branch is the whole fix, and it is additive, so a
+previous deployment still reading the old columns keeps working while you do it.
 
 ### `TRUST_PROXY` is not optional here
 
@@ -97,16 +119,31 @@ lock out every visitor** ([decision 51](decisions/decision-log.md), `PB-D13`).
 as the list of addresses or subnets to trust. Both behaviours are held by tests; removing the
 fix fails them.
 
-The multi-instance leg of decision 51 stays open and this deployment does not close it. The
-limiter counts in one process's memory, so two instances mean two independent counts and an
-attacker gets ten attempts rather than five. Deploy one instance, or accept that number.
+The multi-instance leg of decision 51 stays open, and since `PB-D26` this deployment makes it
+real rather than theoretical. The limiter counts in one process's memory. Render ran a single
+instance, so "deploy one instance" was advice a deployment could follow; a function autoscales,
+so the honest statement is that **five login attempts is five per instance, and the number of
+instances is the platform's to choose**. Nothing caps the total.
+
+That is accepted here rather than fixed, because the fix is a shared store and this database
+holds synthetic data behind a password that is printed in the README. What makes it acceptable
+is also what makes it worth writing down: the limiter still stops a single client hammering one
+instance, argon2id still costs an attacker real time per guess, and the ceiling is named instead
+of implied. A deployment holding real salaries should back the limiter with Redis before it
+holds anything else.
 
 ### `CROSS_SITE_COOKIE` is the one that looks like a bug in your code
 
-`paybands-flame.vercel.app` and `paybands-api.onrender.com` are two different registrable domains,
+`paybands-flame.vercel.app` and `paybands-api.vercel.app` are two different registrable domains,
 which makes every call from the browser to the API a **cross-site** request. The session cookie
 ships as `SameSite=Strict`, and a browser discards a Strict cookie that arrives on a cross-site
 response.
+
+A shared suffix is not a shared site, and this is the trap `PB-D26` walked up to: moving the API
+onto Vercel put both apps under `vercel.app` and changed nothing, because `vercel.app` is on the
+Public Suffix List. Each subdomain is its own registrable domain, so the flag stays on. Verified
+rather than reasoned: the live login returns `SameSite=None; Secure` and a real Chromium session
+signs in and stays in.
 
 What that looks like: `POST /auth/login` returns **200** with a correct `Set-Cookie`, the
 browser stores nothing, `GET /auth/me` returns 401, and the UI bounces straight back to the
@@ -191,31 +228,42 @@ purpose: `hr@paybands.example` / `paybands-demo-2026`.
 
 Then record the URL and the date in [`../tasks/todo.md`](../tasks/todo.md) under phase 13.
 
-## What shipped, 2026-10-19
+## What shipped, 2026-10-19, and what moved on 2026-10-29
 
 | | |
 |---|---|
 | Web | <https://paybands-flame.vercel.app>, Vercel, root directory `apps/web` |
-| API | <https://paybands-api.onrender.com>, Render free, Singapore, one instance |
-| Database | Neon `broad-base-15080110`, branch `production` (`br-long-truth-a1putcqw`) |
+| API | <https://paybands-api.vercel.app>, Vercel function, region `sin1`, root directory `apps/api` |
+| Database | Neon `broad-base-15080110`, branch `production` (`br-long-truth-a1putcqw`), `aws-ap-southeast-1` |
 
-Both platforms build from `main` on push, so a merge redeploys both.
+Both projects build from `main` on push, so a merge redeploys both. The function sits in the
+same region as the database on purpose; the default would have put every query across an ocean.
 
-Render's free tier stops a service after 15 minutes without traffic and takes about forty
-seconds to start again, so the first thing a reviewer meets is a login screen that hangs and no
-reason given. `.github/workflows/keepalive.yml` calls `/health` every five minutes to keep that
-from happening, and the README still describes the cold start in case the job is paused.
+### Why the API left Render (`PB-D26`)
 
-That job is not free of consequence. The free tier allows **750 instance hours a month** and a
-service that never sleeps burns about 730, so it fits only while this API is the only free
-service on the account; a second one takes both over the limit and Render suspends them until
-the cycle resets. Narrowing the cron to `*/5 4-23 * * *` costs five hours of coverage a day and
-returns about 150 hours of margin. The version with no caveat at all is the $7 Starter plan,
-which does not sleep and does not meter hours.
+Render's free tier stopped the service after 15 idle minutes, and the first request back was
+**measured at 42.7 seconds** on 2026-10-29 — paid by whoever opened the link first, on a login
+screen that gave no reason for the wait.
+
+The first fix was a scheduled job pinging `/health` every five minutes. It worked and it was
+wrong: the same free tier meters **750 instance hours a month**, a service that never sleeps
+burns about 730, and the workaround quietly traded an intermittent latency problem for a quota
+that suspends the service outright. A workaround for one limit on a free tier is usually a
+trade against a different limit on the same account.
+
+So the API moved to the platform the web app was already on, where there is no sleep and no
+hour meter. `/health` answers in **under half a second** warm or cold, the keepalive job is
+deleted, and the three paragraphs of cold-start apology are gone from the README.
+
+What it cost, stated rather than buried: the rate limiter's multi-instance ceiling stopped
+being theoretical (above), and the function needed an entry point and a pre-bundling step the
+long-running server did not.
 
 Two things this runbook got wrong before anybody ran it, now fixed above: the build command
 needed `corepack enable`, and `NODE_VERSION` needed pinning. A third was in the code rather
-than the document — see `PB-D16`.
+than the document — see `PB-D16`. A fourth was not in the runbook at all: it never said to run
+the migrations before cutting over, which is how `PB-D26` met `column app_user.role does not
+exist` on its first login.
 
 ## The rollback
 

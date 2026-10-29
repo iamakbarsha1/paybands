@@ -28,15 +28,13 @@ not render without one.
 differ from the local run above, and both were checked against the live deployment on
 2026-10-19.
 
-**The API should already be awake.** Render's free tier stops the service after fifteen idle
-minutes and the first request back waits about forty seconds, which is a hung login screen on
-take one. `.github/workflows/keepalive.yml` calls `/health` every five minutes so that does not
-happen. Confirm rather than trust it: open <https://paybands-api.onrender.com/health> and look
-for `{"status":"ok"}` coming back immediately. If it crawls, the job is paused or late — run it
-by hand from the Actions tab (`keepalive` → Run workflow) and start when the tab answers fast.
+**Nothing to wake.** The API moved off Render to Vercel on 2026-10-29 (`PB-D26`), where it does
+not sleep: <https://paybands-api.vercel.app/health> answers in under half a second cold or warm.
+The old hosting slept after fifteen idle minutes and cost the first visitor forty-two, which is
+what the first take of this recording would have been.
 
 **The ask bar is off there.** That same health response carries `"ask":false`, because the
-Render service is deployed with an empty `ANTHROPIC_API_KEY` — the configuration `deploy.md`
+deployment carries no `ANTHROPIC_API_KEY` at all — the configuration `deploy.md`
 describes, where the ask bar is off and everything else works. The `/reports` page draws no ask
 bar and `POST /ask` answers `503` with `The ask bar is off: this server was started without
 ANTHROPIC_API_KEY.` A feature that is off correctly looks exactly like a feature that was never
@@ -46,7 +44,7 @@ Pick one before recording:
 
 | | |
 |---|---|
-| Set the key on Render | The whole script records in one pass against the deployment. Costs a key in a dashboard and tokens per question |
+| Set the key on the API project | `vercel env add ANTHROPIC_API_KEY production`, then redeploy. The whole script records in one pass against the deployment. Costs a key in a dashboard and tokens per question |
 | Record 3:00 to 3:45 locally | Deployment for the first three minutes, local for the ask bar. The cut is visible only in the URL bar |
 | Drop the beat | Not advised. It is the segment the rest of the video is an argument for |
 

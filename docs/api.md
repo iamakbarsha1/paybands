@@ -4,7 +4,8 @@ Sixteen routes over one Fastify instance. This document exists so the backend is
 without opening the UI; [`architecture.md`](architecture.md) describes how a request moves
 through it, and every schema named here is a zod object you can read in the file cited.
 
-Base URL in development is `http://localhost:3001`. Everything is JSON.
+Base URL in development is `http://localhost:3001`, and in production
+<https://paybands-api.vercel.app>. Everything is JSON.
 
 ## Conventions, before the routes
 

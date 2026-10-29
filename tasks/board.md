@@ -9,7 +9,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 - Status vocabulary: `done` · `next` · `todo` · `blocked` · `out of scope`.
 - Debt tickets (`PB-Dnn`) sit in the same board as planned work. A found problem that is not on a board is a forgotten problem.
 
-**Progress** — 111 of 113 done; phases 0 to 12 are complete and the three deployments are live. The two that remain are the video recording and the submission, and both need a person in front of a camera or an inbox. Everything else on this board is closed, including `PB-D06`, which was marked out of scope and is not — `PB-D18` built it. Earlier headlines said "of 90", "of 94", "of 99", "of 102", "of 103" and "of 112", each predating tickets a later phase added, and this one is no different: a board is complete only against the tickets somebody had thought of.
+**Progress** — 112 of 115 done; phases 0 to 12 are complete and the three deployments are live, the API on Vercel since 2026-10-29. Three remain: the video recording and the submission, both needing a person in front of a camera or an inbox, and `PB-D27`, which is a dependency's bug rather than this repository's. Everything else on this board is closed, including `PB-D06`, which was marked out of scope and is not — `PB-D18` built it. Earlier headlines said "of 90", "of 94", "of 99", "of 102", "of 103", "of 112" and "of 113", each predating tickets a later phase added, and this one is no different: a board is complete only against the tickets somebody had thought of.
 
 | Phase                   | Tickets | Done |
 | ----------------------- | ------- | ---- |
@@ -27,7 +27,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | 11 Performance          | 3       | 3    |
 | 12 Audits               | 4       | 4    |
 | 13 Ship                 | 12      | 10   |
-| Debt and missed         | 25      | 25   |
+| Debt and missed         | 27      | 26   |
 
 ---
 
@@ -37,6 +37,7 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | ------ | ---------------------------------------- | ------ | -------------------- |
 | PB-083 | Demo video                               | next   | a person with a mic  |
 | PB-084 | Submit                                   | next   | PB-083               |
+| PB-D27 | Next's advisory nudge kills `next dev`   | todo   | a Next upgrade       |
 
 ---
 
@@ -227,3 +228,5 @@ Single source of truth for ticket status. Detail lives in [`user-stories-PART1.m
 | PB-D23 | The distribution chart was unlabelled `div`s in the accessibility tree, duplicating the table below it | done | — |
 | PB-D24 | Decision 24's body still read WEAK after `PB-D01` strengthened its header to SOUND | done | — |
 | PB-D25 | The live API slept after 15 idle minutes, so a reviewer's first click waited 42 seconds on a login screen that said nothing | done | — |
+| PB-D26 | `PB-D25`'s keepalive traded a latency problem for a quota: 730 of the free tier's 750 instance hours. API moved to Vercel, where neither limit exists | done | PB-D25 |
+| PB-D27 | Next 16.4.0's security-advisory nudge exits `next dev` with code 1 on some runs, so the browser smoke fails intermittently and CI is a coin toss | todo | a Next upgrade |

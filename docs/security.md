@@ -57,9 +57,19 @@ per fifteen minutes per address, because there is no session yet. `POST /ask` co
 questions per fifteen minutes per session, because there always is one and what it spends is
 a paid key rather than a password. A refused question never reaches the model. Both windows
 are in one process and in memory: two instances mean two counters, and a client behind a
-proxy counts as the proxy until `TRUST_PROXY` is set. Decision 51 carries both ceilings, and
+proxy counts as the proxy until `TRUST_PROXY` is set.
+
+Since `PB-D26` moved the API onto a function that autoscales, the first of those ceilings is
+load-bearing rather than hypothetical: **five login attempts is five per instance, and how
+many instances exist is the platform's decision, not this deployment's**. Nothing caps the
+total. It is accepted here because the data is synthetic and the demo password is printed in
+the README, and because argon2id still costs an attacker real time per guess — but a
+deployment holding real salaries needs a shared store behind the limiter before it holds
+anything else. `docs/deploy.md` carries the same statement next to the variable.
+
+Decision 51 carries both ceilings, and
 `PB-D13` closed the second one as far as code can: the option is read at the edge
-(`apps/api/src/index.ts`) and both behaviours are held by tests — untrusted, five wrong
+(`apps/api/src/server.ts`) and both behaviours are held by tests — untrusted, five wrong
 passwords refuse the next person through the same proxy; trusted, they refuse only the
 guesser. Setting it correctly at deploy time is still a human decision, and an unset
 `TRUST_PROXY` behind a proxy is the dangerous configuration rather than a merely weak one.

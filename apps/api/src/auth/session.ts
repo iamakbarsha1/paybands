@@ -22,7 +22,8 @@ export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
  *
  * `Strict` is the safer value and the right one when both are served from the same
  * registrable domain. It is also the value that silently breaks a split deployment: a browser
- * on `app.vercel.app` talking to `api.onrender.com` is making a cross-site request, so it
+ * on `paybands-flame.vercel.app` talking to `paybands-api.vercel.app` is making a cross-site
+ * request — `vercel.app` is a public suffix, so a shared suffix is not a shared site — so it
  * discards a `Strict` cookie on arrival. The login then answers 200, sets a cookie that is
  * never stored, and every screen afterwards is signed out — a failure that looks like a bug in
  * the session code and is not (decision 63, `PB-D15`).

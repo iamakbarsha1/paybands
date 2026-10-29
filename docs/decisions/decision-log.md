@@ -1365,3 +1365,24 @@ The guarantee is about data the system holds, not about the words the user typed
 **Falsifier:** A screen whose error or empty branch is broken while this suite is green.
 
 **Four files, not nine screens.** The other report pages and the employee list and detail pages branch the same four ways over the same hook. The one screen covered is the one with geometry of its own.
+
+---
+
+### 69. The API is a function on the web app's platform, not a server on a free tier that sleeps
+
+**SOUND** · reversal: cheap, `src/index.ts` still listens and the Render service was not deleted for a day · 2026-10-29 · `PB-D25`, `PB-D26`
+
+**Decision:** `apps/api` deploys to Vercel as a single function in `sin1`, beside the database. `buildApp` is unchanged; `src/vercel.ts` hands it one request at a time and `src/index.ts` still binds a socket, with `src/server.ts` holding the environment reading they share.
+
+**Evidence:** The live API's cold start was measured at **42.7 seconds** on 2026-10-29, against 0.4 seconds warm. Render's free tier stops a service after fifteen idle minutes, so that was the number a reviewer paid for opening the link first.
+
+- **D** — Yes, but the first answer was wrong and is the reason this entry exists. A scheduled job pinging `/health` every five minutes fixed the latency and was shipped. It also committed the account to about 730 of the free tier's 750 instance hours a month: the workaround for one limit was a trade against a different limit on the same account, and the second one suspends the service outright rather than slowing it down. The platform with neither limit was the one already serving the web app.
+- **O** — No. One function, same code, same database.
+- **U** — Driven end to end against the live deployment rather than argued: login 200 with `SameSite=None; Secure`, an authenticated `GET /analytics/bands?country=IN&level=3` returning real bands, a wrong password refused 401, and a real Chromium session signing in and rendering the gender pay gap report with ten rows of computed data. `/health` answers in 0.18s warm.
+- **B** — The build (`tsup` gained a second entry), the deploy runbook, `README.md`, `demo.md`, `architecture.md`, `api.md` and the `WEB_ORIGIN`/`NEXT_PUBLIC_API_URL` pair on both projects.
+- **T** — Two, both written down rather than discovered later. The rate limiter's multi-instance ceiling (decision 51) stops being theoretical, because a function autoscales and Render ran one instance: five login attempts is now five per instance, with nothing capping the total. And the function imports `dist/vercel.js` rather than source, because Vercel traces imports without transpiling them and `@paybands/core` ships TypeScript — a layer of indirection that exists only to keep one bundler in the chain.
+
+**Cheaper:** Keeping the keepalive job and time-boxing it to the review window, which costs nothing and no code. Rejected because it leaves the cold start in place for anyone arriving after the window, and leaves three paragraphs in the README apologising for it. Cheaper still: an honest "the demo API is starting, about forty seconds" in the session gate, which spends zero idle hours and was the right answer if the hosting had stayed.
+**Falsifier:** A request to the live API that waits on a cold start, or a month in which the hosting bills for idle time.
+
+**What it did not settle, and what it found.** Both apps now sit under `vercel.app`, which looks like one domain and is not — `vercel.app` is on the Public Suffix List, so each subdomain is its own registrable domain and `CROSS_SITE_COOKIE` stays `true` (decision 63). The cutover also found the production branch two migrations behind `main`: the first login answered 500 with `column app_user.role does not exist`, because the old host was serving code old enough not to ask for the column. `deploy.md` now says to migrate before cutting over.
