@@ -28,9 +28,12 @@ not render without one.
 differ from the local run above, and both were checked against the live deployment on
 2026-10-19.
 
-**Wake the API first.** Render's free tier stops the service after fifteen idle minutes and the
-first request back waits about a minute. Open <https://paybands-api.onrender.com/health> and
-wait for `{"status":"ok"}` before you start recording, or the login screen hangs on take one.
+**The API should already be awake.** Render's free tier stops the service after fifteen idle
+minutes and the first request back waits about forty seconds, which is a hung login screen on
+take one. `.github/workflows/keepalive.yml` calls `/health` every five minutes so that does not
+happen. Confirm rather than trust it: open <https://paybands-api.onrender.com/health> and look
+for `{"status":"ok"}` coming back immediately. If it crawls, the job is paused or late — run it
+by hand from the Actions tab (`keepalive` → Run workflow) and start when the tab answers fast.
 
 **The ask bar is off there.** That same health response carries `"ask":false`, because the
 Render service is deployed with an empty `ANTHROPIC_API_KEY` — the configuration `deploy.md`

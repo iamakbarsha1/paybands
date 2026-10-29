@@ -13,10 +13,13 @@ The user is an HR manager who runs all of this in spreadsheets today. Two jobs: 
 | Email | `hr@paybands.example` |
 | Password | `paybands-demo-2026` |
 
-The API is on Render's free tier, which stops a service after 15 minutes without traffic. The
-first request after an idle spell waits about a minute for it to start again; the ones after it
-are normal. Open the API's own [`/health`](https://paybands-api.onrender.com/health) first if
-you would rather wait on a blank tab than on the login screen.
+The API is on Render's free tier, which stops a service after 15 minutes without traffic and
+takes about forty seconds to start again. A scheduled job
+([`.github/workflows/keepalive.yml`](.github/workflows/keepalive.yml)) calls `/health` every
+five minutes so it stays awake and the login screen answers straight away. If that job is ever
+paused or late, the first request pays the forty seconds and the ones after it are normal —
+open the API's own [`/health`](https://paybands-api.onrender.com/health) first if you would
+rather wait on a blank tab than on the login screen.
 
 The login is the seed's own and ships on purpose. Every row behind it is synthetic: names
 recombined from per-country pools, emails at the reserved `.example` domain, salaries computed

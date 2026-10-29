@@ -201,9 +201,17 @@ Then record the URL and the date in [`../tasks/todo.md`](../tasks/todo.md) under
 
 Both platforms build from `main` on push, so a merge redeploys both.
 
-Render's free tier stops a service after 15 minutes without traffic and takes about a minute
-to start again. The README says so, because otherwise the first thing a reviewer meets is a
-login screen that hangs and no reason given.
+Render's free tier stops a service after 15 minutes without traffic and takes about forty
+seconds to start again, so the first thing a reviewer meets is a login screen that hangs and no
+reason given. `.github/workflows/keepalive.yml` calls `/health` every five minutes to keep that
+from happening, and the README still describes the cold start in case the job is paused.
+
+That job is not free of consequence. The free tier allows **750 instance hours a month** and a
+service that never sleeps burns about 730, so it fits only while this API is the only free
+service on the account; a second one takes both over the limit and Render suspends them until
+the cycle resets. Narrowing the cron to `*/5 4-23 * * *` costs five hours of coverage a day and
+returns about 150 hours of margin. The version with no caveat at all is the $7 Starter plan,
+which does not sleep and does not meter hours.
 
 Two things this runbook got wrong before anybody ran it, now fixed above: the build command
 needed `corepack enable`, and `NODE_VERSION` needed pinning. A third was in the code rather
