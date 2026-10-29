@@ -185,10 +185,16 @@ from the lockfile.
 
 | Variable | Value |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | The API's `https` URL, no trailing slash |
+| `NEXT_PUBLIC_API_URL` | The API's `https` URL, no trailing slash. Production and Preview only |
 
 `NEXT_PUBLIC_API_URL` is inlined at build time, not read at runtime. Changing it needs a
 redeploy, not a restart.
+
+**Leave the Development environment unset.** `apps/web/lib/api.ts` falls back to
+`http://localhost:3001`, which is where a developer's API actually is; setting the variable for
+Development points `vercel dev` and `vercel env pull` at the production API instead, which is a
+local run quietly reading and writing live data. The fallback is the correct value, so the
+absence of the variable is the configuration, not a gap in it.
 
 Read the production alias off the deployment rather than predicting it. Vercel project names
 are not yours to assume: `paybands` was taken, so this one is aliased `paybands-flame`. That
